@@ -29,7 +29,7 @@ const additionalOrigins = [
 
 // Automatically pick the primary URL based on environment
 const primaryClientUrl = isProduction 
-  ? (normalize(prodOrigins[0]) || 'https://toyove-india-jhkr.vercel.app')
+  ? (normalize(prodOrigins[0]) || 'https://toyovoindia.vercel.app')
   : (process.env.CLIENT_URL || 'http://localhost:5173');
 
 const env = {
