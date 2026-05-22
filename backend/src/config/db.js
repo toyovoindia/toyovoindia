@@ -5,7 +5,7 @@ import logger from '../utils/logger.js';
 export const connectDB = async () => {
   if (env.NODE_ENV === 'test') {
     return;
-  }
+  } 
   
   try {
     if (env.NODE_ENV === 'development') {
