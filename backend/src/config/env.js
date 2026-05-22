@@ -23,6 +23,9 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const devOrigins = parseOrigins(process.env.CLIENT_URL);
 const prodOrigins = parseOrigins(process.env.CLIENT_URL_PROD);
+const additionalOrigins = [
+  'https://toyovoindia.vercel.app',
+];
 
 // Automatically pick the primary URL based on environment
 const primaryClientUrl = isProduction 
@@ -39,6 +42,7 @@ const env = {
       normalize(primaryClientUrl),
       ...devOrigins,
       ...prodOrigins,
+      ...additionalOrigins,
       ...(!isProduction ? defaultDevOrigins : []),
     ]),
   ],
