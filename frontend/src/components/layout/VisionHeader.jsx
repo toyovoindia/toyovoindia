@@ -33,7 +33,6 @@ import { countries, languages, mainNavLinks, categoryData } from '../../data/nav
 import { getCategoryTree, getNavbarCategories, getProducts } from '../../services/catalogApi'
 import { getStorefrontSettings } from '../../services/siteApi'
 
-const C = '#FF4E50'  
 import logo from '../../assets/toyovo.webp'
 
 export function VisionHeader() {
@@ -43,16 +42,14 @@ export function VisionHeader() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [isPastHero, setIsPastHero] = useState(false)
   const [activeMobileSub, setActiveMobileSub] = useState(null)
+  const [activeMobileSub2, setActiveMobileSub2] = useState(null)
   
   const [activeMasterCat, setActiveMasterCat] = useState('Musical Toys')
   const [activeMenu, setActiveMenu] = useState(null)
   const [navLinks, setNavLinks] = useState(mainNavLinks)
   const [megaCategoryData, setMegaCategoryData] = useState(categoryData)
   const [profileDropdown, setProfileDropdown] = useState(false)
-  const [langDropdown, setLangDropdown] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
-  const [selectedCountry, setSelectedCountry] = useState({ name: 'India', code: 'IN', currency: 'INR' })
-  const [selectedLang, setSelectedLang] = useState(languages[0])
   const [promoMessages, setPromoMessages] = useState([
     'Free Shipping On Orders Over ₹999!',
   ])
@@ -97,7 +94,11 @@ export function VisionHeader() {
             href: '/all-categories',
             mega: {
               type: 'master',
-              sidebar: tree.map(category => ({ name: category.name, id: category.slug })),
+              sidebar: tree.map(category => ({ 
+                name: category.name, 
+                id: category.slug,
+                children: category.children || []
+              })),
             },
           },
           ...navbarCategories.map(category => ({
@@ -145,6 +146,9 @@ export function VisionHeader() {
           setPromoMessages(data.announcementMessages)
           setPromoIndex(0)
         }
+        if (data.siteName) {
+          document.title = `${data.siteName} | Premium Kids Toys Marketplace`
+        }
       } catch {
         // keep fallback header copy
       }
@@ -181,10 +185,10 @@ export function VisionHeader() {
   useEffect(() => {
     setMobileOpen(false)
     setActiveMobileSub(null)
+    setActiveMobileSub2(null)
     setSearchOpen(false)
     setActiveMenu(null)
     setProfileDropdown(false)
-    setLangDropdown(false)
     setSearchTerm('')
     setSuggestions([])
   }, [location])
@@ -255,7 +259,7 @@ export function VisionHeader() {
       id="vision-header-root"
       className="relative z-[1100]"
     >
-      <div style={{ backgroundColor: C, width: '100%', padding: '7px 0' }} className="relative z-[1300]">
+      <div style={{ backgroundColor: siteConfig?.announcementBg || '#6651A4', width: '100%', padding: '7px 0' }} className="relative z-[1300]">
         {/* Desktop Utility Bar (1024px+) */}
         <div className="ann-desk hdr-inner" style={{ gridTemplateColumns: '1fr 1.5fr 1fr', alignItems: 'center' }}>
           <div className="flex items-center gap-4">
@@ -290,27 +294,6 @@ export function VisionHeader() {
           </div>
 
           <div className="flex items-center gap-6 justify-end">
-            <div className="flex items-center gap-1.5 px-0 py-1 bg-transparent cursor-default">
-                <span className="flex items-center justify-center w-5 h-4 bg-[#FF4E50]/10 rounded-sm text-[9px] font-black text-[#FF4E50]">IN</span>
-                <span className="text-[11px] font-black uppercase tracking-widest text-white">India</span>
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse ml-0.5"></div>
-            </div>
-            <div className="relative" onMouseEnter={()=>setLangDropdown(true)} onMouseLeave={()=>setLangDropdown(false)}>
-                <button className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:opacity-80 transition-all cursor-pointer">
-                    <Globe size={11}/> <span>{selectedLang}</span> <ChevronDown size={10} />
-                </button>
-                <AnimatePresence>
-                    {langDropdown && (
-                        <motion.div initial={{opacity:0, y:5}} animate={{opacity:1, y:0}} exit={{opacity:0, y:5}} className="absolute top-full right-0 mt-1 w-32 bg-[#FDF4E6] shadow-2xl rounded-xl py-2 z-50 border border-black/5 overflow-hidden">
-                            {languages.map(l => (
-                                <button key={l} onClick={()=>{setSelectedLang(l); setLangDropdown(false)}} className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-white whitespace-nowrap ${selectedLang === l ? 'text-[#E84949]' : 'text-gray-700'}`}>
-                                    {l}
-                                </button>
-                            ))}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
           </div>
         </div>
 
@@ -342,8 +325,6 @@ export function VisionHeader() {
               <button onClick={next} className="text-[#FDF3E7]/60 hover:text-white transition-colors"><ChevronRight size={14} /></button>
            </div>
            <div className="flex-1 flex items-center gap-4 text-white justify-end">
-                <Globe size={14}/>
-                <span className="text-[11px] font-bold uppercase tracking-widest">IN | {selectedLang.substring(0,3)}</span>
            </div>
         </div>
 
@@ -559,17 +540,39 @@ export function VisionHeader() {
           {/* Icons Section: Floated right, maintains spacing on all devices */}
           <div className="flex-1 lg:flex-none flex items-center justify-end gap-1 md:gap-2 shrink-0 ml-auto">
             {/* Desktop Search Bar (Static only on LG+) */}
-            <div className="hidden lg:block mr-1">
-              <form onSubmit={handleSearchSubmit} className="relative">
+            <div className="hidden lg:block mr-1 relative">
+              <form onSubmit={handleSearchSubmit} className="relative z-10">
                 <input 
                   type="text" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search"
-                  className="w-16 xl:w-28 2xl:w-36 h-8 bg-[#F9EAD3] border border-dashed border-[#333]/25 rounded-xl px-2 xl:px-4 py-1.5 text-[9px] xl:text-[11px] 2xl:text-[12px] font-medium outline-none focus:border-[#E84949] transition-all placeholder:text-[#333]/40"
+                  className="w-16 xl:w-28 2xl:w-36 h-8 bg-[#F9EAD3] border border-dashed border-[#333]/25 rounded-xl px-2 xl:px-4 py-1.5 text-[9px] xl:text-[11px] 2xl:text-[12px] font-medium outline-none focus:border-[#E84949] transition-all placeholder:text-[#333]/40 focus:w-48 xl:focus:w-56"
                 />
                 <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-[#333]/40"><Search size={13} /></button>
               </form>
+
+              <AnimatePresence>
+                {searchTerm.trim().length > 1 && suggestions.length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full right-0 mt-3 w-72 bg-[#FDF4E6] shadow-2xl rounded-xl border-t-2 border-[#E84949] p-3 z-50 overflow-hidden"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-[#666] tracking-widest uppercase mb-1 px-1">Suggestions</p>
+                      {suggestions.map(p => (
+                        <Link key={p.id} to={`/product/${p.slug || p.id}`} onClick={() => setSearchTerm('')} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F9EAD3] transition-all">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-black/5 bg-white"><img src={p.img} alt={p.name} className="w-full h-full object-cover" /></div>
+                          <div className="grow"><h5 className="text-[11px] font-bold text-[#333] tracking-tight line-clamp-1">{p.name}</h5><p className="text-[10px] text-[#E84949] mt-0.5 font-bold">₹{p.price}</p></div>
+                        </Link>
+                      ))}
+                      <button onClick={handleSearchSubmit} className="w-full mt-2 py-2 text-center text-[10px] font-bold text-[#333] hover:text-[#E84949] uppercase tracking-wider bg-black/5 rounded-lg transition-colors">View All Results</button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <button onClick={() => setSearchOpen(!searchOpen)} className="p-2 lg:hidden text-[#333] hover:text-[#E84949] transition-colors"><Search size={22} /></button>
@@ -724,15 +727,39 @@ export function VisionHeader() {
                             link.mega.type === 'master' ? (
                               <div className="flex flex-col gap-3">
                                 {link.mega.sidebar.map(item => (
-                                  <Link 
-                                    key={item.id} 
-                                    to={`/collections/${item.id || item.name.toLowerCase().replaceAll(' ', '-')}`} 
-                                    onClick={handleLinkClick} 
-                                    className="flex items-center justify-between text-[13px] text-[#333] font-bold hover:text-[#E84949] transition-colors py-1"
-                                  >
-                                    <span>{item.name}</span>
-                                    <ChevronRight size={12} className="opacity-30" />
-                                  </Link>
+                                  <div key={item.id} className="flex flex-col">
+                                    <div className="flex items-center justify-between border-b border-[#333]/5 pb-1">
+                                      <Link 
+                                        to={`/collections/${item.id || item.name.toLowerCase().replaceAll(' ', '-')}`} 
+                                        onClick={handleLinkClick} 
+                                        className="flex-1 text-[13px] text-[#333] font-bold hover:text-[#E84949] transition-colors py-1"
+                                      >
+                                        {item.name}
+                                      </Link>
+                                      {item.children && item.children.length > 0 && (
+                                        <button 
+                                          onClick={() => setActiveMobileSub2(activeMobileSub2 === item.name ? null : item.name)} 
+                                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${activeMobileSub2 === item.name ? 'bg-[#E84949] text-white rotate-180' : 'bg-transparent text-[#333]'}`}
+                                        >
+                                          <ChevronRight size={14} />
+                                        </button>
+                                      )}
+                                    </div>
+                                    {activeMobileSub2 === item.name && item.children && item.children.length > 0 && (
+                                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="pl-4 py-2 flex flex-col gap-2 border-l-2 border-[#E84949]/20 ml-2 mt-2">
+                                        {item.children.map(child => (
+                                          <Link
+                                            key={child._id || child.slug || child.name}
+                                            to={`/collections/${item.id || item.name.toLowerCase().replaceAll(' ', '-')}/${child.slug || child.name.toLowerCase().replaceAll(' ', '-')}`}
+                                            onClick={handleLinkClick}
+                                            className="text-[11.5px] text-[#555] font-semibold hover:text-[#E84949] transition-colors py-1"
+                                          >
+                                            {child.name}
+                                          </Link>
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </div>
                                 ))}
                               </div>
                             ) : (
@@ -745,10 +772,13 @@ export function VisionHeader() {
                                         const name = typeof item === 'object' ? item.name : item;
                                         const badge = typeof item === 'object' ? item.badge : null;
                                         const type = typeof item === 'object' ? item.type : 'normal';
+                                        const subSlug = name.toLowerCase().replaceAll(' ', '-');
+                                        const parentSlug = link.href.split('/').pop() || link.name.toLowerCase().replaceAll(' ', '-');
+                                        
                                         return (
                                           <Link 
                                             key={name} 
-                                            to={type === 'link' ? `/product/${name.toLowerCase().replaceAll(' ', '-')}` : `/collections/${name.toLowerCase().replaceAll(' ', '-')}`} 
+                                            to={type === 'link' ? `/product/${subSlug}` : `/collections/${parentSlug}/${subSlug}`} 
                                             onClick={handleLinkClick} 
                                             className="flex items-center justify-between text-[12px] text-[#333] font-bold hover:text-[#E84949] transition-colors"
                                           >
@@ -785,54 +815,7 @@ export function VisionHeader() {
                       <span>{user ? 'My Account' : 'Log in'}</span>
                     </Link>
                   </div>
-                  <div className="px-6 py-5 border-b border-[#333]/5 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#333]/5 rounded-lg border border-[#333]/10">
-                      <span className="flex items-center justify-center w-5 h-4 bg-[#FF4E50]/10 rounded-sm text-[9px] font-black text-[#FF4E50]">IN</span>
-                      <span className="text-[11px] font-black uppercase tracking-widest text-[#333]">India</span>
-                    </div>
 
-                    
-                    <div 
-                      className="relative"
-                    >
-                      <button 
-                        onClick={() => setLangDropdown(!langDropdown)}
-                        className="flex items-center gap-1.5 text-[11px] font-black text-[#333] uppercase tracking-widest p-2 hover:bg-[#333]/5 rounded-xl transition-all active:scale-95"
-                      >
-                        <Globe size={14} className="opacity-40" />
-                        <span className="whitespace-nowrap">{selectedLang}</span>
-                        <ChevronDown size={14} className={`opacity-40 transition-transform duration-300 ${langDropdown ? 'rotate-180' : ''}`} />
-                      </button>
-                      <AnimatePresence>
-                          {langDropdown && (
-                              <motion.div 
-                                initial={{opacity:0, scale:0.9, y:10, x: 0}} 
-                                animate={{opacity:1, scale:1, y:0, x: 0}} 
-                                exit={{opacity:0, scale:0.9, y:10, x: 0}} 
-                                className="absolute bottom-full right-0 mb-4 w-44 bg-white shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-[24px] py-4 z-[1000] border border-black/[0.04] overflow-visible"
-                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                              >
-                                  <div className="px-5 pb-3 mb-2 border-b border-black/[0.03]">
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Select Language</p>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    {languages.map(l => (
-                                        <button 
-                                          key={l} 
-                                          onClick={()=>{setSelectedLang(l); setLangDropdown(false)}} 
-                                          className={`w-full text-left px-5 py-3 text-[13px] font-bold transition-all ${selectedLang === l ? 'text-[#E84949] bg-[#E84949]/5' : 'text-[#333] hover:bg-gray-50'}`}
-                                        >
-                                            {l}
-                                        </button>
-                                    ))}
-                                  </div>
-                                  {/* Subtle Arrow */}
-                                  <div className="absolute top-full right-6 w-3 h-3 bg-white border-r border-b border-black/[0.04] rotate-45 -translate-y-1.5" />
-                              </motion.div>
-                          )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
 
                   <div className="px-6 py-8 flex items-center gap-6">
                     {[FbIcon, IgIcon, XIcon, PtIcon].map((Icon, i) => (

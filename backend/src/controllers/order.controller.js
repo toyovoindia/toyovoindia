@@ -235,8 +235,8 @@ export const requestMyOrderReturn = asyncHandler(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  if (order.status !== 'delivered') {
-    return next(new AppError('Return requests are allowed only for delivered orders', 400));
+  if (!['delivered', 'cancelled'].includes(order.status)) {
+    return next(new AppError('Return/refund requests are allowed only for delivered or cancelled orders', 400));
   }
 
   if (order.paymentStatus !== 'paid') {
@@ -255,7 +255,7 @@ export const requestMyOrderReturn = asyncHandler(async (req, res, next) => {
     reviewedAt: null,
   };
 
-  appendStatusHistory(order, order.status, 'customer', `Return requested: ${req.body.reason.trim()}`);
+  appendStatusHistory(order, 'Refund Requested', 'customer', `Return requested: ${req.body.reason.trim()}`);
   await order.save();
 
   // Push notification
@@ -286,7 +286,7 @@ export const getOrderSummary = asyncHandler(async (req, res, next) => {
 
 export const adminListOrders = asyncHandler(async (req, res) => {
   const page = Number(req.query.page || 1);
-  const limit = Math.min(Number(req.query.limit || 20), 200);
+  const limit = Math.min(Number(req.query.limit || 20), 10000);
   const skip = (page - 1) * limit;
   const filter = {};
 
@@ -456,9 +456,10 @@ export const adminUpdateOrderReturnRequest = asyncHandler(async (req, res, next)
     order.paymentStatus = 'refunded';
   }
 
+  const displayStatus = nextStatus === 'requested' ? 'Refund Update' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;
   appendStatusHistory(
     order,
-    order.status,
+    displayStatus,
     req.user.role,
     `Return request marked ${nextStatus}${order.returnRequest.adminNote ? `: ${order.returnRequest.adminNote}` : ''}`
   );
@@ -497,7 +498,8 @@ export const getRevenueStats = asyncHandler(async (req, res) => {
   const stats = await Order.aggregate([
     {
       $match: {
-        paymentStatus: 'paid'
+        paymentStatus: 'paid',
+        status: { $ne: 'cancelled' }
       }
     },
     {

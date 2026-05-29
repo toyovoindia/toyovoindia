@@ -65,6 +65,7 @@ export function AdminProductDetail() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [newColor, setNewColor] = useState('')
   const [newSize, setNewSize] = useState('')
+  const [formErrors, setFormErrors] = useState({})
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -113,9 +114,28 @@ export function AdminProductDetail() {
   }, [id, isNew])
 
   const handleSave = async () => {
-    if (!product.name.trim()) return error('Toy name is required!')
-    if (!product.category) return error('Please select a category!')
+    const errors = {}
+    if (!product.name.trim()) errors.name = 'Toy name is required.'
+    if (!product.category) errors.category = 'Please select a category.'
 
+    const currentPrice = Number(product.price || 0)
+    const currentOldPrice = product.oldPrice !== '' ? Number(product.oldPrice) : null
+    const currentStock = Number(product.stock || 0)
+
+    if (product.price === '' || currentPrice <= 0) errors.price = 'Selling Price must be greater than 0.'
+    if (currentOldPrice !== null && currentOldPrice <= 0) errors.oldPrice = 'MRP cannot be 0 or negative.'
+    if (currentStock < 0) errors.stock = 'Stock cannot be negative.'
+
+    if (currentOldPrice !== null && currentPrice > currentOldPrice) {
+      errors.price = 'Selling Price cannot be greater than MRP / Old Price.'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+
+    setFormErrors({})
     setIsSaving(true)
     try {
       const payload = {
@@ -130,8 +150,8 @@ export function AdminProductDetail() {
         ageGroup: product.ageGroup || '',
         gender: product.gender || 'Unisex',
         material: product.material || '',
-        color: product.color || [],
-        size: product.size || [],
+        color: newColor.trim() && !(product.color || []).includes(newColor.trim()) ? [...(product.color || []), newColor.trim()] : product.color || [],
+        size: newSize.trim() && !(product.size || []).includes(newSize.trim()) ? [...(product.size || []), newSize.trim()] : product.size || [],
         isFeatured: product.isFeatured,
         isTrending: product.isTrending,
         isNewArrival: product.isNewArrival,
@@ -282,13 +302,17 @@ export function AdminProductDetail() {
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-[32px] p-6 shadow-sm border border-black/[0.03] space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-grandstander font-bold text-gray-800">Toy Snapshots</h3>
-                <span className="text-xs font-bold text-gray-400">{product.images.length} added</span>
+                <span className="text-xs font-bold text-gray-400">{(product.images || []).length} added</span>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                {product.images.map((img, idx) => (
+                {(product.images || []).map((img, idx) => (
                   <div key={idx} className="aspect-square rounded-2xl bg-gray-50 relative group overflow-hidden border border-gray-100">
-                    <img src={img.url || img} alt="" className="w-full h-full object-cover" />
+                    {img && (img.url || typeof img === 'string') ? (
+                      <img src={img.url || img} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold text-[10px] uppercase tracking-widest bg-gray-50">No Image</div>
+                    )}
                     {isEditing && (
                       <button 
                         onClick={() => removeImage(idx)}
@@ -348,10 +372,14 @@ export function AdminProductDetail() {
                     disabled={!isEditing}
                     type="text" 
                     value={product.name} 
-                    onChange={(e) => setProduct({...product, name: e.target.value})}
+                    onChange={(e) => {
+                      setProduct({...product, name: e.target.value})
+                      if(formErrors.name) setFormErrors({...formErrors, name: null})
+                    }}
                     placeholder="e.g. Playbox The Builder"
-                    className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60"
+                    className={`w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60 ${formErrors.name ? 'border-red-400' : 'border-transparent'}`}
                   />
+                  {formErrors.name && <p className="text-red-500 text-[11px] font-bold">{formErrors.name}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -360,14 +388,18 @@ export function AdminProductDetail() {
                     <select 
                       disabled={!isEditing}
                       value={product.category}
-                      onChange={(e) => setProduct({...product, category: e.target.value})}
-                      className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all appearance-none disabled:opacity-60"
+                      onChange={(e) => {
+                        setProduct({...product, category: e.target.value})
+                        if(formErrors.category) setFormErrors({...formErrors, category: null})
+                      }}
+                      className={`w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all appearance-none disabled:opacity-60 ${formErrors.category ? 'border-red-400' : 'border-transparent'}`}
                     >
                       <option value="">Select Category</option>
                       {categories.map(category => (
                         <option key={category.id} value={category.id}>{category.name}</option>
                       ))}
                     </select>
+                    {formErrors.category && <p className="text-red-500 text-[11px] font-bold">{formErrors.category}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Inventory Status</label>
@@ -394,10 +426,14 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.price} 
-                        onChange={(e) => setProduct({...product, price: e.target.value})}
-                        className="w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-700 transition-all disabled:opacity-60"
+                        onChange={(e) => {
+                          setProduct({...product, price: e.target.value})
+                          if(formErrors.price) setFormErrors({...formErrors, price: null})
+                        }}
+                        className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-700 transition-all disabled:opacity-60 ${formErrors.price ? 'border-red-400' : 'border-transparent'}`}
                       />
                     </div>
+                    {formErrors.price && <p className="text-red-500 text-[11px] font-bold">{formErrors.price}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">MRP / Old Price (₹)</label>
@@ -407,10 +443,14 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.oldPrice} 
-                        onChange={(e) => setProduct({...product, oldPrice: e.target.value})}
-                        className="w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-400/60 transition-all disabled:opacity-60"
+                        onChange={(e) => {
+                          setProduct({...product, oldPrice: e.target.value})
+                          if(formErrors.oldPrice) setFormErrors({...formErrors, oldPrice: null})
+                        }}
+                        className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-400/60 transition-all disabled:opacity-60 ${formErrors.oldPrice ? 'border-red-400' : 'border-transparent'}`}
                       />
                     </div>
+                    {formErrors.oldPrice && <p className="text-red-500 text-[11px] font-bold">{formErrors.oldPrice}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Units in Storage</label>
@@ -420,10 +460,14 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.stock} 
-                        onChange={(e) => setProduct({...product, stock: e.target.value})}
-                        className="w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60"
+                        onChange={(e) => {
+                          setProduct({...product, stock: e.target.value})
+                          if(formErrors.stock) setFormErrors({...formErrors, stock: null})
+                        }}
+                        className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60 ${formErrors.stock ? 'border-red-400' : 'border-transparent'}`}
                       />
                     </div>
+                    {formErrors.stock && <p className="text-red-500 text-[11px] font-bold">{formErrors.stock}</p>}
                   </div>
                 </div>
 
@@ -447,7 +491,8 @@ export function AdminProductDetail() {
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Brand</label>
                       <input 
                         disabled={!isEditing}
-                        type="text" value={product.brand} onChange={(e) => setProduct({...product, brand: e.target.value})}
+                        type="text" value={product.brand} 
+                        onChange={(e) => setProduct({...product, brand: e.target.value.replace(/[^A-Za-z0-9\s]/g, '')})}
                         placeholder="e.g. Babyhug"
                         className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60"
                       />
@@ -481,7 +526,8 @@ export function AdminProductDetail() {
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Material</label>
                       <input 
                         disabled={!isEditing}
-                        type="text" value={product.material} onChange={(e) => setProduct({...product, material: e.target.value})}
+                        type="text" value={product.material} 
+                        onChange={(e) => setProduct({...product, material: e.target.value.replace(/[^A-Za-z\s]/g, '')})}
                         placeholder="e.g. Wood, Plastic"
                         className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60"
                       />
@@ -492,7 +538,7 @@ export function AdminProductDetail() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Available Colors</label>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {product.color.map(c => (
+                        {(product.color || []).map(c => (
                           <span key={c} className="px-3 py-1.5 bg-[#6651A4]/10 text-[#6651A4] rounded-lg text-[11px] font-bold flex items-center gap-2">
                             {c} {isEditing && <X size={12} className="cursor-pointer" onClick={() => removeTag('color', c)}/>}
                           </span>
@@ -500,34 +546,42 @@ export function AdminProductDetail() {
                       </div>
                       {isEditing && (
                         <div className="flex gap-2">
-                          <input 
-                            value={newColor} onChange={(e) => setNewColor(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag('color', newColor, setNewColor))}
-                            placeholder="Add color..."
-                            className="flex-1 h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none text-xs font-bold"
-                          />
-                          <button onClick={() => addTag('color', newColor, setNewColor)} className="w-12 h-12 bg-[#6651A4] text-white rounded-xl flex items-center justify-center"><Plus size={18}/></button>
+                          <select 
+                            value={newColor} 
+                            onChange={(e) => setNewColor(e.target.value)}
+                            className="flex-1 h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none text-xs font-bold appearance-none cursor-pointer border border-transparent focus:border-[#6651A4]/30"
+                          >
+                            <option value="">Select color...</option>
+                            {['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Pink', 'Orange', 'Purple', 'Multicolor'].map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => addTag('color', newColor, setNewColor)} className="w-12 h-12 bg-[#6651A4] text-white rounded-xl flex items-center justify-center shrink-0 hover:opacity-90"><Plus size={18}/></button>
                         </div>
                       )}
                     </div>
                     <div className="space-y-3">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Available Sizes</label>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {product.size.map(s => (
+                        {(product.size || []).map(s => (
                           <span key={s} className="px-3 py-1.5 bg-[#F1641E]/10 text-[#F1641E] rounded-lg text-[11px] font-bold flex items-center gap-2">
-                            {s} {isEditing && <X size={12} className="cursor-pointer" onClick={() => removeTag('size', s)}/>}
+                            {s} {isEditing && <X size={12} className="cursor-pointer hover:text-red-500" onClick={() => removeTag('size', s)}/>}
                           </span>
                         ))}
                       </div>
                       {isEditing && (
                         <div className="flex gap-2">
-                          <input 
-                            value={newSize} onChange={(e) => setNewSize(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag('size', newSize, setNewSize))}
-                            placeholder="Add size..."
-                            className="flex-1 h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none text-xs font-bold"
-                          />
-                          <button onClick={() => addTag('size', newSize, setNewSize)} className="w-12 h-12 bg-[#F1641E] text-white rounded-xl flex items-center justify-center"><Plus size={18}/></button>
+                          <select 
+                            value={newSize} 
+                            onChange={(e) => setNewSize(e.target.value)}
+                            className="flex-1 h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none text-xs font-bold appearance-none cursor-pointer border border-transparent focus:border-[#F1641E]/30"
+                          >
+                            <option value="">Select size...</option>
+                            {['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'].map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => addTag('size', newSize, setNewSize)} className="w-12 h-12 bg-[#F1641E] text-white rounded-xl flex items-center justify-center shrink-0 hover:opacity-90"><Plus size={18}/></button>
                         </div>
                       )}
                     </div>

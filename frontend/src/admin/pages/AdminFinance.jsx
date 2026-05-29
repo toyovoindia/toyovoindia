@@ -45,7 +45,7 @@ export function AdminFinance() {
     { id: 'gateway', label: 'Gateway', icon: <SettingsIcon size={18} /> },
   ]
 
-  const paidOrders = useMemo(() => orders.filter((order) => order.paymentStatus === 'paid'), [orders])
+  const paidOrders = useMemo(() => orders.filter((order) => order.paymentStatus === 'paid' && order.status !== 'cancelled'), [orders])
   const refundedOrders = useMemo(() => orders.filter((order) => order.paymentStatus === 'refunded'), [orders])
   const grossRevenue = paidOrders.reduce((sum, order) => sum + order.total, 0)
   const refundedAmount = refundedOrders.reduce((sum, order) => sum + order.total, 0)
@@ -90,7 +90,7 @@ export function AdminFinance() {
       Method: o.paymentMethodLabel || 'N/A',
       Status: o.paymentStatusLabel || o.paymentStatus,
       Amount: o.total,
-      Date: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : 'N/A'
+      Date: o.createdAt ? new Date(o.createdAt).toISOString().replace('T', ' ').substring(0, 19) + ' UTC' : 'N/A'
     }))
 
     const header = Object.keys(data[0])

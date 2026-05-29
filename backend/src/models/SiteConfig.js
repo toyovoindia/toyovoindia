@@ -46,21 +46,17 @@ const siteConfigSchema = new mongoose.Schema({
     linkedin: { type: String, default: '' }
   },
 
-  // --- Storefront Media (Hero & Banners) ---
+  // --- Storefront Media (Hero Slider) ---
   storefrontMedia: {
-    heroBanner: {
-      url: { type: String, default: '' },
-      publicId: { type: String, default: '' },
-      alt: { type: String, default: '' },
-    },
-    promoBanners: {
+    showDefaultHero: { type: Boolean, default: true },
+    heroBanners: {
       type: [{
         url: { type: String, default: '' },
         publicId: { type: String, default: '' },
         alt: { type: String, default: '' },
       }],
       default: [],
-    }
+    },
   },
 
   // --- Existing Popup Settings ---

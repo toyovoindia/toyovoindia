@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, ChevronRight, ShoppingCart, Check, ChevronDown, ChevronUp, Tag, AlertCircle } from 'lucide-react'
@@ -15,19 +15,28 @@ import { indianStates, commonCities } from '../utils/indiaData'
 const CHECKOUT_COUPON_STORAGE_KEY = 'TOYOVOINDIA_checkout_coupon'
 const getCheckoutDraftKey = (user) => `TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`
 
-const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholder = ' ', error }) => (
+
+
+const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholder = ' ', error, prefix }) => (
   <div className="relative group w-full mb-4">
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={`peer w-full h-14 px-4 pt-4 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent`}
-    />
-    <label className={`absolute left-4 top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] peer-placeholder-shown:top-4 peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none`}>
-      {label}
-    </label>
+    <div className="relative">
+      {prefix && (
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 mt-2 text-[13px] font-bold text-gray-500 pointer-events-none select-none z-10">
+          {prefix}
+        </span>
+      )}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`peer w-full h-14 ${prefix ? 'pl-[52px]' : 'px-4'} pt-4 pb-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent`}
+      />
+      <label className={`absolute ${prefix ? 'left-[52px]' : 'left-4'} top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] peer-placeholder-shown:top-4 peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none`}>
+        {label}
+      </label>
+    </div>
     {error && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-tight">{error}</p>}
   </div>
 )
@@ -69,17 +78,35 @@ const isMongoObjectId = (value) => {
   if (!value || typeof value !== 'string') return false;
   return /^[0-9a-fA-F]{24}$/.test(value);
 };
+
 const toOptionalString = (value) => {
   if (value === undefined || value === null) return '';
   return String(value);
 };
+
 const toSlugString = (value) => {
   if (value === undefined || value === null || value === '') {
     return undefined
   }
   return String(value).trim()
+};
+
+
+const cleanPhoneForForm = (phone) => {
+  if (!phone) return ''
+  let cleaned = String(phone).trim()
+  if (cleaned.startsWith('+91')) {
+    cleaned = cleaned.slice(3).trim()
+  } else if (cleaned.startsWith('91') && cleaned.length > 10) {
+    cleaned = cleaned.slice(2).trim()
+  }
+  return cleaned.replace(/\D/g, '').slice(0, 10)
 }
 
+const cleanPostalCode = (zip) => {
+  if (!zip) return ''
+  return String(zip).replace(/\D/g, '').slice(0, 6)
+}
 // Stable component outside to prevent focus loss on re-renders
 const CouponSection = ({ 
   discountCode, 
@@ -135,6 +162,8 @@ export function CheckoutPage() {
   const [shippingMethods, setShippingMethods] = useState([])
   const [checkoutNotes, setCheckoutNotes] = useState({ orderMessage: '', giftWrap: false, giftMessage: '' })
   const [isHydrated, setIsHydrated] = useState(false)
+  // Ref to skip the coupon-reset effect on the very first render
+  const couponResetSkipRef = useRef(false)
   
   // Address Management
   const defaultAddress = addresses?.find(a => a.isDefault) || (addresses?.length > 0 ? addresses[0] : null);
@@ -150,13 +179,12 @@ export function CheckoutPage() {
     city: defaultAddress?.city || '',
     country: 'India',
     state: defaultAddress?.state || '',
-    postalCode: defaultAddress?.postalCode || '',
-    phone: defaultAddress?.phone || '',
+    postalCode: cleanPostalCode(defaultAddress?.postalCode || ''),
+    phone: cleanPhoneForForm(defaultAddress?.phone || user?.phone || ''),
     upiId: '',
     district: defaultAddress?.district || ''
   })
   const [formErrors, setFormErrors] = useState({})
-
   const checkoutDraftKey = getCheckoutDraftKey(user)
 
   useEffect(() => {
@@ -172,6 +200,13 @@ export function CheckoutPage() {
       if (typeof parsed?.useSavedAddress === 'boolean') setUseSavedAddress(parsed.useSavedAddress)
       if (parsed?.selectedAddressId !== undefined) setSelectedAddressId(parsed.selectedAddressId)
       if (parsed?.checkoutNotes) setCheckoutNotes(parsed.checkoutNotes)
+      // Restore validated coupon state optimistically — rehydration effect will re-validate
+      if (parsed?.couponState) {
+        setCouponState(parsed.couponState)
+        setIsDiscountApplied(true)
+        // NOTE: intentionally NOT setting couponHydrated=true here
+        // so the rehydration effect can re-validate with the correct shipping charge
+      }
       setIsHydrated(true)
     } catch {
       setIsHydrated(true)
@@ -194,8 +229,8 @@ export function CheckoutPage() {
       apartment: prev.apartment || defaultAddress?.apartment || '',
       city: prev.city || defaultAddress?.city || '',
       state: prev.state || defaultAddress?.state || '',
-      postalCode: prev.postalCode || defaultAddress?.postalCode || '',
-      phone: prev.phone || defaultAddress?.phone || '',
+      postalCode: prev.postalCode ? cleanPostalCode(prev.postalCode) : cleanPostalCode(defaultAddress?.postalCode || ''),
+      phone: prev.phone ? cleanPhoneForForm(prev.phone) : cleanPhoneForForm(defaultAddress?.phone || user?.phone || ''),
       district: prev.district || defaultAddress?.district || '',
     }))
   }, [user, defaultAddress])
@@ -210,12 +245,14 @@ export function CheckoutPage() {
       formData,
       shippingMethod,
       discountCode,
+      // persist coupon state so it survives navigating back to this page
+      couponState: couponState || null,
       useSavedAddress,
       selectedAddressId,
       checkoutNotes,
     }
     localStorage.setItem(checkoutDraftKey, JSON.stringify(draft))
-  }, [checkoutDraftKey, formData, shippingMethod, discountCode, useSavedAddress, selectedAddressId, checkoutNotes, isHydrated])
+  }, [checkoutDraftKey, formData, shippingMethod, discountCode, couponState, useSavedAddress, selectedAddressId, checkoutNotes, isHydrated])
 
   const selectedShippingMethod = shippingMethods.find((method) => method.code === shippingMethod) || null
   const shippingCharge = Number(selectedShippingMethod?.charge || 0)
@@ -223,7 +260,9 @@ export function CheckoutPage() {
   const total = subtotal + shippingCharge - discountAmount
 
   useEffect(() => {
-    window.scrollTo(0, 0)
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 10);
   }, [])
 
   useEffect(() => {
@@ -275,12 +314,18 @@ export function CheckoutPage() {
       document.body.style.overflow = originalBodyOverflow
       document.documentElement.style.position = originalHtmlPosition
       document.body.style.position = originalBodyPosition
-      document.body.style.width = originalBodyWidth
     }
   }, [isLaunchingPayment, isProcessing])
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    let { name, value } = e.target
+    if (name === 'postalCode') {
+      value = value.replace(/\D/g, '').slice(0, 6)
+    } else if (name === 'phone') {
+      value = value.replace(/\D/g, '').slice(0, 10)
+    } else if (name === 'firstName' || name === 'lastName') {
+      value = value.replace(/[^a-zA-Z\s]/g, '')
+    }
     setFormData(prev => ({ ...prev, [name]: value }))
     // Clear error for this field
     if (formErrors[name]) {
@@ -294,35 +339,95 @@ export function CheckoutPage() {
 
   const validateForm = () => {
     const errors = {}
-    if (!formData.email.trim()) errors.email = 'Required'
-    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) errors.email = 'Invalid email'
-    
-    if (!formData.firstName.trim()) errors.firstName = 'Required'
-    if (!formData.lastName.trim()) errors.lastName = 'Required'
-    if (!formData.address.trim()) errors.address = 'Required'
-    if (!formData.state) errors.state = 'Required'
-    if (!formData.city) errors.city = 'Required'
-    if (formData.city === 'Other' && !formData.district?.trim()) errors.district = 'Required'
-    if (!formData.postalCode.trim()) errors.postalCode = 'Required'
-    if (!formData.phone.trim()) errors.phone = 'Required'
-    else if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) errors.phone = 'Invalid phone'
+
+    // Email Validation: required, RFC 5322 standard
+    const emailVal = toOptionalString(formData.email).trim()
+    if (!emailVal) {
+      errors.email = 'Email is required'
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailVal)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // First Name Validation: required, alphabets only
+    const firstNameVal = toOptionalString(formData.firstName).trim()
+    if (!firstNameVal) {
+      errors.firstName = 'First name is required'
+    } else if (!/^[a-zA-Z\s]+$/.test(firstNameVal)) {
+      errors.firstName = 'First name must contain only alphabets'
+    }
+
+    // Last Name Validation: required, alphabets only
+    const lastNameVal = toOptionalString(formData.lastName).trim()
+    if (!lastNameVal) {
+      errors.lastName = 'Last name is required'
+    } else if (!/^[a-zA-Z\s]+$/.test(lastNameVal)) {
+      errors.lastName = 'Last name must contain only alphabets'
+    }
+
+    if (!toOptionalString(formData.address).trim()) {
+      errors.address = 'Street address is required'
+    }
+
+    if (!formData.state) {
+      errors.state = 'State is required'
+    }
+
+    if (useSavedAddress && (!selectedAddressId || !addresses?.find(a => a.id === selectedAddressId))) {
+      errors.general = 'Please select a valid saved address for delivery, or enter a new address.'
+    }
+
+    if (!formData.city) {
+      errors.city = 'City is required'
+    }
+
+
+    if (formData.city === 'Other' && !toOptionalString(formData.district).trim()) {
+      errors.district = 'City/District name is required'
+    }
+
+    // Postal Code Validation: required, 6 digits standard for India
+    const postalVal = toOptionalString(formData.postalCode).trim()
+    if (!postalVal) {
+      errors.postalCode = 'ZIP code is required'
+    } else if (!/^[1-9][0-9]{5}$/.test(postalVal)) {
+      errors.postalCode = 'ZIP code must be exactly 6 digits'
+    }
+
+    // Phone Validation: required, 10 digits starting with 6-9
+    const phoneVal = toOptionalString(formData.phone).trim()
+    if (!phoneVal) {
+      errors.phone = 'Mobile number is required'
+    } else if (!/^[6-9][0-9]{9}$/.test(phoneVal)) {
+      errors.phone = 'Mobile number must be 10 digits starting with 6-9'
+    }
+
 
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   useEffect(() => {
+    // Skip the very first run (initial mount) to avoid wiping coupon restored from draft
+    if (!couponResetSkipRef.current) {
+      couponResetSkipRef.current = true
+      return
+    }
+    // User changed shipping or cart after load — reset and re-validate
     setIsDiscountApplied(false)
     setCouponState(null)
     setCouponError('')
+    setCouponHydrated(false) // allow rehydration effect to re-validate
   }, [shippingMethod, subtotal, cartItems])
 
   useEffect(() => {
+    // Wait for shipping methods to load (so shippingCharge is correct) before auto-applying coupon
     if (couponHydrated) return
     if (!discountCode.trim() || !cartItems.length) {
       setCouponHydrated(true)
       return
     }
+    // Don't attempt rehydration until shippingMethods have loaded
+    if (shippingMethods.length === 0) return
 
     let isMounted = true
     const rehydrateCoupon = async () => {
@@ -349,7 +454,7 @@ export function CheckoutPage() {
     return () => {
       isMounted = false
     }
-  }, [couponHydrated, discountCode, subtotal, shippingCharge, cartItems])
+  }, [couponHydrated, discountCode, subtotal, shippingCharge, cartItems, shippingMethods])
 
   const applyDiscount = async () => {
     if (!discountCode.trim()) return
@@ -367,19 +472,22 @@ export function CheckoutPage() {
     } catch (error) {
       setCouponState(null)
       setIsDiscountApplied(false)
-      setCouponError(error.message || 'Invalid discount code')
+      const msg = error.message && error.message !== 'Request failed'
+        ? error.message
+        : 'Invalid or unrecognized coupon code. Please check and try again.'
+      setCouponError(msg)
     } finally {
       setIsApplyingCoupon(false)
     }
   }
 
-
   const checkoutData = {
+
     customer: {
       firstName: toOptionalString(formData.firstName).trim(),
       lastName: toOptionalString(formData.lastName).trim(),
       email: toOptionalString(formData.email).trim(),
-      phone: toOptionalString(formData.phone).trim(),
+      phone: '+91' + cleanPhoneForForm(formData.phone),
     },
     shippingAddress: {
       firstName: toOptionalString(formData.firstName).trim(),
@@ -391,8 +499,9 @@ export function CheckoutPage() {
       state: toOptionalString(formData.state).trim(),
       country: toOptionalString(formData.country).trim(),
       postalCode: toOptionalString(formData.postalCode).trim(),
-      phone: toOptionalString(formData.phone).trim(),
+      phone: '+91' + cleanPhoneForForm(formData.phone),
     },
+
     items: cartItems.map((item) => ({
       productId: isMongoObjectId(item._id) ? item._id : (isMongoObjectId(item.id) ? item.id : undefined),
       slug: toSlugString(item.slug || (!isMongoObjectId(item._id) && !isMongoObjectId(item.id) ? (item._id || item.id) : undefined)),
@@ -413,17 +522,19 @@ export function CheckoutPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
-    
-    setIsLaunchingPayment(true)
-    setFormErrors({}) // Reset server/general errors
-    try {
 
+    setIsLaunchingPayment(true)
+    setFormErrors({})
+    try {
       const scriptLoaded = await loadRazorpayScript()
+    
+
       if (!scriptLoaded || !window.Razorpay) {
         throw new Error('Razorpay checkout could not be loaded. Check your internet connection and try again.')
       }
 
       const razorpayOrder = await createRazorpayPaymentOrder(checkoutData)
+
 
       const options = {
         key: razorpayOrder.keyId,
@@ -432,10 +543,11 @@ export function CheckoutPage() {
         name: 'TOYOVOINDIA',
         description: 'Toyovo India Checkout',
         order_id: razorpayOrder.razorpayOrderId,
+
         prefill: {
           name: `${formData.firstName} ${formData.lastName}`.trim(),
           email: formData.email,
-          contact: formData.phone,
+          contact: '+91' + cleanPhoneForForm(formData.phone),
         },
         notes: {
           shipping_method: shippingMethod,
@@ -635,8 +747,10 @@ export function CheckoutPage() {
                      )}
                      <div className="grid grid-cols-2 gap-4">
                         <FloatingInput label="ZIP code" name="postalCode" value={formData.postalCode} onChange={handleInputChange} error={formErrors.postalCode} />
-                        <FloatingInput label="Phone number" name="phone" value={formData.phone} onChange={handleInputChange} error={formErrors.phone} />
+                        <FloatingInput label="Phone number" name="phone" value={formData.phone} onChange={handleInputChange} error={formErrors.phone} prefix="+91" />
                      </div>
+
+
                   </div>
                )}
             </section>

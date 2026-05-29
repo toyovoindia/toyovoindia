@@ -32,6 +32,21 @@ const formatJoinedDate = (value) => {
   return new Date(value).toLocaleDateString('en-IN', { dateStyle: 'medium' })
 }
 
+const getReturnStatusOptions = (currentStatus) => {
+  switch (currentStatus) {
+    case 'requested':
+      return ['requested', 'approved', 'rejected'];
+    case 'approved':
+      return ['approved', 'refunded', 'rejected'];
+    case 'rejected':
+      return ['rejected', 'approved'];
+    case 'refunded':
+      return ['refunded'];
+    default:
+      return ['requested', 'approved', 'rejected', 'refunded'];
+  }
+}
+
 export function AdminOrderDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -386,9 +401,11 @@ export function AdminOrderDetail() {
               {order.returnRequest?.status !== 'none' && (
                 <>
                   <select value={returnStatus} onChange={(event) => setReturnStatus(event.target.value)} className="w-full h-11 px-4 rounded-xl bg-[#FDF4E6] border border-black/[0.05] text-[#333] text-[11px] font-bold uppercase tracking-widest outline-none">
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="refunded">Refunded</option>
+                    {getReturnStatusOptions(order.returnRequest?.status).map((val) => (
+                      <option key={val} value={val}>
+                        {val.charAt(0).toUpperCase() + val.slice(1)}
+                      </option>
+                    ))}
                   </select>
                   <textarea
                     value={returnAdminNote}

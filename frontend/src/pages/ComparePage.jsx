@@ -1,37 +1,48 @@
 import { X, ShoppingCart, Trash2, Layers, ShoppingBag } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import { useEffect } from 'react'
 
 export function ComparePage() {
   const { compare, toggleCompare, addToCart, clearCompare } = useCart()
   const { success } = useToast()
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login')
+    }
+  }, [user, authLoading, navigate])
+
+  if (authLoading || !user) return null
+
   if (compare.length === 0) {
     return (
-      <div className="bg-[#FDF4E6] min-h-screen py-24 font-roboto">
-        <div className="max-w-5xl mx-auto px-4 text-center">
+      <div className="bg-[#FDF4E6] h-full py-24">
+        <div className="shell">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-16 md:p-24 bg-[#FAEAD3] rounded-[48px] border-[1.6px] border-dashed border-[#333]/15 shadow-xl"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center"
           >
-            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-[#E84949] mx-auto mb-8 shadow-sm">
-              <Layers size={32} />
+            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-[#E84949] mb-10 shadow-sm">
+              <Layers size={40} />
             </div>
-            <h1 className="text-4xl font-grandstander font-bold text-[#333] mb-6">Comparison is Empty</h1>
-            <p className="text-[16px] md:text-[18px] text-[#666] mb-12 max-w-xl mx-auto leading-relaxed">
+            <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] mb-6 tracking-tighter">Comparison is Empty</h1>
+            <p className="max-w-xl mx-auto font-roboto text-[16px] md:text-[18px] text-[#333] leading-relaxed mb-12 opacity-70">
               Choose your favorite toys and compare them side-by-side to find the perfect adventure partner for your child!
             </p>
             <Link 
               to="/" 
-              className="inline-flex items-center gap-3 px-12 py-4 bg-[#E84949] text-white font-bold rounded-full tracking-widest uppercase hover:bg-[#333] transition-all shadow-lg active:scale-95"
+              className="h-14 px-12 bg-[#E84949] text-white rounded-full font-bold text-[13px] tracking-[0.2em] uppercase hover:bg-[#333] transition-all flex items-center gap-3 shadow-lg"
             >
               <ShoppingBag size={18} /> BACK TO SHOP
             </Link>

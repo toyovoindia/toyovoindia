@@ -16,6 +16,10 @@ const sortMap = {
   relevance: { isFeatured: -1, createdAt: -1 },
 };
 
+const escapeRegExp = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 const resolveCategoryId = async (slug) => {
   if (!slug) return undefined;
   const category = await Category.findOne({ slug, isActive: true }).select('_id');
@@ -33,32 +37,99 @@ const buildProductFilter = async (query, publicOnly = true) => {
   if (subcategoryId) filter.subcategories = subcategoryId;
 
   if (query.search) {
+    const searchRegex = new RegExp(escapeRegExp(query.search.trim()), 'i');
+    
+    // Find any categories that match the search term
+    const matchingCategories = await Category.find({ name: searchRegex }).select('_id');
+    const matchingCategoryIds = matchingCategories.map(c => c._id);
+
     filter.$or = [
-      { name: new RegExp(query.search, 'i') },
-      { description: new RegExp(query.search, 'i') },
-      { brand: new RegExp(query.search, 'i') },
-      { tags: new RegExp(query.search, 'i') },
+      { name: searchRegex },
+      { description: searchRegex },
+      { brand: searchRegex },
+      { tags: searchRegex },
     ];
+
+    if (matchingCategoryIds.length > 0) {
+      filter.$or.push({ category: { $in: matchingCategoryIds } });
+      filter.$or.push({ subcategories: { $in: matchingCategoryIds } });
+    }
   }
 
-  if (query.brand) filter.brand = query.brand;
-  if (query.ageGroup) filter.ageGroup = query.ageGroup;
-  if (query.gender) filter.gender = query.gender;
-  if (query.material) filter.material = query.material;
+  if (query.brand) {
+    const brands = query.brand.split(',').map(b => b.trim()).filter(Boolean);
+    if (brands.length > 0) {
+      filter.brand = { $in: brands.map(b => new RegExp('^' + escapeRegExp(b) + '$', 'i')) };
+    }
+  }
+
+  if (query.ageGroup) {
+    const ages = query.ageGroup.split(',').map(a => a.trim()).filter(Boolean);
+    if (ages.length > 0) {
+      filter.ageGroup = { $in: ages.map(a => new RegExp('^' + escapeRegExp(a) + '$', 'i')) };
+    }
+  }
+
+  if (query.gender) {
+    const genders = query.gender.split(',').map(g => g.trim()).filter(Boolean);
+    if (genders.length > 0) {
+      filter.gender = { $in: genders.map(g => new RegExp('^' + escapeRegExp(g) + '$', 'i')) };
+    }
+  }
+
+  if (query.material) {
+    const materials = query.material.split(',').map(m => m.trim()).filter(Boolean);
+    if (materials.length > 0) {
+      filter.material = { $in: materials.map(m => new RegExp('^' + escapeRegExp(m) + '$', 'i')) };
+    }
+  }
   
   if (query.color) {
-    const colors = query.color.split(',');
-    filter.color = { $in: colors };
+    const colors = query.color.split(',').map(c => c.trim()).filter(Boolean);
+    if (colors.length > 0) {
+      filter.color = { $in: colors.map(c => new RegExp('^' + escapeRegExp(c) + '$', 'i')) };
+    }
   }
   
   if (query.size) {
-    const sizes = query.size.split(',');
-    filter.size = { $in: sizes };
+    const sizes = query.size.split(',').map(s => s.trim()).filter(Boolean);
+    if (sizes.length > 0) {
+      filter.size = { $in: sizes.map(s => new RegExp('^' + escapeRegExp(s) + '$', 'i')) };
+    }
   }
 
   if (query.availability) {
-    if (query.availability === 'in stock') filter.stock = { $gt: 0 };
-    if (query.availability === 'out of stock') filter.stock = { $lte: 0 };
+    const availabilities = query.availability.split(',').map(a => a.trim()).filter(Boolean);
+    if (availabilities.includes('in stock') && availabilities.includes('out of stock')) {
+      // both selected: do not filter by stock (show all)
+    } else if (availabilities.includes('in stock')) {
+      filter.stock = { $gt: 0 };
+    } else if (availabilities.includes('out of stock')) {
+      filter.stock = { $lte: 0 };
+    }
+  }
+
+  if (query.discount) {
+    const discounts = query.discount.split(',').map(d => {
+      const match = d.match(/\d+/);
+      return match ? parseInt(match[0], 10) : null;
+    }).filter(d => d !== null);
+
+    if (discounts.length > 0) {
+      const minDiscount = Math.min(...discounts);
+      filter.oldPrice = { $exists: true, $gt: 0 };
+      filter.$expr = {
+        $gte: [
+          {
+            $multiply: [
+              { $divide: [ { $subtract: [ '$oldPrice', '$price' ] }, '$oldPrice' ] },
+              100
+            ]
+          },
+          minDiscount
+        ]
+      };
+    }
   }
 
   if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -82,6 +153,7 @@ export const listProducts = asyncHandler(async (req, res) => {
       .populate('category', 'name slug')
       .populate('subcategories', 'name slug')
       .sort(sort)
+      .collation({ locale: 'en', strength: 2 })
       .skip(skip)
       .limit(limit),
     Product.countDocuments(filter),
@@ -127,7 +199,7 @@ export const listBestSellers = asyncHandler(async (req, res) => {
 
 export const adminListProducts = asyncHandler(async (req, res) => {
   const page = Number(req.query.page || 1);
-  const limit = Math.min(Number(req.query.limit || 20), 200);
+  const limit = Math.min(Number(req.query.limit || 20), 10000);
   const skip = (page - 1) * limit;
   const filter = await buildProductFilter(req.query, false);
   if (req.query.status) filter.status = req.query.status;

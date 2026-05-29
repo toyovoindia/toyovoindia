@@ -7,8 +7,6 @@ import { TestimonialsSection }from '../components/sections/TestimonialsSection'
 import { PromoBanners }       from '../components/sections/PromoBanners'
 import { SpecialProducts }    from '../components/sections/SpecialProducts'
 import { BlogSection }        from '../components/sections/BlogSection'
-import { BrandLogos }         from '../components/sections/BrandLogos'
-
 export function HomePage() {
   return (
     <div className="flex flex-col">
@@ -21,7 +19,6 @@ export function HomePage() {
       <PromoBanners />
       <SpecialProducts />
       <BlogSection />
-      <BrandLogos />
     </div>
   )
 }

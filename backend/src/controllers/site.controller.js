@@ -1,5 +1,7 @@
 import SiteConfig from '../models/SiteConfig.js';
 import Order from '../models/Order.js';
+import Product from '../models/Product.js';
+import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { successResponse } from '../utils/apiResponse.js';
 
@@ -33,8 +35,10 @@ export const updateStorefrontSettings = asyncHandler(async (req, res) => {
         ...config[key]?.toObject?.() || config[key],
         ...req.body[key]
       };
+      config.markModified(key);
     } else {
       config[key] = req.body[key];
+      config.markModified(key);
     }
   });
 
@@ -67,6 +71,55 @@ export const updatePurchasePopupSettings = asyncHandler(async (req, res) => {
     ...config.purchasePopup.toObject(),
     ...req.body,
   };
-  await config.save();
-  return successResponse(res, 200, 'Purchase popup settings updated successfully', config.purchasePopup);
+});
+
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  const [totalProducts, totalUsers, totalOrders, productsData] = await Promise.all([
+    Product.countDocuments(),
+    User.countDocuments(),
+    Order.countDocuments(),
+    Product.find().select('category categoryName name title sku stock lowStockThreshold').populate('category', 'name').lean()
+  ]);
+
+  const lowStockProducts = productsData
+    .filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || 5))
+    .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
+
+  const categoryCountMap = new Map();
+  productsData.forEach(p => {
+    const name = p.category?.name || p.categoryName || p.category || 'Uncategorized';
+    const actualName = typeof name === 'string' ? name : name.name || 'Uncategorized';
+    categoryCountMap.set(actualName, (categoryCountMap.get(actualName) || 0) + 1);
+  });
+  
+  const sortedCategories = Array.from(categoryCountMap.entries()).sort((a, b) => b[1] - a[1]);
+  const top3 = sortedCategories.slice(0, 3);
+  const othersCount = sortedCategories.slice(3).reduce((sum, [, count]) => sum + count, 0);
+  
+  const finalCategories = [...top3];
+  if (othersCount > 0) finalCategories.push(['Other Categories', othersCount]);
+  const totalCategorized = finalCategories.reduce((sum, [, count]) => sum + count, 0) || 1;
+  const categoryBreakdown = finalCategories.map(([label, count], index) => ({
+    label,
+    count,
+    percent: `${Math.round((count / totalCategorized) * 100)}%`,
+    color: ['bg-[#6651A4]', 'bg-[#F1641E]', 'bg-[#E8312A]', 'bg-gray-400'][index] || 'bg-gray-400',
+  }));
+
+  const wishlistAggregation = await User.aggregate([
+    { $unwind: "$preferences.wishlist" },
+    { $group: { _id: { $cond: [{ $ifNull: ["$preferences.wishlist.title", false] }, "$preferences.wishlist.title", { $cond: [{ $ifNull: ["$preferences.wishlist.name", false] }, "$preferences.wishlist.name", "$preferences.wishlist.slug"] }] }, count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 3 },
+    { $project: { _id: 0, name: { $ifNull: ["$_id", "Wishlist Item"] }, count: 1 } }
+  ]);
+
+  return successResponse(res, 200, 'Dashboard Stats', {
+    totalProducts,
+    totalUsers,
+    totalOrders,
+    categoryBreakdown,
+    wishlistTrends: wishlistAggregation,
+    lowStockProducts
+  });
 });

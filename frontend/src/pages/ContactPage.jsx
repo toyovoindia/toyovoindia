@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import { submitContactMessage } from '../services/messageApi'
+import { getStorefrontSettings } from '../services/siteApi'
 
 const ContactInfoItem = ({ icon: Icon, title, content }) => (
   <div className="flex items-start gap-4 py-4 group">
@@ -24,9 +25,11 @@ export function ContactPage() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [siteConfig, setSiteConfig] = useState(null)
 
   useEffect(() => {
     window.scrollTo(0, 0)
+    getStorefrontSettings().then(setSiteConfig).catch(console.error)
   }, [])
 
   const handleChange = (event) => {
@@ -88,17 +91,17 @@ export function ContactPage() {
               <ContactInfoItem
                 icon={MapPin}
                 title="Address"
-                content="Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab"
+                content={siteConfig?.contactAddress || "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab"}
               />
               <ContactInfoItem
                 icon={Phone}
                 title="Phone"
-                content="+91 98765 43210"
+                content={siteConfig?.contactPhone?.replace('+91', '').trim() || "8814040056"}
               />
               <ContactInfoItem
                 icon={Mail}
                 title="Email"
-                content="hello@toyovoindia.com"
+                content={siteConfig?.contactEmail || "toyovoindia@gmail.com"}
               />
               <ContactInfoItem
                 icon={Clock}

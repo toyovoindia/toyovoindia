@@ -41,6 +41,7 @@ export const updateStorefrontSettingsSchema = z.object({
     storefrontMedia: z.object({
       heroBanner: mediaSchema,
       promoBanners: z.array(mediaSchema).optional(),
+      brandLogos: z.array(mediaSchema).optional(),
     }).optional(),
   }).partial(),
 });

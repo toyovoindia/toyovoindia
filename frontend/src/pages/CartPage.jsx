@@ -24,6 +24,7 @@ export function CartPage() {
   const [orderMessage, setOrderMessage] = useState('')
   const [giftWrap, setGiftWrap] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
+  const [notesErrors, setNotesErrors] = useState({})
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -53,6 +54,8 @@ export function CartPage() {
       localStorage.setItem(key, JSON.stringify({
         ...current,
         discountCode: couponCode,
+        // persist validated coupon so checkout shows discount immediately
+        couponState: couponState || current.couponState || null,
         checkoutNotes: {
           orderMessage,
           giftWrap,
@@ -62,7 +65,7 @@ export function CartPage() {
     } catch {
       // ignore local persistence failure
     }
-  }, [user, couponCode, orderMessage, giftWrap, giftMessage])
+  }, [user, couponCode, couponState, orderMessage, giftWrap, giftMessage])
 
   useEffect(() => {
     if (!cartItems.length) {
@@ -89,12 +92,40 @@ export function CartPage() {
       success(`${result.coupon?.code || couponCode.trim().toUpperCase()} applied successfully.`)
     } catch (error) {
       setCouponState(null)
-      setCouponError(error.message || 'Invalid coupon code')
+      // Use the backend's specific message (e.g. "Coupon code not found", "This coupon has expired")
+      // Fall back to a clear, user-friendly message if none is provided
+      const msg = error.message && error.message !== 'Request failed'
+        ? error.message
+        : 'Invalid or unrecognized coupon code. Please check and try again.'
+      setCouponError(msg)
     } finally {
       setIsApplyingCoupon(false)
     }
   }
 
+  // Order message: optional but can't submit empty
+  const handleSubmitOrderMessage = () => {
+    if (!orderMessage.trim()) {
+      setNotesErrors(prev => ({ ...prev, orderMessage: 'Order message cannot be empty. Please type a message or leave it as is.' }))
+      return
+    }
+    setNotesErrors(prev => ({ ...prev, orderMessage: undefined }))
+    success('Order message saved for checkout.')
+  }
+
+  // Gift wrap: checkbox must be checked, and gift message is required when it is
+  const handleSaveGiftWrap = () => {
+    if (!giftWrap) {
+      setNotesErrors(prev => ({ ...prev, giftMessage: 'Please check the "Do you want a gift wrap?" option first' }))
+      return
+    }
+    if (!giftMessage.trim()) {
+      setNotesErrors(prev => ({ ...prev, giftMessage: 'Please enter a gift message for your gift wrap' }))
+      return
+    }
+    setNotesErrors(prev => ({ ...prev, giftMessage: undefined }))
+    success('Gift wrap preferences saved for checkout.')
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -112,6 +143,7 @@ export function CartPage() {
       </div>
     )
   }
+
 
   return (
     <div className="bg-[#FDF4E6] min-h-screen py-16 font-roboto">
@@ -213,13 +245,27 @@ export function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-12">
            {/* Order Message Box */}
            <div className="p-8 border-[1.2px] border-dashed border-[#333]/20 rounded-2xl space-y-4">
-              <h3 className="font-grandstander font-bold text-xl text-[#333]">Order message</h3>
+              <h3 className="font-grandstander font-bold text-xl text-[#333]">Order message <span className="text-[12px] font-medium text-[#333]/40 normal-case tracking-normal">(optional)</span></h3>
               <textarea 
-                className="w-full h-32 bg-transparent border border-[#333]/10 rounded-xl p-4 text-[14px] outline-none focus:border-[#E84949] font-roboto italic text-[#666]" 
-                placeholder="Order message"
+                className={`w-full h-32 bg-transparent border ${notesErrors.orderMessage ? 'border-red-400' : 'border-[#333]/10'} rounded-xl p-4 text-[14px] outline-none focus:border-[#E84949] font-roboto italic text-[#666] transition-colors`} 
+                placeholder="Add a note for your order..."
                 value={orderMessage}
-                onChange={(e) => setOrderMessage(e.target.value)}
+                onChange={(e) => {
+                  setOrderMessage(e.target.value)
+                  if (notesErrors.orderMessage) setNotesErrors(prev => ({ ...prev, orderMessage: undefined }))
+                }}
               />
+              {notesErrors.orderMessage && (
+                <p className="text-[11px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1">
+                  <span>⚠</span> {notesErrors.orderMessage}
+                </p>
+              )}
+              <button
+                onClick={handleSubmitOrderMessage}
+                className="h-10 px-8 bg-[#333] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#E84949] transition-all active:scale-95"
+              >
+                Submit
+              </button>
            </div>
 
            {/* Totals and Buttons */}
@@ -247,14 +293,42 @@ export function CartPage() {
         {/* Gift Wrap and Coupon Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
            <div className="p-6 md:p-8 border-[1.2px] border-dashed border-[#333]/20 rounded-2xl flex flex-col sm:flex-row gap-6 items-start">
-              <div className="grow space-y-4 w-full">
+              <div className="grow space-y-3 w-full">
                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" checked={giftWrap} onChange={(e) => setGiftWrap(e.target.checked)} className="w-5 h-5 accent-[#E84949]" />
+                    <input
+                      type="checkbox"
+                      checked={giftWrap}
+                      onChange={(e) => {
+                        setGiftWrap(e.target.checked)
+                        // clear gift message error when unchecking
+                        if (!e.target.checked) setNotesErrors(prev => ({ ...prev, giftMessage: undefined }))
+                      }}
+                      className="w-5 h-5 accent-[#E84949]"
+                    />
                     <span className="text-[14px] font-bold text-[#333]">Do you want a gift wrap?</span>
                  </label>
-                 <textarea value={giftMessage} onChange={(e) => setGiftMessage(e.target.value)} className="w-full h-24 bg-transparent border border-[#333]/10 rounded-xl p-4 text-[13px] outline-none italic" placeholder="Gift message" />
+                 <textarea
+                   value={giftMessage}
+                   onChange={(e) => {
+                     setGiftMessage(e.target.value)
+                     if (notesErrors.giftMessage) setNotesErrors(prev => ({ ...prev, giftMessage: undefined }))
+                   }}
+                   className={`w-full h-24 bg-transparent border ${notesErrors.giftMessage ? 'border-red-400' : 'border-[#333]/10'} rounded-xl p-4 text-[13px] outline-none italic transition-colors ${!giftWrap ? 'opacity-40 cursor-not-allowed' : ''}`}
+                   placeholder={giftWrap ? 'Enter gift message (required)' : 'Gift message'}
+                   disabled={!giftWrap}
+                 />
+                 {notesErrors.giftMessage && (
+                   <p className="text-[11px] font-bold text-red-500 uppercase tracking-tight flex items-center gap-1">
+                     <span>⚠</span> {notesErrors.giftMessage}
+                   </p>
+                 )}
               </div>
-              <button onClick={() => success('Cart notes saved for checkout.')} className="h-12 px-10 bg-[#E84949] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] shrink-0 mt-0 sm:mt-8 w-full sm:w-auto">Save</button>
+              <button
+                onClick={handleSaveGiftWrap}
+                className="h-12 px-10 bg-[#E84949] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] shrink-0 mt-0 sm:mt-8 w-full sm:w-auto hover:bg-[#333] transition-all active:scale-95"
+              >
+                Save
+              </button>
            </div>
 
            <div className="p-6 md:p-8 border-[1.2px] border-dashed border-[#333]/20 rounded-2xl space-y-4">

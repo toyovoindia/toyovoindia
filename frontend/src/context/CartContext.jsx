@@ -73,6 +73,10 @@ export function CartProvider({ children }) {
       const localWishlist = normalizeArray(readScopedValue('TOYOVOINDIA_wishlist', user))
       const localCompare = normalizeArray(readScopedValue('TOYOVOINDIA_compare', user))
 
+      const guestCart = user ? normalizeArray(readScopedValue('TOYOVOINDIA_cart', null)) : []
+      const guestWishlist = user ? normalizeArray(readScopedValue('TOYOVOINDIA_wishlist', null)) : []
+      const guestCompare = user ? normalizeArray(readScopedValue('TOYOVOINDIA_compare', null)) : []
+
       if (!user) {
         if (!isMounted) return
         setCartItems(localCart.map(normalizeProductRef).filter(Boolean))
@@ -89,19 +93,29 @@ export function CartProvider({ children }) {
         const server = await getMyPreferences()
         if (!isMounted) return
 
-        const mergedCart = mergeUniqueById(server.cart, localCart).map((item) => {
-          const localItem = localCart.find((candidate) => (candidate.slug || candidate.id) === (item.slug || item.id))
-          return localItem ? { ...item, qty: Math.max(1, Number(localItem.qty || item.qty || 1)) } : item
+        const mergedCart = mergeUniqueById(server.cart, guestCart).map((item) => {
+          const guestItem = guestCart.find((candidate) => (candidate.slug || candidate.id) === (item.slug || item.id))
+          
+          let maxQty = Number(item.qty || 1)
+          if (guestItem) maxQty = Math.max(maxQty, Number(guestItem.qty || 1))
+
+          return { ...item, qty: maxQty }
         })
 
         setCartItems(mergedCart)
-        setWishlist(mergeUniqueById(server.wishlist, localWishlist))
-        setCompare(mergeUniqueById(server.compare, localCompare))
+        setWishlist(mergeUniqueById(server.wishlist, guestWishlist))
+        setCompare(mergeUniqueById(server.compare, guestCompare))
+
+        if (guestCart.length > 0 || guestWishlist.length > 0 || guestCompare.length > 0) {
+          localStorage.removeItem('TOYOVOINDIA_cart_guest')
+          localStorage.removeItem('TOYOVOINDIA_wishlist_guest')
+          localStorage.removeItem('TOYOVOINDIA_compare_guest')
+        }
       } catch {
         if (!isMounted) return
-        setCartItems(localCart.map(normalizeProductRef).filter(Boolean))
-        setWishlist(localWishlist.map(normalizeProductRef).filter(Boolean))
-        setCompare(localCompare.map(normalizeProductRef).filter(Boolean))
+        setCartItems(mergeUniqueById(localCart, guestCart).map(normalizeProductRef).filter(Boolean))
+        setWishlist(mergeUniqueById(localWishlist, guestWishlist).map(normalizeProductRef).filter(Boolean))
+        setCompare(mergeUniqueById(localCompare, guestCompare).map(normalizeProductRef).filter(Boolean))
       } finally {
         if (isMounted) {
           setPreferencesReady(true)

@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { getCurrentUser, loginUser, logoutUser, registerUser } from '../services/authApi'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
+import { getCurrentUser, loginUser, logoutUser, registerUser, verifyOtpUser } from '../services/authApi'
 import { getMyAccountData, updateMyAccountData } from '../services/userAccountApi'
+import { requestForToken } from '../config/firebase'
+import { removeFcmToken } from '../services/notificationApi'
 
 const AuthContext = createContext()
 const AUTH_USER_STORAGE_KEY = 'TOYOVOINDIA_auth_user'
@@ -56,8 +58,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredUser)
   const [authLoading, setAuthLoading] = useState(true)
   const [addresses, setAddresses] = useState([])
-  const [savedMethods, setSavedMethods] = useState({ bankAccounts: [], upiIds: [], cards: [] })
-  const [preferencesHydrated, setPreferencesHydrated] = useState(false)
 
   const refreshUser = async () => {
     try {
@@ -100,33 +100,28 @@ export function AuthProvider({ children }) {
     persistAuthUser(user)
   }, [user])
 
+  // Hydrate only addresses from DB. PaymentVault is strictly managed by PaymentContext.
   useEffect(() => {
     let isMounted = true
-    setPreferencesHydrated(false)
 
     const hydrate = async () => {
       if (user) {
         try {
           const data = await getMyAccountData()
           if (!isMounted) return
-          setAddresses(sanitizeAddresses(data.addresses || []))
-          setSavedMethods(data.paymentVault || [])
-          setPreferencesHydrated(true)
+          
+          setAddresses(data.addresses || [])
           return
         } catch {
-          // fallback to local scoped data
+          // Keep empty array on error, but don't overwrite DB
+          if (isMounted) setAddresses([])
         }
+      } else {
+        // Read guest local storage
+        const guestAddressesRaw = localStorage.getItem('TOYOVOINDIA_addresses_guest')
+        const guestAddresses = guestAddressesRaw ? sanitizeAddresses(JSON.parse(guestAddressesRaw)) : []
+        if (isMounted) setAddresses(guestAddresses)
       }
-
-      const addressesKey = getScopedStorageKey('TOYOVOINDIA_addresses', user)
-      const paymentMethodsKey = getScopedStorageKey('TOYOVOINDIA_payment_methods', user)
-      const savedAddresses = localStorage.getItem(addressesKey)
-      const savedMethods = localStorage.getItem(paymentMethodsKey)
-
-      if (!isMounted) return
-      setAddresses(savedAddresses ? sanitizeAddresses(JSON.parse(savedAddresses)) : [])
-      setSavedMethods(savedMethods ? JSON.parse(savedMethods) : { bankAccounts: [], upiIds: [], cards: [] })
-      setPreferencesHydrated(true)
     }
 
     hydrate()
@@ -135,31 +130,14 @@ export function AuthProvider({ children }) {
     }
   }, [user?.id, user?._id, user?.email])
 
-  useEffect(() => {
-    if (!preferencesHydrated) return
-    if (user) {
-      updateMyAccountData({ addresses }).catch(() => {})
-    } else {
-      const addressesKey = getScopedStorageKey('TOYOVOINDIA_addresses', user)
-      localStorage.setItem(addressesKey, JSON.stringify(addresses))
-    }
-  }, [addresses, user, preferencesHydrated])
-
-  useEffect(() => {
-    if (!preferencesHydrated) return
-    if (user) {
-      updateMyAccountData({ paymentVault: savedMethods }).catch(() => {})
-    } else {
-      const paymentMethodsKey = getScopedStorageKey('TOYOVOINDIA_payment_methods', user)
-      localStorage.setItem(paymentMethodsKey, JSON.stringify(savedMethods))
-    }
-  }, [savedMethods, user, preferencesHydrated])
-
   const login = async (email, password) => {
     try {
-      const loggedInUser = await loginUser({ email, password })
-      setUser(loggedInUser)
-      return { success: true, user: loggedInUser }
+      const result = await loginUser({ email, password })
+      if (result.requireOtp) {
+        return { success: true, requireOtp: true, phone: result.phone, purpose: result.purpose }
+      }
+      setUser(result)
+      return { success: true, user: result }
     } catch (error) {
       return { success: false, message: error.message || 'Invalid credentials' }
     }
@@ -167,20 +145,41 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-      const registeredUser = await registerUser(userData)
-      return { success: true, user: registeredUser }
+      const result = await registerUser(userData)
+      if (result.requireOtp) {
+        return { success: true, requireOtp: true, phone: result.phone, purpose: result.purpose }
+      }
+      // If no OTP required (legacy mode), we might not be logged in directly
+      return { success: true, user: result }
     } catch (error) {
       return { success: false, message: error.message || 'Registration failed' }
     }
   }
 
+  const verifyOtp = async (data) => {
+    try {
+      const loggedInUser = await verifyOtpUser(data)
+      setUser(loggedInUser)
+      return { success: true, user: loggedInUser }
+    } catch (error) {
+      return { success: false, message: error.message || 'Verification failed' }
+    }
+  }
+
   const logout = async () => {
     try {
+      try {
+        const token = await requestForToken();
+        if (token) await removeFcmToken(token);
+      } catch (fcmErr) {
+        console.warn('Failed to remove FCM token on logout', fcmErr);
+      }
       await logoutUser()
     } catch {
-      // Clear local auth state even if the server cookie is already invalid.
     } finally {
       setUser(null)
+      // We clear addresses to prevent data leaking between users
+      setAddresses([])
     }
   }
 
@@ -188,37 +187,37 @@ export function AuthProvider({ children }) {
     setUser((prev) => ({ ...prev, ...newData }))
   }
 
+  // Database Sync Helpers
+  const persistAddresses = async (newAddresses) => {
+    setAddresses(newAddresses)
+    if (user) {
+      try {
+        await updateMyAccountData({ addresses: newAddresses })
+      } catch (err) {
+        console.error('Failed to sync addresses to DB', err)
+      }
+    } else {
+      localStorage.setItem('TOYOVOINDIA_addresses_guest', JSON.stringify(newAddresses))
+    }
+  }
+
   const addAddress = (address) => {
-    const newAddress = { ...address, id: Date.now(), isDefault: addresses.length === 0 }
-    setAddresses((prev) => [...prev, newAddress])
+    const newAddress = { ...address, id: Date.now().toString(), isDefault: addresses.length === 0 }
+    persistAddresses([...addresses, newAddress])
   }
 
   const deleteAddress = (id) => {
-    setAddresses((prev) => prev.filter((address) => address.id !== id))
+    persistAddresses(addresses.filter((address) => address.id !== id))
   }
 
   const updateAddress = (id, updatedAddress) => {
-    setAddresses((prev) => prev.map((address) => (
+    persistAddresses(addresses.map((address) => (
       address.id === id ? { ...updatedAddress, id } : address
     )))
   }
 
   const setAsDefaultAddress = (id) => {
-    setAddresses((prev) => prev.map((address) => ({ ...address, isDefault: address.id === id })))
-  }
-
-  const addPaymentMethod = (type, method) => {
-    setSavedMethods((prev) => ({
-      ...prev,
-      [type]: [{ ...method, id: Date.now() }, ...(prev[type] || [])],
-    }))
-  }
-
-  const removePaymentMethod = (type, id) => {
-    setSavedMethods((prev) => ({
-      ...prev,
-      [type]: (prev[type] || []).filter((method) => method.id !== id),
-    }))
+    persistAddresses(addresses.map((address) => ({ ...address, isDefault: address.id === id })))
   }
 
   const isAdmin = ['admin', 'super_admin'].includes(user?.role)
@@ -230,6 +229,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       refreshUser,
       login,
+      verifyOtp,
       register,
       logout,
       updateUser,
@@ -238,9 +238,6 @@ export function AuthProvider({ children }) {
       deleteAddress,
       updateAddress,
       setAsDefaultAddress,
-      savedMethods,
-      addPaymentMethod,
-      removePaymentMethod,
     }}
     >
       {children}

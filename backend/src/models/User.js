@@ -58,6 +58,18 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'admin', 'super_admin'],
     default: 'customer',
   },
+  phoneVerified: {
+    type: Boolean,
+    default: false,
+  },
+  phoneOtp: {
+    type: String,
+    select: false,
+  },
+  phoneOtpExpires: {
+    type: Date,
+    select: false,
+  },
   status: {
     type: String,
     enum: ['Active', 'Inactive', 'Banned'],

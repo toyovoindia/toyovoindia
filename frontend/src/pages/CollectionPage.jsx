@@ -162,7 +162,8 @@ export function CollectionPage() {
           material: filters.material.join(','),
           color: filters.color.join(','),
           size: filters.size.join(','),
-          availability: filters.availability[0],
+          availability: filters.availability.join(','),
+          discount: filters.discount.join(','),
           minPrice: filters.price[0],
           maxPrice: filters.price[1],
         })
@@ -222,10 +223,18 @@ export function CollectionPage() {
   }, [category, subcategory, innerSearch, sortBy, filters, isFilterOpen, location.search])
 
   const toggleFilter = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value]
-    }))
+    setFilters(prev => {
+      if (key === 'availability') {
+        return {
+          ...prev,
+          [key]: prev[key].includes(value) ? [] : [value]
+        }
+      }
+      return {
+        ...prev,
+        [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value]
+      }
+    })
     setCurrentPage(1)
   }
 
@@ -249,7 +258,7 @@ export function CollectionPage() {
         { id: 'brand', title: 'brands', items: ['Toyovo', 'Babyhug', 'Sanjary', 'Play Nation', 'Intellibaby', 'Bonfino'] },
         { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
         { id: 'age', title: 'age', items: ['0-10 Years', '0-24 Months', '2 Years+', '3 Years+', '5 Years+'] },
-        { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL'] },
+        { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
         { id: 'color', title: 'colors', items: ['Red', 'Blue', 'Pink', 'Yellow', 'Multicolor', 'Green', 'Orange'] },
         { id: 'material', title: 'material', items: ['Child-Safe Premium', 'Wood', 'Plastic', 'Soft Fabric'] },
         { id: 'discount', title: 'discounts', items: ['10% OFF', '20% OFF', '30% OFF', '50% OFF'] }

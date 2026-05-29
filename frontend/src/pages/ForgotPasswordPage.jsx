@@ -4,25 +4,33 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { apiRequest } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import loginImage from '../assets/TOYOVOINIDIA_auth_banner.webp'
-import { Lock, Mail, KeyRound, ArrowLeft, ShieldCheck, CheckCircle2 } from 'lucide-react'
-
+import logo from '../assets/toyovo.webp'
+import { Lock, Mail, KeyRound, ArrowLeft, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
-  const [password, setPassword] = useState('')
-  const [step, setStep] = useState(1) // 1: Email, 2: OTP & Password, 3: Success
+  const [step, setStep] = useState(1) // 1: Phone, 2: OTP & Password, 3: Success
+  const [phoneError, setPhoneError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { success: showSuccess, error: showError } = useToast()
   const navigate = useNavigate()
 
   const handleSendOtp = async (e) => {
     e.preventDefault()
-    if (!email) return
+    setPhoneError('')
+    if (!phone.trim()) {
+      setPhoneError('Mobile number is required')
+      return
+    }
+    if (!/^\d{10}$/.test(phone.trim())) {
+      setPhoneError('Please enter a valid 10-digit mobile number')
+      return
+    }
     setIsSubmitting(true)
     try {
       const res = await apiRequest('/auth/forgot-password', { 
         method: 'POST',
-        body: JSON.stringify({ email }) 
+        body: JSON.stringify({ phone: phone.trim() }) 
       })
       showSuccess(res.message)
       setStep(2)
@@ -32,15 +40,18 @@ export function ForgotPasswordPage() {
       setIsSubmitting(false)
     }
   }
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
 
   const handleResetPassword = async (e) => {
     e.preventDefault()
     if (!otp || !password) return
     setIsSubmitting(true)
     try {
-      const res = await apiRequest('/auth/reset-password', { 
+      const res = await apiRequest('/auth/verify-otp', { 
         method: 'POST',
-        body: JSON.stringify({ email, otp, password }) 
+        body: JSON.stringify({ phone: phone.trim(), otp, password, purpose: 'reset' }) 
       })
       showSuccess(res.message)
       setStep(3)
@@ -53,22 +64,38 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="bg-[#FDF4E6] min-h-screen pb-24 font-roboto">
-      <div className="max-w-350 mx-auto px-4 md:px-10 pt-10">
-        <div className="relative h-[250px] md:h-[400px] rounded-[40px] overflow-hidden shadow-lg mb-[-120px] z-0">
+    <div className="min-h-[100dvh] lg:h-[100dvh] w-screen bg-[#FDF4E6] flex flex-col lg:flex-row overflow-hidden font-roboto">
+      {/* Left Side: Premium Banner (Only on Desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 h-full p-4 flex-col justify-center">
+        <div className="w-full h-full relative rounded-[32px] overflow-hidden shadow-2xl">
           <img 
             src={loginImage}
-            alt="TOYOVOINDIA Auth" 
-            className="w-full h-full object-cover"
+            alt="Toyovo India Auth" 
+            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700 ease-out"
           />
-          <div className="absolute inset-0 bg-[#333]/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#6651A4]/40 via-black/10 to-transparent" />
+          <div className="absolute bottom-12 left-12 max-w-md text-left">
+            <h2 className="text-white text-3xl font-grandstander font-bold drop-shadow-md">Premium Toys for Joyful Kids</h2>
+            <p className="text-white/85 mt-2 text-sm drop-shadow-sm font-medium">Discover safe, educational, and fun toys crafted with love in India.</p>
+          </div>
         </div>
+      </div>
 
-        <div className="max-w-[650px] mx-auto relative z-10">
+      {/* Right Side / Mobile: Form and Branding combined */}
+      <div className="w-full lg:w-1/2 min-h-[100dvh] lg:min-h-0 lg:h-full flex flex-col justify-center items-center p-4 sm:p-6 md:p-12 overflow-y-auto">
+        <div className="w-full max-w-[460px] flex flex-col items-center">
+          {/* Logo Header (inside form side for consistency on both web and mobile) */}
+          <Link to="/" className="flex flex-col items-center gap-2 mb-6 hover:opacity-90 transition-opacity">
+            <img src={logo} alt="Toyovo Logo" className="w-20 h-20 object-contain drop-shadow-sm" />
+            <span className="font-grandstander font-bold text-3xl text-[#6651A4] tracking-tight">
+              Toyovo<span className="text-[#F1641E]">India</span>
+            </span>
+          </Link>
+
           <motion.div 
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#F9EAD3] border-[1.6px] border-dashed border-[#333]/15 rounded-[48px] p-10 md:p-12 lg:p-20 shadow-xl"
+            className="w-full bg-[#F9EAD3] border-[1.6px] border-dashed border-[#333]/15 rounded-[32px] p-6 sm:p-8 shadow-xl"
           >
             <AnimatePresence mode="wait">
               {step === 1 && (
@@ -77,37 +104,45 @@ export function ForgotPasswordPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="space-y-8"
+                  className="space-y-6"
                 >
                   <div className="text-center">
-                    <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] tracking-tighter">Reset your password</h1>
-                    <p className="mt-4 text-gray-500 text-sm font-medium">We will send you an OTP to reset your password</p>
+                    <h1 className="text-2xl md:text-3xl font-grandstander font-bold text-[#333] tracking-tighter">Reset password</h1>
+                    <p className="mt-2 text-gray-500 text-xs font-medium">We will send you an OTP to reset your password</p>
                   </div>
 
-                  <form onSubmit={handleSendOtp} className="space-y-6">
-                    <div className="relative">
-                      <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-[#333]/30" size={18} />
-                      <input 
-                        type="email" 
-                        placeholder="Enter your email" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-16 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-2xl pl-14 pr-6 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 font-bold text-sm"
-                        required
-                      />
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500 pointer-events-none">+91</span>
+                        <input 
+                          type="tel" 
+                          placeholder="Enter your registered mobile number" 
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                            if (phoneError) setPhoneError('')
+                          }}
+                          className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl pl-12 pr-4 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 text-xs font-bold"
+                          required
+                        />
+                      </div>
+                      {phoneError && (
+                        <p className="mt-1 text-[#E84949] text-[10px] font-bold uppercase tracking-wide ml-1">{phoneError}</p>
+                      )}
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <button 
                         type="submit" 
                         disabled={isSubmitting}
-                        className="w-full h-16 bg-[#E84949] text-white font-bold text-[13px] tracking-[0.2em] uppercase rounded-2xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center gap-3"
+                        className="w-full h-12 bg-[#E84949] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                       >
                         {isSubmitting ? 'SENDING...' : 'SUBMIT'}
                       </button>
                       <Link 
                         to="/login"
-                        className="w-full h-16 bg-[#333] text-white font-bold text-[13px] tracking-[0.2em] uppercase rounded-2xl hover:bg-[#E84949] transition-all shadow-md flex items-center justify-center gap-3"
+                        className="w-full h-12 bg-[#333] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#E84949] transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         CANCEL
                       </Link>
@@ -122,53 +157,60 @@ export function ForgotPasswordPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="space-y-8"
+                  className="space-y-6"
                 >
                   <div className="text-center">
-                    <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] tracking-tighter">Verify OTP</h1>
-                    <p className="mt-4 text-gray-500 text-sm font-medium">Enter the 6-digit code sent to {email}</p>
+                    <h1 className="text-2xl md:text-3xl font-grandstander font-bold text-[#333] tracking-tighter">Verify OTP</h1>
+                    <p className="mt-2 text-gray-500 text-xs font-medium">Enter the code sent to {phone}</p>
                   </div>
 
-                  <form onSubmit={handleResetPassword} className="space-y-6">
+                  <form onSubmit={handleResetPassword} className="space-y-4">
                     <div className="relative">
-                      <ShieldCheck className="absolute left-6 top-1/2 -translate-y-1/2 text-[#333]/30" size={18} />
+                      <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-[#333]/30" size={16} />
                       <input 
                         type="text" 
                         placeholder="6-Digit OTP" 
                         maxLength="6"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                        className="w-full h-16 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-2xl pl-14 pr-6 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 font-bold text-lg tracking-[0.5em]"
+                        className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl pl-11 pr-4 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 text-sm font-semibold tracking-[0.3em] text-center font-bold"
                         required
                       />
                     </div>
 
                     <div className="relative">
-                      <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-[#333]/30" size={18} />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#333]/30" size={16} />
                       <input 
-                        type="password" 
+                        type={showPassword ? "text" : "password"} 
                         placeholder="New Password" 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-16 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-2xl pl-14 pr-6 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 font-bold text-sm"
+                        className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl pl-11 pr-11 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 text-xs font-semibold"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#333]/40 hover:text-[#E84949] transition-colors"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <button 
                         type="submit" 
                         disabled={isSubmitting}
-                        className="w-full h-16 bg-[#E84949] text-white font-bold text-[13px] tracking-[0.2em] uppercase rounded-2xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center gap-3"
+                        className="w-full h-12 bg-[#E84949] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                       >
                         {isSubmitting ? 'RESETTING...' : 'UPDATE PASSWORD'}
                       </button>
                       <button 
                         type="button"
                         onClick={() => setStep(1)}
-                        className="w-full h-16 bg-transparent border-[1.2px] border-[#333]/10 text-[#333] font-bold text-[11px] tracking-[0.2em] uppercase rounded-2xl hover:bg-white transition-all flex items-center justify-center gap-2"
+                        className="w-full h-12 bg-transparent border-[1.2px] border-[#333]/10 text-[#333] font-bold text-[10px] tracking-[0.2em] uppercase rounded-xl hover:bg-white transition-all flex items-center justify-center gap-1.5"
                       >
-                        <ArrowLeft size={14} /> Back to Email
+                        <ArrowLeft size={12} /> Back to Mobile
                       </button>
                     </div>
                   </form>
@@ -180,21 +222,21 @@ export function ForgotPasswordPage() {
                   key="step3"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="text-center space-y-8 py-10"
+                  className="text-center space-y-6 py-6"
                 >
                   <div className="flex justify-center">
-                    <div className="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle2 size={48} />
+                    <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle2 size={40} />
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-grandstander font-bold text-[#333]">Success!</h2>
-                    <p className="mt-4 text-gray-500 text-sm font-medium">Your password has been reset successfully.</p>
-                    <p className="text-gray-400 text-[11px] mt-1">Redirecting to login page...</p>
+                    <h2 className="text-2xl font-grandstander font-bold text-[#333]">Success!</h2>
+                    <p className="mt-2 text-gray-500 text-xs font-medium">Your password has been reset successfully.</p>
+                    <p className="text-gray-400 text-[10px] mt-1">Redirecting to login page...</p>
                   </div>
                   <Link 
                     to="/login"
-                    className="inline-block px-10 h-14 bg-[#333] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#E84949] transition-all flex items-center justify-center gap-3"
+                    className="inline-flex w-full h-12 bg-[#333] text-white font-bold text-[11px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#E84949] transition-all items-center justify-center gap-2"
                   >
                     LOGIN NOW
                   </Link>

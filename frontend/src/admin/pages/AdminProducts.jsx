@@ -179,7 +179,11 @@ export function AdminProducts() {
               className="bg-white p-4 rounded-[32px] border border-black/[0.03] shadow-sm hover:shadow-xl transition-all group cursor-pointer"
             >
               <div className="relative w-full aspect-square bg-[#FDF4E6] rounded-[24px] mb-4 overflow-hidden">
-                <img src={product.img} alt={product.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-110 transition-transform duration-500" />
+                {product.img ? (
+                  <img src={product.img} alt={product.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-110 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold text-[10px] uppercase tracking-widest bg-gray-50">No Image</div>
+                )}
                 
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-gray-600 shadow-sm flex items-center gap-1">
                   <Tag size={10} /> {product.categoryName || product.category}

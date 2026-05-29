@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Heart, Home, User, Layers, ArrowUp } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 export function MobileBottomBar() {
   const [showNav, setShowNav] = useState(false)
   const location = useLocation()
-
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
 
   useEffect(() => {
@@ -78,6 +80,12 @@ export function MobileBottomBar() {
                     <React.Fragment key={index}>
                       <Link 
                         to={item.path}
+                        onClick={(e) => {
+                          if (item.path === '/wishlist' && !user) {
+                            e.preventDefault()
+                            navigate('/login')
+                          }
+                        }}
                         className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 ${isActive ? 'text-[#E84949]' : 'text-[#333]/60 hover:text-[#E84949]'}`}
                       >
                         <div className={`${isActive ? 'scale-110' : 'scale-100'} transition-transform`}>

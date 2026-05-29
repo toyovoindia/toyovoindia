@@ -42,6 +42,8 @@ export function AdminSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const [formErrors, setFormErrors] = useState({})
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -59,6 +61,32 @@ export function AdminSettings() {
   }
 
   const handleUpdate = async (updatedData) => {
+    const errors = {}
+    
+    if (!updatedData.contactPhone || !updatedData.contactPhone.trim()) {
+       errors.contactPhone = 'Support Phone is required'
+    } else {
+       const digits = updatedData.contactPhone.replace(/\D/g, '')
+       if (digits.length !== 12 || !/^91[6-9]/.test(digits)) {
+         errors.contactPhone = 'Phone must be a valid 10-digit number starting with 6-9'
+       }
+    }
+    
+    if (!updatedData.contactAddress || !updatedData.contactAddress.trim()) {
+      errors.contactAddress = 'Office address is required'
+    }
+
+    if (!updatedData.contactEmail || !updatedData.contactEmail.trim()) {
+      errors.contactEmail = 'Support Email is required'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      setActiveSection('contact')
+      return
+    }
+    
+    setFormErrors({})
     setSaving(true)
     try {
       const data = await updateAdminStorefrontSettings(updatedData)
@@ -73,7 +101,6 @@ export function AdminSettings() {
 
   const sections = [
     { id: 'site', label: 'Storefront', icon: <Globe size={18} /> },
-    { id: 'financials', label: 'Financials', icon: <IndianRupee size={18} /> },
     { id: 'contact', label: 'Communications', icon: <MessageSquare size={18} /> },
     { id: 'profile', label: 'Admin Identity', icon: <User size={18} /> },
     { id: 'security', label: 'Security', icon: <Shield size={18} /> },
@@ -138,11 +165,8 @@ export function AdminSettings() {
             {activeSection === 'site' && (
               <StorefrontTab settings={settings} setSettings={setSettings} />
             )}
-            {activeSection === 'financials' && (
-              <FinancialsTab settings={settings} setSettings={setSettings} />
-            )}
             {activeSection === 'contact' && (
-              <ContactTab settings={settings} setSettings={setSettings} />
+              <ContactTab settings={settings} setSettings={setSettings} formErrors={formErrors} />
             )}
             {activeSection === 'profile' && <ProfileSettings />}
             {activeSection === 'security' && <SecuritySettings />}
@@ -154,7 +178,23 @@ export function AdminSettings() {
 }
 
 function StorefrontTab({ settings, setSettings }) {
+  const [uploading, setUploading] = useState(false)
   const updateField = (field, value) => setSettings({ ...settings, [field]: value })
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const { uploadAdminMedia } = await import('../../services/adminCatalogApi')
+      const result = await uploadAdminMedia(file, 'site')
+      updateField('siteLogo', { url: result.url, publicId: result.publicId })
+    } catch (err) {
+      alert(err.message || 'Logo upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="space-y-12">
@@ -197,17 +237,21 @@ function StorefrontTab({ settings, setSettings }) {
             />
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Bar Color</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Bar Color (HEX/RGB)</label>
             <div className="flex gap-2">
               <input 
                 type="color" 
+                value={settings.announcementBg?.startsWith('#') ? settings.announcementBg : '#6651A4'}
+                onChange={(e) => updateField('announcementBg', e.target.value)}
+                className="w-14 h-14 rounded-2xl cursor-pointer bg-white p-1 border border-gray-100 shrink-0" 
+              />
+              <input 
+                type="text"
                 value={settings.announcementBg || '#6651A4'}
                 onChange={(e) => updateField('announcementBg', e.target.value)}
-                className="w-14 h-14 rounded-2xl cursor-pointer bg-white p-1 border border-gray-100" 
+                placeholder="e.g. #FF4E50 or rgb(255, 78, 80)"
+                className="flex-1 h-14 bg-gray-50 rounded-2xl px-4 font-mono text-[12px] text-gray-700 outline-none border border-transparent focus:border-[#6651A4]/30"
               />
-              <div className="flex-1 h-14 bg-gray-50 rounded-2xl flex items-center px-4 font-mono text-[12px] text-gray-500 uppercase">
-                {settings.announcementBg}
-              </div>
             </div>
           </div>
         </div>
@@ -226,9 +270,10 @@ function StorefrontTab({ settings, setSettings }) {
           <div>
             <p className="font-bold text-gray-800">Store Logo</p>
             <p className="text-[12px] text-gray-500 mt-1">Upload a high-res PNG with transparent background.</p>
-            <button className="mt-4 h-10 px-6 bg-white text-[#6651A4] border border-[#6651A4]/20 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#6651A4] hover:text-white transition-all">
-              Update Logo
-            </button>
+            <label className="mt-4 h-10 px-6 inline-flex items-center justify-center bg-white text-[#6651A4] border border-[#6651A4]/20 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#6651A4] hover:text-white transition-all cursor-pointer">
+              {uploading ? 'Uploading...' : 'Update Logo'}
+              <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} className="hidden" />
+            </label>
           </div>
         </div>
       </div>
@@ -236,75 +281,9 @@ function StorefrontTab({ settings, setSettings }) {
   )
 }
 
-function FinancialsTab({ settings, setSettings }) {
-  const updateField = (field, value) => setSettings({ ...settings, [field]: value })
 
-  return (
-    <div className="space-y-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-3">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Currency Symbol</label>
-          <input 
-            type="text" 
-            value={settings.currencySymbol}
-            onChange={(e) => updateField('currencySymbol', e.target.value)}
-            className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
-          />
-        </div>
-        <div className="space-y-3">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Tax Percentage (GST)</label>
-          <div className="relative">
-            <input 
-              type="number" 
-              value={settings.taxPercentage}
-              onChange={(e) => updateField('taxPercentage', Number(e.target.value))}
-              className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
-            />
-            <span className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-gray-400">%</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="bg-[#6651A4] p-10 rounded-[40px] text-white space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center"><Truck size={24} /></div>
-          <div>
-            <h4 className="text-xl font-grandstander font-bold">Shipping Rules</h4>
-            <p className="text-white/60 text-[12px]">Define thresholds for free delivery.</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-          <div className="space-y-3">
-            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-2">Free Delivery Over</label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-white/40">{settings.currencySymbol}</span>
-              <input 
-                type="number" 
-                value={settings.freeShippingThreshold}
-                onChange={(e) => updateField('freeShippingThreshold', Number(e.target.value))}
-                className="w-full h-14 pl-12 pr-6 bg-white/10 rounded-2xl border border-white/20 outline-none focus:border-white/40 font-bold text-white" 
-              />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-2">Standard Shipping Fee</label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-white/40">{settings.currencySymbol}</span>
-              <input 
-                type="number" 
-                value={settings.defaultShippingFee}
-                onChange={(e) => updateField('defaultShippingFee', Number(e.target.value))}
-                className="w-full h-14 pl-12 pr-6 bg-white/10 rounded-2xl border border-white/20 outline-none focus:border-white/40 font-bold text-white" 
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ContactTab({ settings, setSettings }) {
+function ContactTab({ settings, setSettings, formErrors }) {
   const updateField = (field, value) => setSettings({ ...settings, [field]: value })
   const updateSocial = (key, val) => setSettings({ ...settings, socialLinks: { ...settings.socialLinks, [key]: val } })
 
@@ -319,17 +298,23 @@ function ContactTab({ settings, setSettings }) {
               type="email" 
               value={settings.contactEmail}
               onChange={(e) => updateField('contactEmail', e.target.value)}
-              className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
+              className={`w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 outline-none font-bold ${formErrors?.contactEmail ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'}`} 
             />
+            {formErrors?.contactEmail && <p className="text-red-500 text-xs px-2">{formErrors.contactEmail}</p>}
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Support Phone</label>
-            <input 
-              type="text" 
-              value={settings.contactPhone}
-              onChange={(e) => updateField('contactPhone', e.target.value)}
-              className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
-            />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-500 text-[13px]">+91</span>
+              <input 
+                type="text" 
+                value={settings.contactPhone?.replace('+91', '').trim() || ''}
+                onChange={(e) => updateField('contactPhone', e.target.value ? `+91${e.target.value}` : '')}
+                className={`w-full h-14 pl-12 pr-6 bg-[#FDF4E6]/50 rounded-2xl border-2 outline-none font-bold ${formErrors?.contactPhone ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'}`} 
+                placeholder="10 digit number"
+              />
+            </div>
+            {formErrors?.contactPhone && <p className="text-red-500 text-xs px-2">{formErrors.contactPhone}</p>}
           </div>
           <div className="md:col-span-2 space-y-3">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Office Address</label>
@@ -337,8 +322,9 @@ function ContactTab({ settings, setSettings }) {
               type="text" 
               value={settings.contactAddress}
               onChange={(e) => updateField('contactAddress', e.target.value)}
-              className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
+              className={`w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 outline-none font-bold ${formErrors?.contactAddress ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'}`} 
             />
+            {formErrors?.contactAddress && <p className="text-red-500 text-xs px-2">{formErrors.contactAddress}</p>}
           </div>
         </div>
       </div>
@@ -379,8 +365,22 @@ function ProfileSettings() {
     email: user?.email || ''
   })
   const [isSyncing, setIsSyncing] = useState(false)
+  const [formErrors, setFormErrors] = useState({})
 
   const handleProfileUpdate = async () => {
+    const errors = {}
+    if (!profile.firstName.trim()) errors.firstName = 'First name is required'
+    else if (!/^[a-zA-Z\s]+$/.test(profile.firstName)) errors.firstName = 'First name must contain only alphabets'
+
+    if (!profile.lastName.trim()) errors.lastName = 'Last name is required'
+    else if (!/^[a-zA-Z\s]+$/.test(profile.lastName)) errors.lastName = 'Last name must contain only alphabets'
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({})
+
     setIsSyncing(true)
     try {
       const updated = await updateMyProfile(profile)
@@ -417,8 +417,9 @@ function ProfileSettings() {
                type="text" 
                value={profile.firstName}
                onChange={(e) => setProfile({...profile, firstName: e.target.value})}
-               className="w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/20 font-bold" 
+               className={`w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.firstName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
              />
+             {formErrors.firstName && <p className="text-red-500 text-xs px-2">{formErrors.firstName}</p>}
           </div>
           <div className="space-y-3">
              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Last Name</label>
@@ -426,8 +427,9 @@ function ProfileSettings() {
                type="text" 
                value={profile.lastName}
                onChange={(e) => setProfile({...profile, lastName: e.target.value})}
-               className="w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/20 font-bold" 
+               className={`w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.lastName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
              />
+             {formErrors.lastName && <p className="text-red-500 text-xs px-2">{formErrors.lastName}</p>}
           </div>
           <div className="md:col-span-2 space-y-3">
              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">System Email</label>
@@ -458,6 +460,29 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
+  const { user } = useAuth()
+  const { success, error } = useToast()
+  const [loading, setLoading] = useState(false)
+
+  const handleResetPassword = async () => {
+    setLoading(true)
+    try {
+      // Admin is already logged in, so we send the OTP to their email
+      const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP')
+      success('Password reset OTP sent to your email.')
+    } catch (err) {
+      error(err.message || 'Failed to send reset email')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-8 text-center py-10">
        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-red-500/10 mb-6">
@@ -465,8 +490,12 @@ function SecuritySettings() {
        </div>
        <h3 className="text-2xl font-grandstander font-bold text-gray-800">Admin Credentials</h3>
        <p className="text-gray-500 max-w-sm mx-auto text-sm">Regularly rotate your password to protect the admin command center.</p>
-       <button className="h-14 px-12 bg-white text-red-500 border-2 border-red-100 rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-red-500 hover:text-white transition-all shadow-lg mt-4">
-          Reset Password
+       <button 
+         onClick={handleResetPassword}
+         disabled={loading}
+         className="h-14 px-12 bg-white text-red-500 border-2 border-red-100 rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-red-500 hover:text-white transition-all shadow-lg mt-4 disabled:opacity-50"
+       >
+          {loading ? 'Sending OTP...' : 'Reset Password'}
        </button>
     </div>
   )

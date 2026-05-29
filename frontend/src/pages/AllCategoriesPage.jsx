@@ -89,7 +89,7 @@ const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFil
       { id: 'brand', title: 'brands', items: ['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'] },
       { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
       { id: 'age', title: 'age', items: ['0-2 Years', '2-4 Years', '4-6 Years', '6-8 Years', '8+ Years'] },
-      { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL'] },
+      { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
       { id: 'color', title: 'colors', items: ['Red', 'Blue', 'Pink', 'Yellow', 'White', 'Black'] },
       { id: 'material', title: 'material', items: ['Cotton', 'Wool', 'Plastic', 'Wood', 'Silicone'] },
       { id: 'discount', title: 'discounts', items: ['10% OFF', '20% OFF', '30% OFF', '50% OFF'] }
@@ -199,10 +199,16 @@ export function AllCategoriesPage() {
           limit: itemsPerPage,
           sort: sortBy,
           search: innerSearch.trim(),
-          brand: filters.brand[0],
-          gender: filters.gender[0],
-          ageGroup: filters.age[0],
-          material: filters.material[0],
+          brand: filters.brand.join(','),
+          gender: filters.gender.join(','),
+          ageGroup: filters.age.join(','),
+          material: filters.material.join(','),
+          color: filters.color.join(','),
+          size: filters.size.join(','),
+          availability: filters.availability.join(','),
+          discount: filters.discount.join(','),
+          minPrice: filters.price[0],
+          maxPrice: filters.price[1],
         }
         if (activeCategory?.parentSlug) params.subcategory = activeCategory.slug
         else params.category = activeCategory?.slug
@@ -226,7 +232,7 @@ export function AllCategoriesPage() {
       isMounted = false
       clearTimeout(timer)
     }
-  }, [activeCategory, currentPage, filters.age, filters.brand, filters.gender, filters.material, innerSearch, sortBy])
+  }, [activeCategory, currentPage, innerSearch, sortBy, filters])
 
   useEffect(() => {
     if (isFilterOpen) {
@@ -248,10 +254,18 @@ export function AllCategoriesPage() {
   }, [activeCategory, innerSearch, sortBy, filters])
 
   const toggleFilter = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value]
-    }))
+    setFilters(prev => {
+      if (key === 'availability') {
+        return {
+          ...prev,
+          [key]: prev[key].includes(value) ? [] : [value]
+        }
+      }
+      return {
+        ...prev,
+        [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value]
+      }
+    })
     setCurrentPage(1)
   }
 

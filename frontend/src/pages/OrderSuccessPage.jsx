@@ -141,7 +141,7 @@ export function OrderSuccessPage() {
 
              {/* Action Buttons */}
              <div className="flex flex-col md:flex-row gap-4 pt-2">
-                <Link to="/account" state={{ activeTab: 'orders' }} className="flex-1 py-5 bg-[#333] text-white rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest text-[12px] hover:bg-[#E84949] transition-all shadow-lg active:scale-[0.98]">
+                <Link to="/account/orders" className="flex-1 py-5 bg-[#333] text-white rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest text-[12px] hover:bg-[#E84949] transition-all shadow-lg active:scale-[0.98]">
                    View My Orders <ExternalLink size={18}/>
                 </Link>
                 <Link to="/" className="flex-1 py-5 bg-white border-2 border-[#333] text-[#333] rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest text-[12px] hover:bg-[#333] hover:text-white transition-all active:scale-[0.98]">

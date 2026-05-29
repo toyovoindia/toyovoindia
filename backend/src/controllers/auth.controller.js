@@ -7,44 +7,47 @@ import AppError from '../utils/AppError.js';
 import { successResponse } from '../utils/apiResponse.js';
 import { generateTokens, hashToken } from '../utils/jwt.js';
 import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
-import { sendPasswordResetOtpEmail } from '../services/email.service.js';
+import { sendPasswordResetOtpEmail } from '../services/email.service.js'; // Keep as fallback if needed
 import { notifyWelcome, notifySecurityLogin } from '../services/notification.service.js';
 import logger from '../utils/logger.js';
+import { sendOtpSms } from '../services/sms.service.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, phone } = req.body;
-  logger.info('Auth register attempt', {
-    email,
-    hasPassword: Boolean(password),
-    ip: req.ip,
-    origin: req.headers.origin
-  });
+  
+  if (!phone || phone.trim() === '') {
+    return next(new AppError('Mobile number is required for OTP verification.', 400));
+  }
 
-  // Check if email already exists
+  logger.info('Auth register attempt', { email, phone, hasPassword: Boolean(password), ip: req.ip });
+
   const existingEmail = await User.findOne({ email: email.toLowerCase() });
-  if (existingEmail) {
-    logger.warn('Auth register blocked: email already registered', { email, ip: req.ip });
-    return next(new AppError('This email is already registered. Please log in or use a different email.', 400));
+  if (existingEmail && existingEmail.phoneVerified) {
+    return next(new AppError('This email is already registered. Please log in.', 400));
   }
 
-  // Check if phone already exists (if provided)
-  if (phone && phone.trim() !== '') {
-    const existingPhone = await User.findOne({ phone: phone.trim() });
-    if (existingPhone) {
-      logger.warn('Auth register blocked: phone already registered', { phone, ip: req.ip });
-      return next(new AppError('This mobile number is already registered. Please use a different number or log in.', 400));
-    }
+  const existingPhone = await User.findOne({ phone: phone.trim() });
+  if (existingPhone && existingPhone.phoneVerified) {
+    return next(new AppError('This mobile number is already registered. Please log in.', 400));
   }
+
+  // If unverified exists, we can overwrite or just delete it. We'll just delete unverified duplicates.
+  if (existingEmail && !existingEmail.phoneVerified) await User.findByIdAndDelete(existingEmail._id);
+  if (existingPhone && !existingPhone.phoneVerified) await User.findByIdAndDelete(existingPhone._id);
 
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(password, salt);
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const newUser = await User.create({
     firstName,
     lastName,
     email: email.toLowerCase(),
-    phone: (phone && phone.trim() !== '') ? phone.trim() : undefined,
+    phone: phone.trim(),
     passwordHash,
+    phoneOtp: otp,
+    phoneOtpExpires: Date.now() + 10 * 60 * 1000, // 10 mins
   });
 
   await Order.updateMany(
@@ -52,88 +55,62 @@ export const register = asyncHandler(async (req, res, next) => {
     { $set: { user: newUser._id } }
   );
   
-  logger.info('Auth register success', {
-    userId: newUser._id,
-    email: newUser.email,
-    ip: req.ip
+  try {
+    await sendOtpSms(newUser.phone, otp, 'register');
+  } catch (err) {
+    logger.error('Failed to send registration SMS', { error: err });
+  }
+
+  return successResponse(res, 201, 'Registration initiated. Please verify OTP sent to your mobile.', {
+    requireOtp: true,
+    phone: newUser.phone,
+    purpose: 'register'
   });
-
-  // Welcome push notification (fire-and-forget)
-  Promise.resolve(notifyWelcome(newUser)).catch(() => {});
-
-  return successResponse(res, 201, 'Registration successful. Please log in to continue.', newUser.toJSON());
 });
 
 export const login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
-  logger.info('Auth login attempt', {
-    email,
-    hasPassword: Boolean(password),
-    ip: req.ip,
-    origin: req.headers.origin,
-    cookieNames: Object.keys(req.cookies || {})
-  });
+  const { email, password } = req.body; // email could be phone or email
+  logger.info('Auth login attempt', { email, hasPassword: Boolean(password), ip: req.ip });
 
-  const user = await User.findOne({ email }).select('+passwordHash');
+  const isPhone = /^\d{10}$/.test(email.trim());
+  const phoneQuery = isPhone ? '+91' + email.trim() : email.trim();
+
+  const user = await User.findOne({ 
+    $or: [{ email: email.toLowerCase() }, { phone: phoneQuery }] 
+  }).select('+passwordHash +phone +status +phoneVerified');
+
   if (!user) {
-    logger.warn('Auth login failed: user not found', {
-      email,
-      ip: req.ip
-    });
-    return next(new AppError('Invalid email or password', 401));
+    return next(new AppError('Not registered with this email/phone or password', 401));
   }
 
   const isPasswordValid = await user.comparePassword(password);
-  logger.info('Auth login password check completed', {
-    email,
-    userId: user._id,
-    isPasswordValid,
-    status: user.status
-  });
-
   if (!isPasswordValid) {
-    logger.warn('Auth login failed: invalid password', {
-      email,
-      userId: user._id,
-      ip: req.ip
-    });
-    return next(new AppError('Invalid email or password', 401));
+    return next(new AppError('Not registered with this email/phone or password', 401));
   }
 
   if (user.status !== 'Active') {
-    logger.warn('Auth login blocked: inactive user', {
-      email,
-      userId: user._id,
-      status: user.status
-    });
     return next(new AppError(`Account is ${user.status.toLowerCase()}. Please contact support.`, 403));
   }
+  
+  if (!user.phone) {
+    return next(new AppError('Account does not have a registered mobile number for OTP.', 400));
+  }
 
-  user.lastLoginAt = new Date();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  user.phoneOtp = otp;
+  user.phoneOtpExpires = Date.now() + 10 * 60 * 1000;
   await user.save({ validateBeforeSave: false });
 
-  const { accessToken, refreshTokenPlain, refreshTokenHash } = generateTokens(user._id);
+  try {
+    await sendOtpSms(user.phone, otp, 'login');
+  } catch (err) {
+    logger.error('Failed to send login SMS', { error: err });
+  }
 
-  await RefreshToken.createTokenRecord(user._id, refreshTokenHash, req);
-  await Order.updateMany(
-    { user: null, 'customer.email': user.email.toLowerCase() },
-    { $set: { user: user._id } }
-  );
-
-  setAuthCookies(res, accessToken, refreshTokenPlain);
-  logger.info('Auth login success', {
-    email,
-    userId: user._id,
-    role: user.role,
-    ip: req.ip
-  });
-
-  // Security login notification (fire-and-forget)
-  Promise.resolve(notifySecurityLogin(user)).catch(() => {});
-
-  return successResponse(res, 200, 'Login successful', {
-    ...user.toJSON(),
-    accessToken,
+  return successResponse(res, 200, 'Credentials verified. Please verify OTP sent to your mobile.', {
+    requireOtp: true,
+    phone: user.phone,
+    purpose: 'login'
   });
 });
 
@@ -243,69 +220,102 @@ export const getMe = asyncHandler(async (req, res, next) => {
 });
 
 export const forgotPassword = asyncHandler(async (req, res, next) => {
-  const { email } = req.body;
-  if (!email) {
-    return next(new AppError('Please provide an email address', 400));
+  const { phone } = req.body;
+  if (!phone) {
+    return next(new AppError('Please provide your registered mobile number', 400));
   }
 
-  const user = await User.findOne({ email });
+  const isPhone = /^\d{10}$/.test(phone.trim());
+  const phoneQuery = isPhone ? '+91' + phone.trim() : phone.trim();
+
+  const user = await User.findOne({ phone: phoneQuery });
   if (!user) {
-    // For security reasons, don't reveal if user exists or not, 
-    // but in development we can be more specific or just send success.
-    return successResponse(res, 200, 'If an account exists with this email, you will receive an OTP.');
+    // For security reasons, still say success
+    return successResponse(res, 200, 'If an account exists with this number, you will receive an OTP.');
   }
 
-  // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   
-  user.resetPasswordOTP = otp;
-  user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  user.phoneOtp = otp;
+  user.phoneOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
   await user.save({ validateBeforeSave: false });
 
   try {
-    await sendPasswordResetOtpEmail(user, otp);
-    return successResponse(res, 200, 'Password reset OTP sent to your email.');
+    await sendOtpSms(user.phone, otp, 'reset');
+    return successResponse(res, 200, 'Password reset OTP sent to your mobile number.', {
+      requireOtp: true,
+      phone: user.phone,
+      purpose: 'reset'
+    });
   } catch (error) {
-    user.resetPasswordOTP = undefined;
-    user.resetPasswordExpires = undefined;
+    user.phoneOtp = undefined;
+    user.phoneOtpExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    return next(new AppError('Error sending email. Please try again later.', 500));
+    return next(new AppError('Error sending SMS. Please try again later.', 500));
   }
 });
 
-export const resetPassword = asyncHandler(async (req, res, next) => {
-  const { email, otp, password } = req.body;
-  if (!email || !otp || !password) {
-    return next(new AppError('Please provide email, OTP and new password', 400));
+export const verifyOtp = asyncHandler(async (req, res, next) => {
+  const { phone, otp, purpose, password } = req.body;
+  if (!phone || !otp || !purpose) {
+    return next(new AppError('Please provide phone, otp, and purpose', 400));
   }
 
+  const isPhone = /^\d{10}$/.test(phone.trim());
+  const phoneQuery = isPhone ? '+91' + phone.trim() : phone.trim();
+
   const user = await User.findOne({ 
-    email: email.toLowerCase(),
-    resetPasswordOTP: otp,
-    resetPasswordExpires: { $gt: Date.now() }
-  }).select('+resetPasswordOTP +resetPasswordExpires');
+    phone: phoneQuery,
+    phoneOtp: otp,
+    phoneOtpExpires: { $gt: Date.now() }
+  }).select('+phoneOtp +phoneOtpExpires +status +role');
 
   if (!user) {
     return next(new AppError('Invalid or expired OTP', 400));
   }
 
-  // Hash new password
-  const salt = await bcrypt.genSalt(10);
-  user.passwordHash = await bcrypt.hash(password, salt);
-  
-  // Clear OTP fields
-  user.resetPasswordOTP = undefined;
-  user.resetPasswordExpires = undefined;
-  user.passwordChangedAt = Date.now();
-  
-  await user.save();
+  // Clear OTP
+  user.phoneOtp = undefined;
+  user.phoneOtpExpires = undefined;
 
-  // Optionally generate new tokens and log them in immediately
+  if (purpose === 'register') {
+    user.phoneVerified = true;
+    await user.save({ validateBeforeSave: false });
+    Promise.resolve(notifyWelcome(user)).catch(() => {});
+  } else if (purpose === 'reset') {
+    if (!password) {
+      return next(new AppError('Please provide new password', 400));
+    }
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(password, salt);
+    user.passwordChangedAt = Date.now();
+    await user.save({ validateBeforeSave: false });
+  } else if (purpose === 'login') {
+    user.lastLoginAt = new Date();
+    await user.save({ validateBeforeSave: false });
+    Promise.resolve(notifySecurityLogin(user)).catch(() => {});
+  } else {
+    return next(new AppError('Invalid purpose', 400));
+  }
+
+  // Generate tokens and log them in
   const { accessToken, refreshTokenPlain, refreshTokenHash } = generateTokens(user._id);
+
   await RefreshToken.createTokenRecord(user._id, refreshTokenHash, req);
+  await Order.updateMany(
+    { user: null, 'customer.email': user.email.toLowerCase() },
+    { $set: { user: user._id } }
+  );
+
   setAuthCookies(res, accessToken, refreshTokenPlain);
 
-  return successResponse(res, 200, 'Password reset successful. You are now logged in.', {
+  const msgMap = {
+    'register': 'Registration successful. You are now logged in.',
+    'login': 'Login successful.',
+    'reset': 'Password reset successful. You are now logged in.'
+  };
+
+  return successResponse(res, 200, msgMap[purpose], {
     ...user.toJSON(),
     accessToken,
   });

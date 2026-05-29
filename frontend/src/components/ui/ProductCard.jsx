@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Eye, Layers, X, Star, Plus, Minus } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const QuickViewModal = ({ p, isOpen, onClose }) => {
   const { addToCart } = useCart()
@@ -130,6 +132,8 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
 export function ProductCard({ p, i, isGridOne = false }) {
   const { addToCart, toggleWishlist, toggleCompare, wishlist, compare } = useCart()
   const { success } = useToast()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [showQuickView, setShowQuickView] = useState(false)
   
   const finalPrice = (p.price || 0).toFixed(0)
@@ -145,11 +149,19 @@ export function ProductCard({ p, i, isGridOne = false }) {
   }
 
   const handleWishlist = () => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
     toggleWishlist(p)
     success(isWishlisted ? `${p.name} removed from wishlist.` : `${p.name} added to wishlist!`)
   }
 
   const handleCompare = () => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
     toggleCompare(p)
     success(isCompared ? `${p.name} removed from comparison.` : `${p.name} added to comparison!`)
   }
@@ -209,8 +221,8 @@ export function ProductCard({ p, i, isGridOne = false }) {
 
           {/* Promo Badge */}
           {discountPercent && (
-            <span className="absolute top-3 left-3 z-20 bg-[#222] text-[#fff] text-[9px] font-black px-2 py-1 rounded shadow-sm uppercase tracking-wider">
-              -{discountPercent}%
+            <span className="absolute top-3 left-3 z-20 bg-[#222] text-[#fff] text-[12px] md:text-[13px] font-black px-3 py-1.5 rounded shadow-sm uppercase tracking-wider">
+              {discountPercent}%
             </span>
           )}
         </div>

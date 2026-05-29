@@ -105,8 +105,10 @@ export function SearchPage() {
                     <h3 className="font-grandstander text-[14px] md:text-[17px] font-bold text-[#333] group-hover:text-[#E84949] transition-colors leading-tight tracking-tight capitalize">{p.name}</h3>
                   </Link>
                   <div className="flex items-center justify-center gap-3 mt-1">
-                    <span className="text-[12px] text-gray-400 line-through font-bold">${p.oldPrice.toFixed(2)}</span>
-                    <span className="text-[15px] font-bold text-[#FF4E50] font-grandstander tracking-tight">${p.price.toFixed(2)}</span>
+                    {p.oldPrice && p.oldPrice > (p.price || 0) && (
+                      <span className="text-[12px] text-gray-400 line-through font-bold">₹{p.oldPrice.toFixed(2)}</span>
+                    )}
+                    <span className="text-[15px] font-bold text-[#FF4E50] font-grandstander tracking-tight">₹{(p.price || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </motion.div>

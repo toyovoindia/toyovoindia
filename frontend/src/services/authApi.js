@@ -24,3 +24,11 @@ export const getCurrentUser = async () => {
   const payload = await apiRequest('/auth/me')
   return payload.data
 }
+
+export const verifyOtpUser = async (data) => {
+  const payload = await apiRequest('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+  return payload.data
+}

@@ -28,7 +28,7 @@ export const adminListUsersSchema = z.object({
     role: z.enum(['customer', 'admin', 'super_admin']).optional().or(z.literal('')),
     sort: z.enum(['recent', 'oldest', 'name', 'email']).optional(),
     page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(10000).optional(),
   }),
 });
 

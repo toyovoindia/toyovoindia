@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getMyAccountData, updateMyAccountData } from '../services/userAccountApi';
 
@@ -6,10 +6,6 @@ const PaymentContext = createContext();
 
 export function PaymentProvider({ children }) {
   const { user } = useAuth();
-  const storageScope = useMemo(() => user?.id || user?._id || user?.email || 'guest', [user]);
-  const paymentHistoryKey = `TOYOVOINDIA_payment_history_${storageScope}`;
-  const savedMethodsKey = `TOYOVOINDIA_saved_methods_${storageScope}`;
-  const ordersKey = `TOYOVOINDIA_orders_${storageScope}`;
 
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [savedMethods, setSavedMethods] = useState({
@@ -18,11 +14,9 @@ export function PaymentProvider({ children }) {
     cards: []
   });
   const [orders, setOrders] = useState([]);
-  const [storageHydrated, setStorageHydrated] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    setStorageHydrated(false);
 
     const hydrate = async () => {
       if (user) {
@@ -31,81 +25,99 @@ export function PaymentProvider({ children }) {
           if (!isMounted) return;
           setPaymentHistory(data.paymentHistory || []);
           setSavedMethods(data.paymentVault || { bankAccounts: [], upiIds: [], cards: [] });
-          setStorageHydrated(true);
           return;
         } catch {
-          // fall back to local scoped storage
+          // If fetch fails, keep empty state, don't overwrite DB
+          if (isMounted) {
+            setPaymentHistory([]);
+            setSavedMethods({ bankAccounts: [], upiIds: [], cards: [] });
+          }
+        }
+      } else {
+        // Read guest local storage
+        const savedMethodsData = localStorage.getItem('TOYOVOINDIA_saved_methods_guest');
+        const savedPaymentHistory = localStorage.getItem('TOYOVOINDIA_payment_history_guest');
+        if (isMounted) {
+          setPaymentHistory(savedPaymentHistory ? JSON.parse(savedPaymentHistory) : []);
+          setSavedMethods(savedMethodsData ? JSON.parse(savedMethodsData) : {
+            bankAccounts: [],
+            upiIds: [],
+            cards: []
+          });
         }
       }
-
-      const savedPaymentHistory = localStorage.getItem(paymentHistoryKey);
-      const savedMethodsData = localStorage.getItem(savedMethodsKey);
-      const savedOrders = localStorage.getItem(ordersKey);
-      if (!isMounted) return;
-      setPaymentHistory(savedPaymentHistory ? JSON.parse(savedPaymentHistory) : []);
-      setSavedMethods(savedMethodsData ? JSON.parse(savedMethodsData) : {
-        bankAccounts: [],
-        upiIds: [],
-        cards: []
-      });
-      setOrders(savedOrders ? JSON.parse(savedOrders) : []);
-      setStorageHydrated(true);
     };
 
     hydrate();
     return () => {
       isMounted = false;
     };
-  }, [paymentHistoryKey, savedMethodsKey, ordersKey, user]);
+  }, [user]);
 
-  useEffect(() => {
-    if (!storageHydrated) return;
+  // Database Sync Helpers
+  const persistPaymentVault = async (newMethods) => {
+    setSavedMethods(newMethods);
     if (user) {
-      updateMyAccountData({ paymentHistory }).catch(() => {});
+      try {
+        await updateMyAccountData({ paymentVault: newMethods });
+      } catch (err) {
+        console.error('Failed to sync payment vault to DB', err);
+      }
     } else {
-      localStorage.setItem(paymentHistoryKey, JSON.stringify(paymentHistory));
+      localStorage.setItem('TOYOVOINDIA_saved_methods_guest', JSON.stringify(newMethods));
     }
-  }, [paymentHistory, paymentHistoryKey, storageHydrated, user]);
+  };
 
-  useEffect(() => {
-    if (!storageHydrated) return;
+  const persistPaymentHistory = async (newHistory) => {
+    setPaymentHistory(newHistory);
     if (user) {
-      updateMyAccountData({ paymentVault: savedMethods }).catch(() => {});
+      try {
+        await updateMyAccountData({ paymentHistory: newHistory });
+      } catch (err) {
+        console.error('Failed to sync payment history to DB', err);
+      }
     } else {
-      localStorage.setItem(savedMethodsKey, JSON.stringify(savedMethods));
+      localStorage.setItem('TOYOVOINDIA_payment_history_guest', JSON.stringify(newHistory));
     }
-  }, [savedMethods, savedMethodsKey, storageHydrated, user]);
-
-  useEffect(() => {
-    if (!storageHydrated) return;
-    localStorage.setItem(ordersKey, JSON.stringify(orders));
-  }, [orders, ordersKey, storageHydrated]);
+  };
 
   const addPaymentLog = (log) => {
-    setPaymentHistory(prev => [
-      { 
-        id: `PAY-${Math.floor(1000 + Math.random() * 9000)}`, 
-        date: new Date().toLocaleDateString(), 
-        status: 'Completed',
-        ...log 
-      }, 
-      ...prev
-    ]);
+    const newLog = { 
+      id: `PAY-${Math.floor(1000 + Math.random() * 9000)}`, 
+      date: new Date().toLocaleDateString(), 
+      status: 'Completed',
+      ...log 
+    };
+    persistPaymentHistory([newLog, ...paymentHistory]);
   };
 
   const addSavedMethod = (type, data) => {
-    setSavedMethods(prev => ({
-      ...prev,
-      [type]: [{ id: Date.now(), ...data }, ...prev[type]]
-    }));
+    const newMethods = {
+      ...savedMethods,
+      [type]: [{ id: Date.now().toString(), ...data }, ...savedMethods[type]]
+    };
+    persistPaymentVault(newMethods);
   };
 
   const deleteSavedMethod = (type, id) => {
-    setSavedMethods(prev => ({
-      ...prev,
-      [type]: prev[type].filter(m => m.id !== id)
-    }));
+    const newMethods = {
+      ...savedMethods,
+      [type]: savedMethods[type].filter(m => m.id !== id)
+    };
+    persistPaymentVault(newMethods);
   };
+
+  // Orders are handled by backend typically, but keeping mock local state for now
+  useEffect(() => {
+    const savedOrders = localStorage.getItem('TOYOVOINDIA_orders_mock');
+    if (savedOrders) {
+      setOrders(JSON.parse(savedOrders));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('TOYOVOINDIA_orders_mock', JSON.stringify(orders));
+  }, [orders]);
 
   const addOrder = (orderData) => {
     const newOrder = {

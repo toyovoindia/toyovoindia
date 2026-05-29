@@ -55,6 +55,7 @@ export function AdminNotifications() {
       await markAdminNotificationsRead()
       success('All alerts marked as read')
       fetchNotifications(page, filter)
+      window.dispatchEvent(new Event('adminNotificationsRead'))
     } catch (err) {
       showError('Failed to update alerts')
     }
@@ -62,7 +63,14 @@ export function AdminNotifications() {
 
   const handleNotificationClick = async (notif) => {
     if (!notif.readByAdmin) {
-      await markAdminNotificationsRead([notif._id])
+      try {
+        await markAdminNotificationsRead([notif._id])
+        setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, readByAdmin: true } : n))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        window.dispatchEvent(new Event('adminNotificationsRead'))
+      } catch (err) {
+        showError('Failed to mark read')
+      }
     }
     if (notif.adminActionUrl) {
       navigate(notif.adminActionUrl)

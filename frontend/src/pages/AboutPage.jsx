@@ -37,9 +37,14 @@ const InfoBox = ({ icon: Icon, title, content }) => (
   </div>
 )
 
+import { getStorefrontSettings } from '../services/siteApi'
+
 export function AboutPage() {
+  const [siteConfig, setSiteConfig] = useState(null)
+
   useEffect(() => {
     window.scrollTo(0, 0)
+    getStorefrontSettings().then(setSiteConfig).catch(console.error)
   }, [])
 
   return (
@@ -94,17 +99,17 @@ export function AboutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 md:mt-20 mt-12 gap-8">
            <InfoBox 
              icon={Phone} 
-             title="+91 98765 43210" 
+             title={siteConfig?.contactPhone || "+91 88140 40056"} 
              content="We're thrilled to connect with you and assist in every way possible. Feel free to reach out to us for any inquiries, suggestions, or assistance you might need." 
            />
            <InfoBox 
              icon={MapPin} 
              title="Mohali, Punjab, India" 
-             content="Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab. We look forward to seeing you!" 
+             content={siteConfig?.contactAddress ? `${siteConfig.contactAddress}. We look forward to seeing you!` : "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab. We look forward to seeing you!"} 
            />
            <InfoBox 
              icon={Mail} 
-             title="hello@toyovoindia.com" 
+             title={siteConfig?.contactEmail || "toyovoindia@gmail.com"} 
              content="Our dedicated team is at your service, ready to respond promptly and ensure your experience with TOYOVOINDIA is nothing short of exceptional." 
            />
         </div>

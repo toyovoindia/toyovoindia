@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { Star, Heart, Share2, Eye, ShoppingCart, Search, Repeat, Plus, Minus, CheckCircle, X, ChevronRight, Share, ZoomIn } from 'lucide-react'
@@ -34,9 +35,11 @@ const FAQItem = ({ question, answer, isOpen, onToggle }) => (
 
 export function ProductDetailPage() {
   const { title } = useParams()
-  const { addToCart, toggleWishlist, wishlist, toggleCompare, compare } = useCart()
-  const { success, error: showError } = useToast()
   const navigate = useNavigate()
+  const { addToCart, wishlist, toggleWishlist, compare, toggleCompare } = useCart()
+  const { success, error: showError } = useToast()
+  const { user } = useAuth()
+  
   const [selectedImg, setSelectedImg] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState('description')
@@ -46,6 +49,7 @@ export function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState('Small')
   const [selectedColor, setSelectedColor] = useState('Red')
   const [isZoomed, setIsZoomed] = useState(false)
+  const [showStoreInfo, setShowStoreInfo] = useState(false)
   const [productState, setProductState] = useState(null)
   const [relatedProducts, setRelatedProducts] = useState([])
   const [isLoadingProduct, setIsLoadingProduct] = useState(true)
@@ -91,6 +95,30 @@ export function ProductDetailPage() {
       window.removeEventListener('scroll', handleScroll)
     }
   }, [title])
+
+  useEffect(() => {
+    if (showStoreInfo) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+    } else {
+      const savedScrollY = document.body.style.top;
+      if (savedScrollY) {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, parseInt(savedScrollY || '0') * -1);
+      }
+    }
+    return () => {
+      if (showStoreInfo) {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+      }
+    }
+  }, [showStoreInfo])
 
   const fallbackProduct = {
     id: title?.toLowerCase() || 'product-08',
@@ -139,6 +167,10 @@ export function ProductDetailPage() {
   }
 
   const handleCompare = () => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
     const isCompared = compare?.some(item => item.id === product.id)
     toggleCompare(product)
     success(isCompared ? `${product.title || product.name} removed from comparison.` : `${product.title || product.name} added to comparison!`)
@@ -416,6 +448,10 @@ export function ProductDetailPage() {
                   <div className="flex gap-3 pt-1">
                     <button
                       onClick={() => { 
+                        if (!user) {
+                          navigate('/login');
+                          return;
+                        }
                         const isCurrentlyWishlisted = wishlist.some(item => item.id === product.id);
                         toggleWishlist(product); 
                         success(isCurrentlyWishlisted ? `${product.title || product.name} removed from wishlist.` : `${product.title || product.name} added to wishlist!`);
@@ -429,35 +465,43 @@ export function ProductDetailPage() {
                   <p className="text-[13px] text-[#666] font-medium">Sku: {product.sku}</p>
                 </div>
 
-                <div className="bg-[#F9EAD3] p-4 rounded-[20px] border-[1.2px] border-[#333333]/15 space-y-4 shadow-sm">
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-[#666] font-grandstander">Select Size</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Small', 'Medium', 'Large'].map(size => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize(size)}
-                          className={`px-3 py-1 text-[11px] font-bold rounded-lg border transition-all font-grandstander ${selectedSize === size ? 'bg-[#E84949] text-white border-[#E84949]' : 'bg-[#FDF4E6] text-[#333] border-[#E5E5E5] hover:border-[#E84949]'}`}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
+                {(product.size?.length > 0 || product.color?.length > 0) && (
+                  <div className="bg-[#F9EAD3] p-4 rounded-[20px] border-[1.2px] border-[#333333]/15 space-y-4 shadow-sm">
+                    {product.size?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-[#666] font-grandstander">Select Size</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {product.size.map(size => (
+                            <button
+                              key={size}
+                              onClick={() => setSelectedSize(size)}
+                              className={`px-3 py-1 text-[11px] font-bold rounded-lg border transition-all font-grandstander ${selectedSize === size ? 'bg-[#E84949] text-white border-[#E84949]' : 'bg-[#FDF4E6] text-[#333] border-[#E5E5E5] hover:border-[#E84949]'}`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {product.color?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-[#666] font-grandstander">Choose Color</p>
+                        <div className="flex flex-wrap gap-2">
+                          {product.color.map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setSelectedColor(color)}
+                              title={color}
+                              className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${selectedColor === color ? 'border-[#333] scale-105 shadow-md' : 'border-white shadow-sm'}`}
+                              style={{ background: color.toLowerCase() === 'multicolor' ? 'conic-gradient(red, yellow, green, blue, purple, red)' : color.toLowerCase() }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-[#666] font-grandstander">Choose Color</p>
-                    <div className="flex gap-2">
-                      {['Red', 'Yellow'].map(color => (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${selectedColor === color ? 'border-[#333] scale-105' : 'border-transparent'}`}
-                          style={{ backgroundColor: color === 'Red' ? '#FF4E50' : '#FFEB3B' }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                )}
 
 
                 <div className="space-y-3">
@@ -497,10 +541,8 @@ export function ProductDetailPage() {
                     <CheckCircle size={16} className="text-[#E84949]" />
                     <span>Pickup available at Shop location</span>
                   </div>
-                  {/* reduce font weight */}
                   <p className="text-[13px] text-[#333] ml-6">Usually ready in 24 hours</p>
-                  <button className="ml-6 text-[12px] font-medium underline decoration-solid hover:text-[#E84949]">View store information</button>
-
+                  <button onClick={() => setShowStoreInfo(true)} className="text-[12px] font-bold text-[#E84949] underline underline-offset-4 font-grandstander">View Store Information</button>
                   <div className="pt-4 border-t border-dashed border-gray-300 space-y-2">
                     <p><span className="font-medium text-[11px] text-gray-400 mr-2 font-grandstander">Categories:</span> <Link to="/collections/toys" className="underline hover:text-[#E84949] font-medium">{product.category}</Link></p>
                   </div>
@@ -655,6 +697,76 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+      {/* Store Information Modal */}
+      <AnimatePresence>
+        {showStoreInfo && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowStoreInfo(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative bg-[#FDF4E6] w-full max-w-2xl max-h-[85vh] rounded-[30px] p-8 md:p-10 shadow-2xl border-[1.5px] border-dashed border-black/10 overflow-y-auto custom-scrollbar"
+            >
+              <button 
+                onClick={() => setShowStoreInfo(false)} 
+                className="absolute top-6 right-6 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-[#E84949] hover:text-white transition-all z-10"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="text-center mb-8">
+                <h3 className="font-grandstander font-bold text-3xl text-[#333] tracking-tight">Store & Product Info</h3>
+                <p className="text-[14px] text-[#666] mt-2 font-medium">Everything you need to know about your purchase</p>
+              </div>
+
+              {/* Product Info Section */}
+              <div className="bg-white p-6 rounded-2xl border border-dashed border-[#E84949]/30 flex flex-col sm:flex-row items-center gap-6 mb-6">
+                <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-black/5">
+                  <img src={product.thumbnail?.url || product.images?.[0]?.url || product.img || 'https://images.unsplash.com/photo-1532330393533-443990a51d10?auto=format&fit=crop&q=80&w=800'} alt={product.title || product.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="font-grandstander font-bold text-xl text-[#333]">{product.title || product.name}</h4>
+                  <p className="text-[#E84949] font-black text-lg mt-1">₹{Number(product.price || 0).toFixed(2)}</p>
+                  <p className="text-[12px] text-[#666] mt-2"><strong>SKU:</strong> {product.sku}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6 text-[14px] text-[#444] leading-relaxed">
+                <div className="bg-white p-6 rounded-2xl border border-dashed border-black/10">
+                  <h4 className="font-bold text-[#E84949] uppercase tracking-widest text-[11px] mb-3">About Us</h4>
+                  <p>Discover <strong>TOYOVOINDIA</strong>, India's premium marketplace meticulously crafted for baby essentials and kids' toys. Our mission is to elevate your parenting journey with a seamless fusion of quality, safety, and joy.</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-dashed border-black/10">
+                  <h4 className="font-bold text-[#333] uppercase tracking-widest text-[11px] mb-3">Product Guarantee</h4>
+                  <p>At the heart of TOYOVOINDIA is a commitment to child development. Every product in our catalog—from educational STEM kits to plush baby rattles—is curated to spark imagination and support milestones.</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-dashed border-black/10">
+                  <h4 className="font-bold text-[#333] uppercase tracking-widest text-[11px] mb-3">Store Policies</h4>
+                  <ul className="list-disc pl-4 space-y-2 text-[13px]">
+                    <li><strong>Shipping:</strong> Standard delivery within 3-5 business days across India.</li>
+                    <li><strong>Returns:</strong> 7-day easy return policy for unused items in original packaging.</li>
+                    <li><strong>Support:</strong> Dedicated customer support for all ToyovoIndia shoppers.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                <Link to="/about" className="px-6 py-3 bg-[#333] text-white rounded-xl text-[12px] font-bold uppercase tracking-widest text-center hover:bg-[#E84949] transition-all">Learn More</Link>
+                <Link to="/contact" className="px-6 py-3 bg-white border border-[#333]/20 text-[#333] rounded-xl text-[12px] font-bold uppercase tracking-widest text-center hover:border-[#E84949] hover:text-[#E84949] transition-all">Contact Us</Link>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

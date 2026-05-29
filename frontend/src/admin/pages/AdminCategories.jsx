@@ -25,6 +25,7 @@ export function AdminCategories() {
 
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState({ show: false, category: null })
+  const [formErrors, setFormErrors] = useState({})
 
   const loadCategories = async () => {
     setLoading(true)
@@ -122,8 +123,18 @@ export function AdminCategories() {
 
   const handleCreate = async (e) => {
     e.preventDefault()
-    if (!formData.name.trim()) return showError('Category name is required')
-    
+    const errors = {}
+    const trimmedName = formData.name.trim()
+    if (!trimmedName) {
+      errors.name = 'Category name is required.'
+    } else if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      errors.name = 'Category name must contain alphabets only.'
+    }
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({})
     setIsSubmitting(true)
     try {
       const payload = { ...formData }
@@ -140,6 +151,7 @@ export function AdminCategories() {
         showInNavbar: false,
         showInAllCategories: true
       })
+      setFormErrors({})
     } catch (err) {
       showError(err.message || 'Failed to create category')
     } finally {
@@ -165,12 +177,12 @@ export function AdminCategories() {
       {/* Add Category Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setFormErrors({}) }} />
           <div className="relative bg-[#FDF4E6] w-full max-w-xl rounded-[32px] shadow-2xl overflow-hidden border border-white/20">
             <div className="p-6 md:p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-grandstander font-bold text-gray-800">Add Category</h2>
-                <button onClick={() => setShowAddModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors shadow-sm">
+                <button onClick={() => { setShowAddModal(false); setFormErrors({}) }} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors shadow-sm">
                   <X size={20} />
                 </button>
               </div>
@@ -182,10 +194,17 @@ export function AdminCategories() {
                     required
                     type="text"
                     value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^A-Za-z\s]/g, '')
+                      setFormData({...formData, name: val})
+                      if (formErrors.name) setFormErrors(prev => ({ ...prev, name: '' }))
+                    }}
                     placeholder="Enter category name..."
-                    className="w-full h-12 px-4 bg-white rounded-xl border border-black/5 focus:border-[#6651A4]/30 outline-none text-sm font-medium transition-all"
+                    className={`w-full h-12 px-4 bg-white rounded-xl border focus:outline-none text-sm font-medium transition-all ${
+                      formErrors.name ? 'border-red-400 focus:border-red-400' : 'border-black/5 focus:border-[#6651A4]/30'
+                    }`}
                   />
+                  {formErrors.name && <p className="text-red-500 text-[11px] font-semibold ml-1 mt-1">{formErrors.name}</p>}
                 </div>
 
                 <div className="space-y-2">

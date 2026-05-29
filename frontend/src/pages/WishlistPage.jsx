@@ -1,16 +1,27 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, ShoppingBag, ArrowRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { ProductCard } from '../components/ui/ProductCard'
 
 export function WishlistPage() {
   const { wishlist } = useCart()
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login')
+    }
+  }, [user, authLoading, navigate])
+
+  if (authLoading || !user) return null
 
   if (wishlist.length === 0) {
     return (

@@ -2,16 +2,15 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ProductCard } from '../ui/ProductCard'
 import { useEffect } from 'react'
-import { getFeaturedProducts, getNewArrivalProducts, getTrendingProducts } from '../../services/catalogApi'
+import { getFeaturedProducts, getNewArrivalProducts } from '../../services/catalogApi'
 
-const tabs = ['Featured', 'Arrival', 'Trending']
+const tabs = ['Featured', 'New Arrival']
 
 export function SpecialProducts() {
   const [activeTab, setActiveTab] = useState('Featured')
   const [products, setProducts] = useState({
     Featured: [],
-    Arrival: [],
-    Trending: [],
+    'New Arrival': [],
   })
 
   useEffect(() => {
@@ -19,25 +18,22 @@ export function SpecialProducts() {
 
     const loadProducts = async () => {
       try {
-        const [featured, arrivals, trending] = await Promise.all([
+        const [featured, arrivals] = await Promise.all([
           getFeaturedProducts(),
           getNewArrivalProducts(),
-          getTrendingProducts(),
         ])
 
         if (isMounted) {
           setProducts({
             Featured: featured,
-            Arrival: arrivals,
-            Trending: trending,
+            'New Arrival': arrivals,
           })
         }
       } catch {
         if (isMounted) {
           setProducts({
             Featured: [],
-            Arrival: [],
-            Trending: [],
+            'New Arrival': [],
           })
         }
       }

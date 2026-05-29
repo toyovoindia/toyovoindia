@@ -10,6 +10,11 @@ export const getAdminStorefrontSettings = async () => {
   return payload.data
 }
 
+export const getAdminDashboardStats = async () => {
+  const payload = await apiRequest('/admin/site/dashboard-stats')
+  return payload.data
+}
+
 export const updateAdminStorefrontSettings = async (data) => {
   const payload = await apiRequest('/admin/site/storefront', {
     method: 'PATCH',

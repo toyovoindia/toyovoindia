@@ -61,11 +61,15 @@ export const listProductsSchema = z.object({
     ageGroup: optionalString,
     gender: optionalString,
     material: optionalString,
+    color: optionalString,
+    size: optionalString,
+    availability: optionalString,
+    discount: optionalString,
     minPrice: z.coerce.number().min(0).optional(),
     maxPrice: z.coerce.number().min(0).optional(),
     sort: z.enum(['relevance', 'price-asc', 'price-desc', 'alpha-asc', 'alpha-desc', 'newest', 'oldest', 'best-selling']).optional(),
     page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(10000).optional(),
   }),
 });
 

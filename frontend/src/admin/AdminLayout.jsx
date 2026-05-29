@@ -41,6 +41,7 @@ export function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
 
   // Fetch unread count
   useEffect(() => {
@@ -55,7 +56,15 @@ export function AdminLayout() {
     fetchCount()
     // Poll every 1 minute
     const interval = setInterval(fetchCount, 60000)
-    return () => clearInterval(interval)
+    
+    // Listen for custom event to update instantly
+    const handleUpdate = () => fetchCount()
+    window.addEventListener('adminNotificationsRead', handleUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('adminNotificationsRead', handleUpdate)
+    }
   }, [])
 
   // Handle window resize for responsiveness
@@ -169,11 +178,17 @@ export function AdminLayout() {
 
         <div className="p-4 border-t border-black/[0.05] shrink-0 bg-gray-50/50">
           <button 
-            onClick={async () => {
-              if (window.confirm('Are you sure you want to log out?')) {
-                await logout()
-                navigate('/login')
-              }
+            onClick={() => {
+              setConfirmModal({
+                isOpen: true,
+                title: 'Confirm Logout',
+                message: 'Are you sure you want to log out of the admin panel?',
+                action: async () => {
+                  setConfirmModal({ isOpen: false, action: null, message: '', title: '' })
+                  await logout()
+                  navigate('/login')
+                }
+              })
             }}
             className="w-full flex items-center gap-4 px-4 py-3.5 rounded-[16px] text-gray-500 hover:bg-red-50 hover:text-[#E8312A] transition-all group overflow-hidden"
           >
@@ -182,6 +197,22 @@ export function AdminLayout() {
           </button>
         </div>
       </motion.aside>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[2000000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+             <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} className="bg-white max-w-sm w-full rounded-3xl overflow-hidden shadow-2xl p-6">
+                 <h3 className="text-xl font-bold font-grandstander text-gray-800 mb-2">{confirmModal.title}</h3>
+                 <p className="text-sm text-gray-500 mb-6">{confirmModal.message}</p>
+                 <div className="flex gap-3">
+                    <button onClick={() => setConfirmModal({ isOpen: false, action: null, message: '', title: '' })} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl text-[12px] uppercase tracking-wider hover:bg-gray-200 transition-colors">Cancel</button>
+                    <button onClick={confirmModal.action} className="flex-1 py-3 bg-[#E8312A] text-white font-bold rounded-xl text-[12px] uppercase tracking-wider hover:bg-[#b9211c] transition-colors">Logout</button>
+                 </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 w-full">

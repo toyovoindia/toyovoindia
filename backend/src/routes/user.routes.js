@@ -14,6 +14,7 @@ import {
   updatePassword,
   saveFcmToken,
   removeFcmToken,
+  sendTestPushNotification,
 } from '../controllers/user.controller.js';
 import { validate } from '../middlewares/validate.js';
 import {
@@ -42,6 +43,7 @@ router.patch('/me', validate(updateProfileSchema), updateMe);
 router.patch('/me/password', validate(updatePasswordSchema), updatePassword);
 router.post('/me/fcm-token', saveFcmToken);
 router.delete('/me/fcm-token', removeFcmToken);
+router.post('/me/test-notification', sendTestPushNotification);
 
 adminRouter.use(protect, authorizeRoles('admin', 'super_admin'));
 adminRouter.get('/', validate(adminListUsersSchema), adminListUsers);

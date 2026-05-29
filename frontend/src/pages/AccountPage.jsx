@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePayment } from '../context/PaymentContext'
 import { useCart } from '../context/CartContext'
@@ -17,6 +17,9 @@ import { printOrderInvoice } from '../utils/invoice'
 import { updateMyProfile } from '../services/userProfileApi'
 import { requestForToken } from '../config/firebase'
 import { saveFcmToken } from '../services/notificationApi'
+import { apiRequest } from '../services/api'
+import { ProductCard } from '../components/ui/ProductCard'
+import { getStorefrontSettings } from '../services/siteApi'
 
 const upiLogos = {
   'Google Pay': (
@@ -79,18 +82,50 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (type === 'bankAccounts' && (!formData.bankName || !formData.accNo || !formData.ifsc)) {
-      setErrors({ msg: 'All bank fields are required' });
+    const newErrors = {};
+    
+    if (type === 'bankAccounts') {
+      if (!formData.bankName) newErrors.bankName = 'Bank name is required';
+      if (!formData.accNo) newErrors.accNo = 'Account number is required';
+      else if (!/^\d{9,18}$/.test(formData.accNo)) newErrors.accNo = 'Account number must be 9 to 18 digits';
+      if (!formData.ifsc) newErrors.ifsc = 'IFSC code is required';
+      else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifsc)) newErrors.ifsc = 'Valid IFSC code is required (e.g. HDFC0001234)';
+    }
+    
+    if (type === 'upiIds') {
+      if (!formData.upiId) newErrors.upiId = 'UPI ID is required';
+      else if (!formData.upiId.includes('@')) newErrors.upiId = 'Please enter a valid UPI ID (e.g. user@upi)';
+    }
+    
+    if (type === 'cards') {
+      if (!formData.cardNo) newErrors.cardNo = 'Card number is required';
+      else if (formData.cardNo.length < 16) newErrors.cardNo = 'Card number must be 16 digits';
+
+      if (!formData.exp) newErrors.exp = 'Expiry date is required';
+      else if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.exp)) {
+        newErrors.exp = 'Valid expiry date (MM/YY) is required';
+      } else {
+        const [month, year] = formData.exp.split('/');
+        const currentDate = new Date();
+        const currentYear = parseInt(currentDate.getFullYear().toString().slice(-2));
+        const currentMonth = currentDate.getMonth() + 1;
+        
+        if (parseInt(year) < currentYear || (parseInt(year) === currentYear && parseInt(month) < currentMonth)) {
+          newErrors.exp = 'This card has expired';
+        }
+      }
+      
+      if (!formData.cvv) newErrors.cvv = 'CVV is required';
+      else if (formData.cvv.length !== 3 && formData.cvv.length !== 4) newErrors.cvv = 'CVV must be 3 or 4 digits';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      newErrors.msg = 'Please correct the highlighted fields';
+      setErrors(newErrors);
       return;
     }
-    if (type === 'upiIds' && (!formData.upiId || !formData.upiId.includes('@'))) {
-      setErrors({ msg: 'Please enter a valid UPI ID (e.g. user@upi)' });
-      return;
-    }
-    if (type === 'cards' && (!formData.cardNo || formData.cardNo.length < 16 || !formData.exp || !formData.cvv)) {
-      setErrors({ msg: 'Please enter valid card details' });
-      return;
-    }
+    
+    setErrors({});
     onComplete(formData);
   };
 
@@ -116,20 +151,23 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
                  <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Select Bank</label>
                    <div className="relative group">
-                     <select value={formData.bankName || ''} onChange={e=>setFormData({...formData, bankName: e.target.value})} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold appearance-none transition-all cursor-pointer">
+                     <select value={formData.bankName || ''} onChange={e=>setFormData({...formData, bankName: e.target.value})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.bankName ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold appearance-none transition-all cursor-pointer`}>
                         <option value="">Choose your bank</option>
                         {indianBanks.map(bank => <option key={bank} value={bank}>{bank}</option>)}
                      </select>
                      <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                    </div>
+                   {errors.bankName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.bankName}</p>}
                  </div>
                  <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Account Number</label>
-                   <input type="text" placeholder="XXXX XXXX XXXX" value={formData.accNo || ''} onChange={e=>handleNumericChange(e, 'accNo', 18)} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold tracking-widest" />
+                   <input type="text" placeholder="XXXX XXXX XXXX" value={formData.accNo || ''} onChange={e=>handleNumericChange(e, 'accNo', 18)} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.accNo ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold tracking-widest transition-colors`} />
+                   {errors.accNo && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.accNo}</p>}
                  </div>
                  <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">IFSC Code</label>
-                   <input type="text" placeholder="HDFC0001234" maxLength="11" value={formData.ifsc || ''} onChange={e=>setFormData({...formData, ifsc: e.target.value.toUpperCase()})} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold uppercase tracking-widest" />
+                   <input type="text" placeholder="HDFC0001234" maxLength="11" value={formData.ifsc || ''} onChange={e=>setFormData({...formData, ifsc: e.target.value.toUpperCase()})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.ifsc ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold uppercase tracking-widest transition-colors`} />
+                   {errors.ifsc && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.ifsc}</p>}
                  </div>
                </>
              )}
@@ -137,7 +175,8 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
              {type === 'upiIds' && (
                <div className="space-y-1.5">
                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">UPI ID (VPA)</label>
-                 <input type="text" placeholder="username@upi" value={formData.upiId || ''} onChange={e=>setFormData({...formData, upiId: e.target.value})} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold lowercase" />
+                 <input type="text" placeholder="username@upi" value={formData.upiId || ''} onChange={e=>setFormData({...formData, upiId: e.target.value})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.upiId ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold lowercase transition-colors`} />
+                 {errors.upiId && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.upiId}</p>}
                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-1 flex items-center gap-1"><ShieldCheck size={10}/> Verified VPA only</p>
                </div>
              )}
@@ -147,22 +186,25 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
                  <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Card Number</label>
                    <div className="relative">
-                     <input type="text" placeholder="XXXX XXXX XXXX XXXX" value={formData.cardNo || ''} onChange={e=>handleNumericChange(e, 'cardNo', 16)} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold font-mono tracking-widest" />
+                     <input type="text" placeholder="XXXX XXXX XXXX XXXX" autoComplete="cc-number" value={formData.cardNo || ''} onChange={e=>handleNumericChange(e, 'cardNo', 16)} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.cardNo ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold font-mono tracking-widest transition-colors`} />
                      <CreditCard className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300" size={20}/>
                    </div>
+                   {errors.cardNo && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.cardNo}</p>}
                  </div>
                  <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-1.5">
                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Expiry Date</label>
-                     <input type="text" placeholder="MM/YY" maxLength="5" value={formData.exp || ''} onChange={e=>{
+                     <input type="text" placeholder="MM/YY" autoComplete="cc-exp" maxLength="5" value={formData.exp || ''} onChange={e=>{
                        let v = e.target.value.replace(/\D/g, '');
                        if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2,4);
                        setFormData({...formData, exp: v});
-                     }} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold text-center" />
+                     }} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.exp ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold text-center transition-colors`} />
+                     {errors.exp && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.exp}</p>}
                    </div>
                    <div className="space-y-1.5">
                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">CVV</label>
-                     <input type="password" placeholder="***" value={formData.cvv || ''} onChange={e=>handleNumericChange(e, 'cvv', 3)} className="w-full h-14 px-5 bg-[#FDF4E6] border-2 border-transparent focus:border-[#E84949] rounded-2xl outline-none text-sm font-bold text-center" />
+                     <input type="password" placeholder="***" autoComplete="new-password" value={formData.cvv || ''} onChange={e=>handleNumericChange(e, 'cvv', 4)} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.cvv ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold text-center transition-colors`} />
+                     {errors.cvv && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.cvv}</p>}
                    </div>
                  </div>
                </>
@@ -186,6 +228,24 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
   )
 }
 
+// Valid tab slugs mapped to internal tab IDs
+const TAB_SLUG_MAP = {
+  'dashboard': 'dashboard',
+  'orders': 'orders',
+  'payments': 'payments',
+  'addresses': 'addresses',
+  'wishlist': 'wishlist',
+  'settings': 'profile',
+}
+const TAB_ID_TO_SLUG = {
+  'dashboard': 'dashboard',
+  'orders': 'orders',
+  'payments': 'payments',
+  'addresses': 'addresses',
+  'wishlist': 'wishlist',
+  'profile': 'settings',
+}
+
 export function AccountPage() {
   const { user, authLoading, logout, updateUser, addresses, addAddress, deleteAddress, updateAddress, setAsDefaultAddress } = useAuth()
   const { paymentHistory, savedMethods, addSavedMethod, deleteSavedMethod } = usePayment()
@@ -193,27 +253,20 @@ export function AccountPage() {
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
+  const { tab: tabParam } = useParams()
 
-  const accountViewStorageKey = `TOYOVOINDIA_account_view_${user?.id || user?._id || user?.email || 'guest'}`
-  const readStoredAccountView = () => {
-    try {
-      const saved = localStorage.getItem(accountViewStorageKey)
-      if (!saved) return null
-      return JSON.parse(saved)
-    } catch {
-      return null
-    }
-  }
-
-  const initialAccountView = readStoredAccountView()
-  const [activeTab, setActiveTab] = useState(location.state?.activeTab || initialAccountView?.activeTab || 'dashboard')
-  const [viewMode, setViewMode] = useState(location.state?.activeTab ? 'content' : (initialAccountView?.viewMode || 'menu'))
+  // Derive active tab from URL param; fallback to 'dashboard'
+  const tabFromUrl = TAB_SLUG_MAP[tabParam] || 'dashboard'
+  const [activeTab, setActiveTab] = useState(tabFromUrl)
+  const [viewMode, setViewMode] = useState('content')
   
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [profileForm, setProfileForm] = useState(user || {})
+  const [profileErrors, setProfileErrors] = useState({})
   const [showAddAddress, setShowAddAddress] = useState(false)
   const [editingAddressId, setEditingAddressId] = useState(null)
   const [addressForm, setAddressForm] = useState({ type: 'Home', firstName: '', lastName: '', address: '', apartment: '', city: '', state: '', postalCode: '', phone: '', district: '' })
+  const [addressErrors, setAddressErrors] = useState({})
 
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [paymentTypeToAdd, setPaymentTypeToAdd] = useState('bankAccounts')
@@ -221,49 +274,43 @@ export function AccountPage() {
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [returnReason, setReturnReason] = useState('')
+  const [siteConfig, setSiteConfig] = useState(null)
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
 
+  // Sync active tab when URL param changes (e.g. browser back/forward)
   useEffect(() => {
-    const storedView = readStoredAccountView()
-    if (location.state?.activeTab) {
-      setActiveTab(location.state.activeTab)
-      setViewMode('content')
-      navigate(location.pathname, { replace: true, state: null })
-      return
-    }
-    if (storedView?.activeTab) {
-      setActiveTab(storedView.activeTab)
-      setViewMode(storedView.viewMode || 'content')
-    }
-  }, [accountViewStorageKey, location.state, navigate, location.pathname])
-
-  useEffect(() => {
-    localStorage.setItem(accountViewStorageKey, JSON.stringify({
-      activeTab,
-      viewMode,
-    }))
-  }, [accountViewStorageKey, activeTab, viewMode])
+    const derived = TAB_SLUG_MAP[tabParam] || 'dashboard'
+    setActiveTab(derived)
+    setViewMode('content')
+  }, [tabParam])
 
   const canCancelOrder = (order) => ['pending', 'processing'].includes(order?.status)
   const canRequestReturn = (order) => (
-    order?.status === 'delivered' &&
+    ['delivered', 'cancelled'].includes(order?.status) &&
     order?.paymentStatus === 'paid' &&
     ['none', 'rejected'].includes(order?.returnRequest?.status || 'none')
   )
 
   const handleCancelOrder = async (orderId) => {
-    if (!window.confirm('Cancel this order?')) return
-
-    setIsProcessing(true)
-    try {
-      const updatedOrder = await cancelMyOrder(orderId)
-      setOrders((prev) => prev.map((order) => order.id === orderId ? updatedOrder : order))
-      setSelectedOrder((prev) => (prev?.id === orderId ? updatedOrder : prev))
-      success(`Order ${updatedOrder.orderNumber} cancelled.`)
-    } catch (err) {
-      showError(err.message || 'Order cancellation failed')
-    } finally {
-      setIsProcessing(false)
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancel Order',
+      message: 'Are you sure you want to cancel this order?',
+      action: async () => {
+        setConfirmModal({ isOpen: false, action: null, message: '', title: '' })
+        setIsProcessing(true)
+        try {
+          const updatedOrder = await cancelMyOrder(orderId)
+          setOrders((prev) => prev.map((order) => order.id === orderId ? updatedOrder : order))
+          setSelectedOrder((prev) => (prev?.id === orderId ? updatedOrder : prev))
+          success(`Order ${updatedOrder.orderNumber} cancelled.`)
+        } catch (err) {
+          showError(err.message || 'Order cancellation failed')
+        } finally {
+          setIsProcessing(false)
+        }
+      }
+    })
   }
 
   const handleRequestReturn = async (orderId) => {
@@ -293,7 +340,7 @@ export function AccountPage() {
     pan: "AANCT0674K",
     tan: "PTLT16619B",
     incDate: "22nd April 2026",
-    address: "UNIT 703, 7th FLOOR, BLOCK 1 MAYAGARDEN, Zirakpur, Rajpura, Mohali- 140603, Punjab"
+    address: siteConfig?.contactAddress || "UNIT 703, 7th FLOOR, BLOCK 1 MAYAGARDEN, Zirakpur, Rajpura, Mohali- 140603, Punjab"
   }
 
   useEffect(() => {
@@ -307,6 +354,10 @@ export function AccountPage() {
       document.body.style.overflow = '';
     };
   }, []);
+
+  useEffect(() => {
+    getStorefrontSettings().then(setSiteConfig).catch(console.error)
+  }, [])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -339,7 +390,9 @@ export function AccountPage() {
   if (!user) return null
 
   const handleTabChange = (id) => {
-    setActiveTab(id); setViewMode('content'); window.scrollTo(0, 0);
+    const slug = TAB_ID_TO_SLUG[id] || id
+    navigate(`/account/${slug}`, { replace: true })
+    window.scrollTo(0, 0)
   }
 
   const menuItems = [
@@ -347,7 +400,7 @@ export function AccountPage() {
     { id: 'orders', label: 'Order History', icon: <Box size={16}/>, color: 'text-[#6651A4]/60' },
     { id: 'payments', label: 'Bank & Cards', icon: <CreditCard size={16}/>, color: 'text-[#E84949]/60' },
     { id: 'addresses', label: 'Addresses', icon: <MapPin size={16}/>, color: 'text-green-500/60' },
-    { id: 'wishlist', label: 'My Wishlist', icon: <Heart size={16}/>, color: 'text-pink-500/60', isLink: true, path: '/wishlist' },
+    { id: 'wishlist', label: 'My Wishlist', icon: <Heart size={16}/>, color: 'text-pink-500/60' },
     { id: 'profile', label: 'Settings', icon: <User size={16}/>, color: 'text-blue-500/60' },
   ]
 
@@ -384,6 +437,22 @@ export function AccountPage() {
         </div>
       )}
 
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[2000000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+             <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} className="bg-white max-w-sm w-full rounded-3xl overflow-hidden shadow-2xl p-6">
+                 <h3 className="text-xl font-bold font-grandstander text-gray-800 mb-2">{confirmModal.title}</h3>
+                 <p className="text-sm text-gray-500 mb-6">{confirmModal.message}</p>
+                 <div className="flex gap-3">
+                    <button onClick={() => setConfirmModal({ isOpen: false, action: null, message: '', title: '' })} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl text-[12px] uppercase tracking-wider hover:bg-gray-200 transition-colors">No</button>
+                    <button onClick={confirmModal.action} className="flex-1 py-3 bg-[#E84949] text-white font-bold rounded-xl text-[12px] uppercase tracking-wider hover:bg-[#333] transition-colors">Yes, Confirm</button>
+                 </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Order Detail Modal */}
       <AnimatePresence>
         {selectedOrder && (
@@ -414,8 +483,8 @@ export function AccountPage() {
                     </div>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                      <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
-                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Expected Delivery</p>
-                       <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.deliveryDate || '-'}</p>
+                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{selectedOrder.status === 'cancelled' ? 'Cancelled On' : 'Expected Delivery'}</p>
+                       <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.status === 'cancelled' ? (selectedOrder.cancelledAt ? new Date(selectedOrder.cancelledAt).toLocaleDateString() : '-') : (selectedOrder.deliveryDate || '-')}</p>
                      </div>
                      <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tracking Number</p>
@@ -439,8 +508,8 @@ export function AccountPage() {
                      )}
                      {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && (
                        <p className="mt-2 text-[12px] text-gray-500">
-                         {selectedOrder.status !== 'delivered'
-                           ? 'Return/refund requests become available after delivery.'
+                         {!['delivered', 'cancelled'].includes(selectedOrder.status)
+                           ? 'Return/refund requests are available for delivered or cancelled orders.'
                            : selectedOrder.paymentStatus !== 'paid'
                              ? 'Refund requests are available only for paid orders.'
                              : 'No request submitted yet.'}
@@ -572,7 +641,7 @@ export function AccountPage() {
       <div className={`grow h-full overflow-y-auto custom-scrollbar flex flex-col bg-[#FDF4E6] ${viewMode === 'menu' ? 'hidden lg:flex' : 'flex'}`}>
          
          <div className="sticky top-0 z-50 bg-[#FDF4E6]/90 backdrop-blur-md px-6 py-5 border-b border-black/[0.03] flex items-center gap-4">
-            <button onClick={() => setViewMode('menu')} className="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-[#333] shadow-sm lg:hidden"><Menu size={18}/></button>
+            <button onClick={() => { setViewMode('menu'); navigate('/account', { replace: true }); }} className="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-[#333] shadow-sm lg:hidden"><Menu size={18}/></button>
             <h3 className="font-grandstander font-bold text-[16px] text-gray-700 capitalize tracking-tight">{activeTab}</h3>
          </div>
 
@@ -625,9 +694,10 @@ export function AccountPage() {
                               const token = await requestForToken();
                               if (token) {
                                 console.log('[FCM] ✅ Token generated:', token);
-                                await saveFcmToken(token, 'web');
-                                console.log('[FCM] ✅ Token saved to DB via API');
-                                success('FCM token saved! Check console for details.');
+                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'web';
+                                await saveFcmToken(token, isMobile);
+                                console.log(`[FCM] ✅ Token saved to DB via API as ${isMobile}`);
+                                success(`FCM token saved as ${isMobile}! Check console for details.`);
                               } else {
                                 console.warn('[FCM] ⚠️ No token — check browser permission');
                                 showError('No token generated. Allow notification permission first.');
@@ -644,25 +714,15 @@ export function AccountPage() {
 
                         <button
                           id="btn-test-foreground-notif"
-                          onClick={() => {
-                            if (!('Notification' in window)) {
-                              showError('Notifications not supported in this browser.');
-                              return;
+                          onClick={async () => {
+                            try {
+                              console.log('[FCM] Triggering backend test notification...');
+                              await apiRequest('/users/me/test-notification', { method: 'POST' });
+                              success('Real push notification triggered! You should receive it via FCM shortly.');
+                            } catch (err) {
+                              console.error('[FCM] Test failed:', err);
+                              showError('Failed to trigger push: ' + err.message);
                             }
-                            if (Notification.permission !== 'granted') {
-                              showError('Notification permission not granted. Click the first button first.');
-                              return;
-                            }
-                            console.log('[FCM] Firing a local foreground test notification...');
-                            const n = new Notification('🎉 Toyovo India', {
-                              body: 'This is a foreground notification test! FCM is working.',
-                              icon: '/logo.png',
-                            });
-                            n.onclick = () => {
-                              console.log('[FCM] Notification clicked!');
-                              window.focus();
-                            };
-                            success('Foreground notification fired! Check your browser.');
                           }}
                           className="flex-1 h-12 bg-[#E84949] text-white text-[11px] font-bold uppercase tracking-widest rounded-2xl hover:bg-[#d43d3d] active:scale-95 transition-all shadow-md shadow-[#E84949]/20"
                         >
@@ -742,7 +802,7 @@ export function AccountPage() {
                               <div className="min-w-0">
                                 <p className="text-[14px] sm:text-[13px] font-bold text-gray-700 font-grandstander">Order #{order.orderNumber}</p>
                                 <p className="text-[11px] sm:text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-wider">{order.date} · {order.items.length} Items</p>
-                                <p className="text-[11px] sm:text-[10px] text-[#6651A4] font-bold mt-0.5 uppercase tracking-widest">ETA {order.deliveryDate || '-'}</p>
+                                <p className="text-[11px] sm:text-[10px] text-[#6651A4] font-bold mt-0.5 uppercase tracking-widest">{order.status === 'cancelled' ? 'Cancelled' : `ETA ${order.deliveryDate || '-'}`}</p>
                               </div>
                            </div>
                            <div className="text-center sm:text-right flex flex-col sm:flex-row items-center gap-4 md:gap-6 border-t sm:border-t-0 border-black/[0.03] pt-4 sm:pt-0">
@@ -857,14 +917,43 @@ export function AccountPage() {
                             initial={{height:0, opacity:0}} animate={{height:'auto', opacity:1}} exit={{height:0, opacity:0}} 
                             onSubmit={(e) => { 
                                e.preventDefault(); 
-                               if (editingAddressId) {
-                                  updateAddress(editingAddressId, addressForm);
-                               } else {
-                                  addAddress(addressForm);
+                               const newErrors = {};
+                               if (!addressForm.firstName.trim()) newErrors.firstName = 'First name is required';
+                               else if (!/^[A-Za-z\s]+$/.test(addressForm.firstName)) newErrors.firstName = 'First name must contain alphabets only';
+                               
+                               if (!addressForm.lastName.trim()) newErrors.lastName = 'Last name is required';
+                               else if (!/^[A-Za-z\s]+$/.test(addressForm.lastName)) newErrors.lastName = 'Last name must contain alphabets only';
+                               
+                               if (!addressForm.address.trim()) newErrors.address = 'Street address is required';
+                               if (!addressForm.state) newErrors.state = 'State is required';
+                               if (!addressForm.city) newErrors.city = 'City is required';
+                               if (addressForm.city === 'Other' && !addressForm.district.trim()) newErrors.district = 'City/District is required';
+
+                               if (!addressForm.postalCode) newErrors.postalCode = 'ZIP code is required';
+                               else if (!/^\d{6}$/.test(addressForm.postalCode)) newErrors.postalCode = 'ZIP code must be exactly 6 digits';
+                               
+                               const cleanPhone = addressForm.phone.replace(/\D/g, '');
+                               if (!cleanPhone) newErrors.phone = 'Mobile number is required';
+                               else if (!/^[6-9]\d{9}$/.test(cleanPhone)) newErrors.phone = 'Mobile number must be 10 digits starting with 6-9';
+
+                               if (Object.keys(newErrors).length > 0) {
+                                 setAddressErrors(newErrors);
+                                 return;
                                }
+                               setAddressErrors({});
+                               
+                               const formattedPhone = cleanPhone.startsWith('91') && cleanPhone.length === 12 
+                                  ? '+' + cleanPhone 
+                                  : '+91' + cleanPhone;
+                               const finalAddress = { ...addressForm, phone: formattedPhone };
+
+                               if (editingAddressId) updateAddress(editingAddressId, finalAddress);
+                               else addAddress(finalAddress);
+                               
                                setShowAddAddress(false); 
                                setEditingAddressId(null);
                             }} 
+                            noValidate 
                             className="p-10 bg-[#FAEAD3] rounded-[50px] space-y-6 overflow-hidden border border-white/40 shadow-xl"
                           >
                              <div className="flex gap-3 mb-4 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
@@ -875,35 +964,62 @@ export function AccountPage() {
                                 ))}
                              </div>
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <input required placeholder="First Name" value={addressForm.firstName} onChange={e=>setAddressForm({...addressForm, firstName: e.target.value})} className="h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
-                                <input required placeholder="Last Name" value={addressForm.lastName} onChange={e=>setAddressForm({...addressForm, lastName: e.target.value})} className="h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                                <div>
+                                  <input required placeholder="First Name" value={addressForm.firstName} onChange={e=>setAddressForm({...addressForm, firstName: e.target.value.replace(/[^A-Za-z\s]/g, '')})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.firstName ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                                  {addressErrors.firstName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.firstName}</p>}
+                                </div>
+                                <div>
+                                  <input required placeholder="Last Name" value={addressForm.lastName} onChange={e=>setAddressForm({...addressForm, lastName: e.target.value.replace(/[^A-Za-z\s]/g, '')})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.lastName ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                                  {addressErrors.lastName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.lastName}</p>}
+                                </div>
                              </div>
-                             <input required placeholder="Street Address" value={addressForm.address} onChange={e=>setAddressForm({...addressForm, address: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                             <div>
+                               <input required placeholder="Street Address" value={addressForm.address} onChange={e=>setAddressForm({...addressForm, address: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.address ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                               {addressErrors.address && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.address}</p>}
+                             </div>
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <input placeholder="Apartment, Suite (Optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
-                                <div className="relative">
-                                  <select required value={addressForm.state} onChange={e=>setAddressForm({...addressForm, state: e.target.value, city: ''})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] appearance-none cursor-pointer">
-                                     <option value="">Select State</option>
-                                     {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
-                                  </select>
-                                  <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                <input placeholder="Apartment, Suite (Optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                                <div>
+                                  <div className="relative">
+                                    <select required value={addressForm.state} onChange={e=>setAddressForm({...addressForm, state: e.target.value, city: ''})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.state ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} appearance-none cursor-pointer`}>
+                                       <option value="">Select State</option>
+                                       {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                  </div>
+                                  {addressErrors.state && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.state}</p>}
                                 </div>
                              </div>
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="relative">
-                                  <select required value={addressForm.city} onChange={e=>setAddressForm({...addressForm, city: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] appearance-none cursor-pointer">
-                                     <option value="">Select City</option>
-                                     {(commonCities[addressForm.state] || []).map(c => <option key={c} value={c}>{c}</option>)}
-                                     <option value="Other">Other (Manual Entry)</option>
-                                  </select>
-                                  <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                <div>
+                                  <div className="relative">
+                                    <select required value={addressForm.city} onChange={e=>setAddressForm({...addressForm, city: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.city ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} appearance-none cursor-pointer`}>
+                                       <option value="">Select City</option>
+                                       {(commonCities[addressForm.state] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                                       <option value="Other">Other (Manual Entry)</option>
+                                    </select>
+                                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                  </div>
+                                  {addressErrors.city && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.city}</p>}
                                 </div>
                                 {addressForm.city === 'Other' && (
-                                   <input required placeholder="Enter City/District" value={addressForm.district} onChange={e=>setAddressForm({...addressForm, district: e.target.value})} className="h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-[#E84949]" />
+                                   <div>
+                                     <input required placeholder="Enter City/District" value={addressForm.district} onChange={e=>setAddressForm({...addressForm, district: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.district ? 'border-red-400' : 'border-[#E84949]'}`} />
+                                     {addressErrors.district && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.district}</p>}
+                                   </div>
                                 )}
-                                <input required placeholder="ZIP Code" value={addressForm.postalCode} onChange={e=>setAddressForm({...addressForm, postalCode: e.target.value})} className="h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                                <div>
+                                  <input required placeholder="ZIP Code" maxLength="6" value={addressForm.postalCode} onChange={e=>setAddressForm({...addressForm, postalCode: e.target.value.replace(/\D/g, '').slice(0, 6)})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.postalCode ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                                  {addressErrors.postalCode && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.postalCode}</p>}
+                                </div>
                              </div>
-                             <input required placeholder="Phone Number" value={addressForm.phone} onChange={e=>setAddressForm({...addressForm, phone: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                             <div>
+                               <div className="relative">
+                                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-500 pointer-events-none">+91</span>
+                                 <input required placeholder="Phone Number" maxLength="10" value={addressForm.phone.replace(/^\+91/, '')} onChange={e=>setAddressForm({...addressForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-14 pl-14 pr-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                               </div>
+                               {addressErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.phone}</p>}
+                             </div>
                              
                              <button type="submit" className="w-full h-16 bg-[#333] text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-[#E84949] transition-all shadow-xl active:scale-[0.98] mt-4 flex items-center justify-center gap-3">
                                 {editingAddressId ? 'Update Address' : 'Save Address'}
@@ -933,9 +1049,9 @@ export function AccountPage() {
                                        setAddressForm(addr); 
                                        setShowAddAddress(true); 
                                        window.scrollTo({top: 0, behavior: 'smooth'}); 
-                                    }} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 hover:text-[#6651A4] hover:bg-white opacity-0 group-hover:opacity-100 transition-all shadow-sm"><Edit2 size={16}/></button>
+                                    }} className="w-10 h-10 rounded-xl flex items-center justify-center text-[#6651A4] bg-[#6651A4]/10 hover:bg-[#6651A4] hover:text-white transition-all shadow-sm"><Edit2 size={16}/></button>
                                     {!addr.isDefault && (
-                                       <button onClick={() => deleteAddress(addr.id)} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 hover:text-[#E84949] hover:bg-white opacity-0 group-hover:opacity-100 transition-all shadow-sm"><Trash2 size={16}/></button>
+                                       <button onClick={() => deleteAddress(addr.id)} className="w-10 h-10 rounded-xl flex items-center justify-center text-[#E84949] bg-[#E84949]/10 hover:bg-[#E84949] hover:text-white transition-all shadow-sm"><Trash2 size={16}/></button>
                                     )}
                                  </div>
                               </div>
@@ -966,16 +1082,12 @@ export function AccountPage() {
                      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                         {wishlist.length === 0 ? (
                            <div className="col-span-full py-24 text-center border-2 border-dashed border-black/[0.03] rounded-[40px] space-y-6">
-                              <Heart className="mx-auto text-gray-100" size={48}/>
-                              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">No toys in your wishlist yet</p>
+                              <Heart className="mx-auto text-gray-300" size={48}/>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">No toys in your wishlist yet</p>
                               <Link to="/" className="inline-block px-10 py-3 bg-[#333] text-white rounded-xl font-bold uppercase tracking-widest text-[10px]">Start Exploring</Link>
                            </div>
-                        ) : wishlist.map(item => (
-                           <div key={item.id} className="bg-white/40 p-4 rounded-[32px] border border-black/[0.02] hover:shadow-md transition-all group">
-                              <img src={item.img} className="w-full aspect-square object-cover rounded-[24px] mb-4 group-hover:scale-[1.02] transition-transform" />
-                              <h4 className="text-[13px] font-bold text-gray-700 line-clamp-1">{item.title}</h4>
-                              <p className="text-xl font-bold font-grandstander text-[#E84949] mt-1">${item.price}</p>
-                           </div>
+                        ) : wishlist.map((item, i) => (
+                           <ProductCard key={item.id} p={item} i={i} />
                         ))}
                      </div>
                   </motion.div>
@@ -986,15 +1098,33 @@ export function AccountPage() {
                      <h3 className="text-3xl font-grandstander font-bold text-gray-700 text-center">Profile Settings</h3>
                      <form onSubmit={async (e)=>{
                         e.preventDefault()
+                        const newErrors = {};
+                        if (!profileForm.firstName?.trim()) newErrors.firstName = 'First name is required';
+                        else if (!/^[A-Za-z\s]+$/.test(profileForm.firstName)) newErrors.firstName = 'First name must contain alphabets only';
+                        
+                        if (!profileForm.lastName?.trim()) newErrors.lastName = 'Last name is required';
+                        else if (!/^[A-Za-z\s]+$/.test(profileForm.lastName)) newErrors.lastName = 'Last name must contain alphabets only';
+                        
+                        const cleanPhone = profileForm.phone?.replace(/^\+91/, '').replace(/\D/g, '');
+                        if (!cleanPhone) newErrors.phone = 'Mobile number is required';
+                        else if (!/^[6-9]\d{9}$/.test(cleanPhone)) newErrors.phone = 'Mobile number must be 10 digits starting with 6-9';
+
+                        if (Object.keys(newErrors).length > 0) {
+                           setProfileErrors(newErrors);
+                           return;
+                        }
+                        setProfileErrors({});
+                        
                         setIsProcessing(true)
                         try {
+                          const formattedPhone = cleanPhone ? '+91' + cleanPhone : '';
                           const updatedProfile = await updateMyProfile({
                             firstName: profileForm.firstName,
                             lastName: profileForm.lastName,
-                            phone: profileForm.phone || '',
+                            phone: formattedPhone,
                           })
                           updateUser(updatedProfile)
-                          success('Profile updated successfully.')
+                          success('Your profile is updated successfully.')
                         } catch (err) {
                           showError(err.message || 'Profile update failed')
                         } finally {
@@ -1004,11 +1134,13 @@ export function AccountPage() {
                         <div className="grid grid-cols-2 gap-6">
                            <div className="space-y-2">
                               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">First Name</label>
-                              <input value={profileForm.firstName} onChange={e=>setProfileForm({...profileForm, firstName:e.target.value})} className="w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 border-transparent focus:border-[#6651A4] font-bold text-gray-600" />
+                              <input value={profileForm.firstName} onChange={e=>setProfileForm({...profileForm, firstName:e.target.value.replace(/[^A-Za-z\s]/g, '')})} className={`w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 ${profileErrors.firstName ? 'border-red-400' : 'border-transparent focus:border-[#6651A4]'} font-bold text-gray-600 transition-colors`} />
+                              {profileErrors.firstName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight px-4">{profileErrors.firstName}</p>}
                            </div>
                            <div className="space-y-2">
                               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Last Name</label>
-                              <input value={profileForm.lastName} onChange={e=>setProfileForm({...profileForm, lastName:e.target.value})} className="w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 border-transparent focus:border-[#6651A4] font-bold text-gray-600" />
+                              <input value={profileForm.lastName} onChange={e=>setProfileForm({...profileForm, lastName:e.target.value.replace(/[^A-Za-z\s]/g, '')})} className={`w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 ${profileErrors.lastName ? 'border-red-400' : 'border-transparent focus:border-[#6651A4]'} font-bold text-gray-600 transition-colors`} />
+                              {profileErrors.lastName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight px-4">{profileErrors.lastName}</p>}
                            </div>
                         </div>
                         <div className="space-y-2">
@@ -1017,7 +1149,11 @@ export function AccountPage() {
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Phone Number</label>
-                           <input value={profileForm.phone || ''} onChange={e=>setProfileForm({...profileForm, phone:e.target.value})} className="w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 border-transparent focus:border-[#6651A4] font-bold text-gray-600" />
+                           <div className="relative">
+                             <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-500 pointer-events-none">+91</span>
+                             <input maxLength="10" value={(profileForm.phone || '').replace(/^\+91/, '')} onChange={e=>setProfileForm({...profileForm, phone:e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-12 pl-14 pr-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 ${profileErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#6651A4]'} font-bold text-gray-600 transition-colors`} />
+                           </div>
+                           {profileErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight px-4">{profileErrors.phone}</p>}
                         </div>
                         <button type="submit" className="w-full h-16 bg-[#333] text-white rounded-[25px] font-grandstander font-bold uppercase tracking-widest text-[13px] hover:bg-[#6651A4] transition-all shadow-xl">Update Profile</button>
                      </form>

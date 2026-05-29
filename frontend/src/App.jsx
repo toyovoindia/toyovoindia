@@ -26,9 +26,9 @@ import { AllCategoriesPage } from './pages/AllCategoriesPage'
 import { AuthProvider } from './context/AuthContext'
 import { MobileBottomBar } from './components/layout/MobileBottomBar'
 import { AsideSidebar } from './components/layout/AsideSidebar'
-import { PurchaseNotification } from './components/ui/PurchaseNotification'
 import { useAuth } from './context/AuthContext'
 import { FirebaseTokenManager } from './components/FirebaseTokenManager'
+import { getStorefrontSettings } from './services/siteApi'
 
 // Helper component to scroll to top on route change
 function ScrollToTop() {
@@ -134,10 +134,39 @@ function AppContent() {
   const location = useLocation()
   const isCheckout = location.pathname === '/checkout'
   const isAdmin = location.pathname.startsWith('/admin')
-  const hideLayouts = isCheckout || isAdmin
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname)
+  const hideLayouts = isCheckout || isAdmin || isAuthPage
+
+  const { user } = useAuth()
+  const isSiteAdmin = ['admin', 'super_admin'].includes(user?.role)
+  const [maintenanceMode, setMaintenanceMode] = React.useState(false)
+
+  React.useEffect(() => {
+    getStorefrontSettings()
+      .then((data) => {
+        setMaintenanceMode(Boolean(data.maintenanceMode))
+      })
+      .catch(console.error)
+  }, [location.pathname]) // re-check occasionally on navigation
 
   // If we are entirely inside admin, we don't need the flex-col bg-[#FDF4E6] wrapper of the user site,
   // but it's okay because AdminLayout fills the screen anyway. Let's just conditionally render components.
+
+  if (maintenanceMode && !isSiteAdmin && !isAdmin && !isAuthPage) {
+    return (
+      <div className="min-h-screen bg-[#FDF4E6] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6 border border-[#F1641E]/20">
+          <svg className="w-10 h-10 text-[#F1641E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-gray-800 mb-4">We'll be back soon!</h1>
+        <p className="text-gray-500 font-medium max-w-md mx-auto text-sm md:text-base leading-relaxed">
+          Toyovo India is currently undergoing scheduled maintenance to improve your shopping experience. Please check back shortly.
+        </p>
+      </div>
+    )
+  }
 
   if (isAdmin) {
     return (
@@ -213,6 +242,7 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/account/:tab" element={<AccountPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/order-success" element={<OrderSuccessPage />} />
@@ -226,7 +256,6 @@ function AppContent() {
         {!hideLayouts && <Footer />}
         {!hideLayouts && <MobileBottomBar />}
         {!hideLayouts && <AsideSidebar />}
-        {!hideLayouts && <PurchaseNotification />}
       </div>
     </>
   )

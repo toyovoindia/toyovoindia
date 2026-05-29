@@ -45,7 +45,7 @@ export function CategorySection() {
 
   // Seamless Looping Listener: Teleports between sets invisibly
   useEffect(() => {
-    return x.onChange((latest) => {
+    return x.on('change', (latest) => {
       const cardWidth = window.innerWidth / cardsPerView;
       const setWidth = cardWidth * 5;
       
@@ -126,13 +126,14 @@ export function CategorySection() {
 
       <div className="mt-12 bg-[#F47522] py-4 md:py-5 overflow-hidden flex items-center border-y border-white/5 shadow-inner">
         <motion.div 
-          animate={{ x: [-1200, 0] }}
-          transition={{ repeat: Infinity, duration: 10, ease: 'linear' }}
-          className="flex whitespace-nowrap gap-12 md:gap-20 items-center"
+          animate={{ x: ["-50%", 0] }}
+          transition={{ repeat: Infinity, duration: 50, ease: 'linear' }}
+          className="flex whitespace-nowrap w-max"
         >
-          {[...marqueeItems, ...marqueeItems, ...marqueeItems].map((item, i) => (
-            <div key={i} className="flex items-center gap-6 text-white font-bold text-[12px] md:text-[14px] lg:text-[16px] tracking-[0.1em] uppercase">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          {/* We repeat the exact same set of items many times to ensure a perfect 50% translation loop */}
+          {[...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems].map((item, i) => (
+            <div key={i} className="flex items-center gap-6 text-white font-bold text-[12px] md:text-[14px] lg:text-[16px] tracking-[0.1em] uppercase pr-12 md:pr-20">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white shrink-0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               <span>{item}</span>
             </div>
           ))}

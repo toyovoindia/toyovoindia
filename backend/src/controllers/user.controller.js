@@ -165,7 +165,7 @@ const adminSortMap = {
 
 export const adminListUsers = asyncHandler(async (req, res) => {
   const page = Number(req.query.page || 1);
-  const limit = Math.min(Number(req.query.limit || 10), 200);
+  const limit = Math.min(Number(req.query.limit || 10), 10000);
   const skip = (page - 1) * limit;
   const filter = {};
 
@@ -286,13 +286,25 @@ export const saveFcmToken = asyncHandler(async (req, res, next) => {
     return next(new AppError('Token is required', 400));
   }
 
-  const field = platform === 'mobile' ? 'fcmTokenMobile' : 'fcmTokens';
+  // 1. Remove this token from ALL users (to prevent cross-user broadcasting if device changes hands)
+  await User.updateMany(
+    { $or: [{ fcmTokens: token }, { fcmTokenMobile: token }] },
+    { $pull: { fcmTokens: token, fcmTokenMobile: token } }
+  );
 
-  await User.findByIdAndUpdate(req.user._id, {
-    $addToSet: { [field]: token }
-  });
+  // 2. Overwrite current user's tokens to ONLY be this single token (Single Device Rule)
+  const updateData = {};
+  if (platform === 'mobile') {
+    updateData.fcmTokenMobile = [token];
+    updateData.fcmTokens = []; // Clear web tokens
+  } else {
+    updateData.fcmTokens = [token];
+    updateData.fcmTokenMobile = []; // Clear mobile tokens
+  }
 
-  return successResponse(res, 200, 'FCM token saved successfully');
+  await User.findByIdAndUpdate(req.user._id, { $set: updateData });
+
+  return successResponse(res, 200, 'FCM token saved successfully (Limited to latest device)');
 });
 
 export const removeFcmToken = asyncHandler(async (req, res, next) => {
@@ -309,4 +321,27 @@ export const removeFcmToken = asyncHandler(async (req, res, next) => {
   });
 
   return successResponse(res, 200, 'FCM token removed successfully');
+});
+
+import { sendNotificationToUser, notifyAdmins } from '../services/notification.service.js';
+
+export const sendTestPushNotification = asyncHandler(async (req, res, next) => {
+  await sendNotificationToUser(req.user._id, {
+    title: '🎉 Toyovo India',
+    body: 'FCM Push Notifications are working perfectly!',
+    category: 'General',
+    userActionUrl: '/account',
+    data: { type: 'test_notification' }
+  });
+
+  // Also send to admins so the user can verify admin push is working
+  await notifyAdmins({
+    title: '🛠️ Test Push Received',
+    body: `User ${req.user.firstName} just fired a test notification.`,
+    category: 'General',
+    adminActionUrl: '/admin',
+    data: { type: 'admin_test_notification' }
+  });
+  
+  return successResponse(res, 200, 'Test push notification sent successfully');
 });

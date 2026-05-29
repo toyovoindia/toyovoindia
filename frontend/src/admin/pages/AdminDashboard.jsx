@@ -3,9 +3,8 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Users, DollarSign, Package, ShoppingCart, ArrowUpRight, ArrowDownRight, Activity, ChevronDown } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
-import { getAdminUsers } from '../../services/adminUserApi'
-import { getAdminProducts } from '../../services/adminCatalogApi'
 import { getAdminOrders, getAdminRevenueStats } from '../../services/orderApi'
+import { getAdminDashboardStats } from '../../services/siteApi'
 
 const formatCurrencyShort = (val) => {
   if (val >= 10000000) return (val / 10000000).toFixed(1).replace('.0', '') + ' Cr'
@@ -47,9 +46,12 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState([])
   const [recentOrders, setRecentOrders] = useState([])
-  const [allOrders, setAllOrders] = useState([])
-  const [allProducts, setAllProducts] = useState([])
-  const [allUsers, setAllUsers] = useState([])
+  const [dashboardData, setDashboardData] = useState({
+    categoryBreakdown: [],
+    wishlistTrends: [],
+    lowStockProducts: [],
+    totalProducts: 0
+  })
   const [monthlyStats, setMonthlyStats] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
   const [revenueTimeframe, setRevenueTimeframe] = useState('monthly')
@@ -65,14 +67,12 @@ export function AdminDashboard() {
       setLoading(true)
       try {
         const [
-          { users, meta: userMeta }, 
-          { products, meta: productMeta }, 
-          { orders, meta: orderMeta }, 
+          dashboardStats, 
+          { orders: recentOrdersData }, 
           chartRes
         ] = await Promise.all([
-          getAdminUsers({ limit: 200 }),
-          getAdminProducts({ limit: 200 }),
-          getAdminOrders({ limit: 200 }),
+          getAdminDashboardStats(),
+          getAdminOrders({ limit: 5 }),
           getAdminRevenueStats('monthly')
         ])
 
@@ -81,9 +81,12 @@ export function AdminDashboard() {
         const totalRevenue = chartRes.reduce((sum, m) => sum + m.revenue, 0)
         const paidOrdersCount = chartRes.reduce((sum, m) => sum + m.orderCount, 0)
 
-        setAllUsers(users)
-        setAllProducts(products)
-        setAllOrders(orders)
+        setDashboardData({
+          categoryBreakdown: dashboardStats.categoryBreakdown || [],
+          wishlistTrends: dashboardStats.wishlistTrends || [],
+          lowStockProducts: dashboardStats.lowStockProducts || [],
+          totalProducts: dashboardStats.totalProducts || 0
+        })
         
         // Setup 12 Months Data for both Dropdown and Chart
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -112,12 +115,12 @@ export function AdminDashboard() {
 
         setStats([
           { title: 'Total Revenue', value: `₹${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: `${paidOrdersCount} paid`, isUp: true, icon: <DollarSign size={24} />, color: 'bg-green-500', route: '/admin/finance' },
-          { title: 'Active Explorers', value: (userMeta?.total || 0).toLocaleString('en-IN'), trend: 'live users', isUp: true, icon: <Users size={24} />, color: 'bg-[#6651A4]', route: '/admin/users' },
-          { title: 'Total Orders', value: (orderMeta?.total || 0).toLocaleString('en-IN'), trend: `${orders.filter((order) => order.status === 'processing').length} processing`, isUp: true, icon: <ShoppingCart size={24} />, color: 'bg-[#F1641E]', route: '/admin/orders' },
-          { title: 'Products in Catalog', value: (productMeta?.total || 0).toLocaleString('en-IN'), trend: 'live catalog', isUp: true, icon: <Package size={24} />, color: 'bg-[#E8312A]', route: '/admin/products' },
+          { title: 'Active Explorers', value: (dashboardStats.totalUsers || 0).toLocaleString('en-IN'), trend: 'live users', isUp: true, icon: <Users size={24} />, color: 'bg-[#6651A4]', route: '/admin/users' },
+          { title: 'Total Orders', value: (dashboardStats.totalOrders || 0).toLocaleString('en-IN'), trend: `${recentOrdersData.filter((order) => order.status === 'processing').length} processing recently`, isUp: true, icon: <ShoppingCart size={24} />, color: 'bg-[#F1641E]', route: '/admin/orders' },
+          { title: 'Products in Catalog', value: (dashboardStats.totalProducts || 0).toLocaleString('en-IN'), trend: 'live catalog', isUp: true, icon: <Package size={24} />, color: 'bg-[#E8312A]', route: '/admin/products' },
         ])
         setRecentOrders(
-          orders.slice(0, 4).map((order) => ({
+          recentOrdersData.slice(0, 4).map((order) => ({
             id: `#${order.orderNumber}`,
             user: order.customerName || 'Customer',
             amount: `₹${order.total.toFixed(2)}`,
@@ -129,9 +132,7 @@ export function AdminDashboard() {
         if (isMounted) {
           setStats([])
           setRecentOrders([])
-          setAllUsers([])
-          setAllProducts([])
-          setAllOrders([])
+          setDashboardData({ categoryBreakdown: [], wishlistTrends: [], lowStockProducts: [] })
           showError(err.message || 'Dashboard data could not be loaded')
         }
       } finally {
@@ -145,54 +146,11 @@ export function AdminDashboard() {
     }
   }, [showError])
 
-  const paidOrders = useMemo(() => allOrders.filter((order) => order.paymentStatus === 'paid'), [allOrders])
+  const { categoryBreakdown, wishlistTrends, lowStockProducts, totalProducts } = dashboardData
+  const systemHealth = { lowStockProducts }
+  
   const revenueSeriesData = useMemo(() => buildRevenueSeries(chartData), [chartData])
   const { chartMax, series: revenueSeries } = revenueSeriesData
-
-  const categoryBreakdown = useMemo(() => {
-    const categoryCountMap = new Map()
-    allProducts.forEach((product) => {
-      const name = product.category?.name || product.categoryName || 'Uncategorized'
-      categoryCountMap.set(name, (categoryCountMap.get(name) || 0) + 1)
-    })
-    const totalProducts = Math.max(allProducts.length, 1)
-    return Array.from(categoryCountMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([label, count], index) => ({
-        label,
-        count,
-        value: `${Math.round((count / totalProducts) * 100)}%`,
-        color: ['bg-[#6651A4]', 'bg-[#F1641E]', 'bg-[#E8312A]'][index] || 'bg-gray-400',
-      }))
-  }, [allProducts])
-
-  const wishlistTrends = useMemo(() => {
-    const wishlistCountMap = new Map()
-    allUsers.forEach((user) => {
-      ;(user.preferences?.wishlist || []).forEach((item) => {
-        const name = item.title || item.name || item.slug || 'Wishlist Item'
-        wishlistCountMap.set(name, (wishlistCountMap.get(name) || 0) + 1)
-      })
-    })
-    return Array.from(wishlistCountMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([name, count]) => ({ name, count }))
-  }, [allUsers])
-
-  const systemHealth = useMemo(() => {
-    const totalProducts = Math.max(allProducts.length, 1)
-    const lowStockProducts = allProducts.filter((product) => Number(product.stock || 0) <= Number(product.lowStockThreshold || 5))
-    const activeProducts = allProducts.filter((product) => product.status === 'active')
-    const completedPayments = allOrders.filter((order) => ['paid', 'refunded', 'failed'].includes(order.paymentStatus))
-    const successfulPayments = allOrders.filter((order) => ['paid', 'refunded'].includes(order.paymentStatus))
-    return {
-      paymentSuccessRate: completedPayments.length ? Math.round((successfulPayments.length / completedPayments.length) * 100) : 100,
-      lowStockRate: Math.round((lowStockProducts.length / totalProducts) * 100),
-      activeCatalogRate: Math.round((activeProducts.length / totalProducts) * 100),
-    }
-  }, [allOrders, allProducts])
 
   return (
     <div className="shell space-y-8 pb-10">
@@ -365,7 +323,7 @@ export function AdminDashboard() {
                   <motion.circle cx="50%" cy="50%" r="40%" fill="transparent" stroke="#6651A4" strokeWidth="12" strokeDasharray="251" initial={{ strokeDashoffset: 251 }} animate={{ strokeDashoffset: 251 * 0.4 }} transition={{ duration: 1.5, ease: 'easeInOut' }} strokeLinecap="round" />
                 </svg>
                 <div className="absolute text-center">
-                  <p className="text-xl md:text-3xl font-grandstander font-bold text-gray-800">{allProducts.length}</p>
+                  <p className="text-xl md:text-3xl font-grandstander font-bold text-gray-800">{totalProducts}</p>
                   <p className="text-[7px] md:text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Toys</p>
                 </div>
               </div>
@@ -374,10 +332,10 @@ export function AdminDashboard() {
                   <div key={item.label} className="space-y-1.5">
                     <div className="flex justify-between text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                       <span className="text-gray-500">{item.label}</span>
-                      <span className="text-gray-800">{item.value}</span>
+                      <span className="text-gray-800">{item.count}</span>
                     </div>
                     <div className="h-1.5 bg-gray-50 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: item.value }} className={`h-full ${item.color} rounded-full`} />
+                      <motion.div initial={{ width: 0 }} animate={{ width: item.percent }} className={`h-full ${item.color} rounded-full`} />
                     </div>
                   </div>
                 ))}
@@ -450,45 +408,40 @@ export function AdminDashboard() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="bg-[#6651A4] rounded-[32px] p-8 text-white relative overflow-hidden shadow-xl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="bg-[#6651A4] rounded-[32px] p-8 text-white relative overflow-hidden shadow-xl flex flex-col h-full min-h-[400px]">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-[#F1641E]/20 rounded-full blur-2xl" />
-          <div className="relative z-10">
-            <h2 className="text-2xl font-grandstander font-bold mb-2">System Health</h2>
-            <p className="text-white/60 text-sm mb-8">Live platform metrics based on payments and catalog status.</p>
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest mb-2">
-                  <span>Payment Success</span>
-                  <span className="text-green-300">{systemHealth.paymentSuccessRate}%</span>
-                </div>
-                <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                  <div style={{ width: `${systemHealth.paymentSuccessRate}%` }} className="h-full bg-green-400 rounded-full" />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest mb-2">
-                  <span>Active Catalog</span>
-                  <span className="text-blue-200">{systemHealth.activeCatalogRate}%</span>
-                </div>
-                <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                  <div style={{ width: `${systemHealth.activeCatalogRate}%` }} className="h-full bg-blue-300 rounded-full" />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest mb-2">
-                  <span>Low Stock Exposure</span>
-                  <span className="text-yellow-300">{systemHealth.lowStockRate}%</span>
-                </div>
-                <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                  <div style={{ width: `${systemHealth.lowStockRate}%` }} className="h-full bg-yellow-400 rounded-full" />
-                </div>
-              </div>
-              <div className="pt-6 mt-6 border-t border-white/10">
-                <button onClick={() => navigate('/admin/system-logs')} className="w-full h-12 bg-white text-[#6651A4] rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#FAEAD3] transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                  View Full Logs <ArrowUpRight size={16} />
-                </button>
-              </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-2xl font-grandstander font-bold">Stock Alerts</h2>
+              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest">{systemHealth.lowStockProducts.length} Items</span>
+            </div>
+            <p className="text-white/60 text-sm mb-6">Products requiring inventory attention.</p>
+            
+            <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-[150px] max-h-[300px]">
+              {systemHealth.lowStockProducts.length === 0 ? (
+                <div className="p-4 bg-white/10 rounded-xl text-[11px] font-bold text-white/40 uppercase tracking-widest text-center">Inventory is healthy</div>
+              ) : systemHealth.lowStockProducts.slice(0, 5).map(product => {
+                 const stock = Number(product.stock || 0)
+                 const isOut = stock === 0
+                 return (
+                   <div key={product._id || product.id} onClick={() => navigate(`/admin/products/${product._id || product.id}`)} className="p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/20 transition-colors cursor-pointer flex justify-between items-center group">
+                     <div className="min-w-0 pr-4">
+                       <p className="text-[12px] font-bold text-white truncate">{product.name || product.title}</p>
+                       <p className="text-[10px] text-white/50 font-medium truncate mt-0.5">SKU: {product.sku || 'N/A'}</p>
+                     </div>
+                     <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest shrink-0 ${isOut ? 'bg-red-500/20 text-red-200' : 'bg-yellow-500/20 text-yellow-200'}`}>
+                       {isOut ? 'Out of Stock' : `${stock} Left`}
+                     </span>
+                   </div>
+                 )
+              })}
+            </div>
+            
+            <div className="pt-6 mt-auto border-t border-white/10">
+              <button onClick={() => navigate('/admin/products')} className="w-full h-12 bg-white text-[#6651A4] rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#FAEAD3] transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                Manage Inventory <ArrowUpRight size={16} />
+              </button>
             </div>
           </div>
         </motion.div>

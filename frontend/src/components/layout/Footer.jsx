@@ -34,7 +34,7 @@ const FooterAccordion = ({ title, children, isNewsletter = false }) => {
 }
 
 const PaymentBadges = () => (
-  <div className="grid grid-cols-6 lg:grid-cols-3 gap-2 justify-center lg:justify-end">
+  <div className="grid grid-cols-3 lg:flex lg:flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto px-2 lg:px-0">
     {[
       { name: 'Visa', url: 'https://www.logo.wine/a/logo/Visa_Inc./Visa_Inc.-Logo.wine.svg' },
       { name: 'Mastercard', url: 'https://www.logo.wine/a/logo/Mastercard/Mastercard-Logo.wine.svg' },
@@ -43,7 +43,7 @@ const PaymentBadges = () => (
       { name: 'Paytm', url: 'https://www.logo.wine/a/logo/Paytm/Paytm-Logo.wine.svg' },
       { name: 'UPI', url: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg' }
     ].map((icon) => (
-      <div key={icon.name} className="bg-white rounded-md p-1 w-10 h-7 md:w-12 md:h-8 flex items-center justify-center shadow-sm border border-black/5 shrink-0 overflow-hidden">
+      <div key={icon.name} className="bg-white rounded-md p-1.5 w-full lg:w-14 h-10 lg:h-9 flex items-center justify-center shadow-sm border border-black/5 shrink-0 overflow-hidden">
         <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
       </div>
     ))}
@@ -57,11 +57,14 @@ export function Footer() {
   const { success, error } = useToast()
 
   const [siteConfig, setSiteConfig] = useState(null)
+  const [isStandalone, setIsStandalone] = useState(false)
 
   // Update email if user logs in/out
   useEffect(() => {
     if (user?.email) setEmail(user.email)
     else setEmail('')
+
+    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone)
 
     // Load site config for social links
     const loadConfig = async () => {
@@ -180,16 +183,16 @@ export function Footer() {
                   <Headset size={32} strokeWidth={1} className="text-white shrink-0 mt-1" />
                   <div className="flex flex-col gap-1">
                     <span className="text-[13px] text-white/90">Hotline free 24/7:</span>
-                    <span className="font-bold text-[18px] leading-none">{siteConfig?.contactPhone || "+91 98765 43210"}</span>
+                    <span className="font-bold text-[18px] leading-none">{siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}</span>
                   </div>
                 </div>
                 <div className="mt-2">
                   <span className="font-bold uppercase text-[13px]">ADDRESS: </span>
-                  <span className="text-white/90 text-[14px]">{siteConfig?.contactAddress || "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab"}</span>
+                  <span className="text-white/90 text-[14px]">{siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab'}</span>
                 </div>
                 <div>
                   <span className="font-bold uppercase text-[13px]">EMAIL: </span>
-                  <a href={`mailto:${siteConfig?.contactEmail || "hello@toyovoindia.com"}`} className="text-white/90 text-[14px] hover:text-white">{siteConfig?.contactEmail || "hello@toyovoindia.com"}</a>
+                  <a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="text-white/90 text-[14px] hover:text-white">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a>
                 </div>
               </div>
             </FooterAccordion>
@@ -199,24 +202,20 @@ export function Footer() {
       </div>
 
       {/* Bottom Bar Full Width */}
-      <div className="w-full border-t border-dotted border-white/80">
+      <div className="w-full border-t border-dotted border-white/80 pb-20 lg:pb-0">
         <div className="shell py-6 flex flex-col gap-6">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="flex flex-col gap-2 text-center lg:text-left">
-              <p className="text-[13px] md:text-[14px] text-white/80">
-                © 2026, TOYOVO INDIA (OPC) PRIVATE LIMITED Powered by Appzeto
-              </p>
-              <div className="flex flex-wrap justify-center lg:justify-start gap-x-4 gap-y-1 text-[11px] font-medium text-white/60">
-                <span>CIN: U47912PB2026OPC068091</span>
-                <span>PAN: AANCT0674K</span>
-                <span>TAN: PTLT16619B</span>
-              </div>
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-10">
+            <div className="flex flex-col gap-2 text-center lg:text-left w-full lg:w-auto">
+              {!isStandalone && (
+                <a href="#" target="_blank" rel="noopener noreferrer" className="block hover:scale-105 transition-transform mx-auto lg:mx-0 w-[140px] md:w-[160px]">
+                  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="w-full h-auto" />
+                </a>
+              )}
             </div>
-            <PaymentBadges />
+            <div className="w-full lg:w-auto">
+              <PaymentBadges />
+            </div>
           </div>
-          <p className="text-center text-[11px] text-white/50">
-            Incorporated Under The Companies Act, 2013 | Ministry of Corporate Affairs, India
-          </p>
         </div>
       </div>
     </footer>

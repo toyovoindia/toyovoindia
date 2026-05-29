@@ -66,8 +66,22 @@ export async function apiRequest(path, options = {}, meta = {}) {
   }
 
   if (!response.ok) {
-    const error = new Error(payload.message || 'Request failed')
-    error.details = payload.errors || []
+    const details = payload.errors || []
+    // If backend returns generic 'Validation failed', build a readable message from Zod field errors
+    let message = payload.message || 'Request failed'
+    if (message === 'Validation failed' && details.length > 0) {
+      // Map field-level Zod errors to a user-friendly sentence
+      const fieldMessages = details.map(err => {
+        const field = err.path?.split('.').pop() || ''
+        const msg = err.message || ''
+        if (field === 'code') return 'Please enter a valid coupon code (3–40 characters)'
+        if (field === 'subtotal') return 'Invalid order amount'
+        return msg
+      })
+      message = fieldMessages[0] || message
+    }
+    const error = new Error(message)
+    error.details = details
     error.status = response.status
     throw error
   }

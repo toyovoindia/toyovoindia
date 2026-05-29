@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle2, Clock } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { getPurchasePopupSettings } from '../../services/siteApi'
 
 const formatRelativeTime = (value) => {
@@ -15,6 +16,7 @@ const formatRelativeTime = (value) => {
 }
 
 export function PurchaseNotification() {
+  const location = useLocation()
   const [popupConfig, setPopupConfig] = useState({
     enabled: false,
     initialDelaySeconds: 60,
@@ -78,8 +80,9 @@ export function PurchaseNotification() {
   }, [isVisible, hasBeenClosed, popupConfig.repeatDelaySeconds, popupConfig.visibleDurationSeconds, visibleActivities.length])
 
   const currentPurchase = visibleActivities[currentIndex]
+  const isHiddenRoute = location.pathname === '/login' || location.pathname.startsWith('/admin')
 
-  if (!popupConfig.enabled || !currentPurchase) return null
+  if (!popupConfig.enabled || !currentPurchase || isHiddenRoute) return null
 
   return (
     <AnimatePresence>
