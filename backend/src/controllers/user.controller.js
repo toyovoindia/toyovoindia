@@ -62,29 +62,34 @@ export const getMyAccountData = asyncHandler(async (req, res) => {
   });
 });
 
-export const updateMyAccountData = asyncHandler(async (req, res) => {
-  const nextData = {};
-  if (req.body.addresses !== undefined) {
-    nextData.addresses = normalizeAddresses(req.body.addresses);
-  }
-  if (req.body.paymentVault !== undefined) {
-    nextData.paymentVault = normalizePaymentVault(req.body.paymentVault);
-  }
-  if (req.body.paymentHistory !== undefined) {
-    nextData.paymentHistory = normalizePaymentHistory(req.body.paymentHistory);
-  }
+export const updateMyAccountData = asyncHandler(async (req, res, next) => {
+  try {
+    const nextData = {};
+    if (req.body.addresses !== undefined) {
+      nextData.addresses = normalizeAddresses(req.body.addresses);
+    }
+    if (req.body.paymentVault !== undefined) {
+      nextData.paymentVault = normalizePaymentVault(req.body.paymentVault);
+    }
+    if (req.body.paymentHistory !== undefined) {
+      nextData.paymentHistory = normalizePaymentHistory(req.body.paymentHistory);
+    }
 
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user._id,
-    { $set: nextData },
-    { new: true }
-  );
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: nextData },
+      { new: true }
+    );
 
-  return successResponse(res, 200, 'User account data updated successfully', {
-    addresses: normalizeAddresses(updatedUser.addresses),
-    paymentVault: normalizePaymentVault(updatedUser.paymentVault),
-    paymentHistory: normalizePaymentHistory(updatedUser.paymentHistory),
-  });
+    return successResponse(res, 200, 'User account data updated successfully', {
+      addresses: normalizeAddresses(updatedUser.addresses),
+      paymentVault: normalizePaymentVault(updatedUser.paymentVault),
+      paymentHistory: normalizePaymentHistory(updatedUser.paymentHistory),
+    });
+  } catch (error) {
+    console.error('CRITICAL DB SAVE ERROR in updateMyAccountData:', error);
+    return next(new AppError('Failed to update account data', 500));
+  }
 });
 
 export const updateMyPreferences = asyncHandler(async (req, res) => {
