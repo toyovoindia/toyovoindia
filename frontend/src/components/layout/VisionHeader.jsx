@@ -46,7 +46,18 @@ export function VisionHeader() {
   
   const [activeMasterCat, setActiveMasterCat] = useState('Musical Toys')
   const [activeMenu, setActiveMenu] = useState(null)
-  const [navLinks, setNavLinks] = useState(mainNavLinks)
+  const [navLinks, setNavLinks] = useState([
+    { name: 'Home', href: '/', hideOnDesktop: true },
+    {
+      name: 'ALL CATEGORIES',
+      href: '/all-categories',
+      mega: {
+        type: 'master',
+        sidebar: []
+      }
+    },
+    { name: 'Contact', href: '/contact', hideOnDesktop: true }
+  ])
   const [megaCategoryData, setMegaCategoryData] = useState(categoryData)
   const [profileDropdown, setProfileDropdown] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
@@ -125,6 +136,9 @@ export function VisionHeader() {
         if (tree[0]?.name) setActiveMasterCat(tree[0].name)
       } catch (error) {
         console.warn('Falling back to static navigation data:', error.message)
+        if (isMounted) {
+          setNavLinks(mainNavLinks)
+        }
       }
     }
 
@@ -371,9 +385,9 @@ export function VisionHeader() {
             </button>
           </div>
 
-          <div className="lg:static absolute left-1/2 -translate-x-1/2 lg:left-0 lg:translate-x-0 flex items-center shrink-0 lg:mr-1 xl:mr-4 z-10">
-            <Link to="/" onClick={handleLinkClick} className="flex items-center gap-2">
-              <img src={siteConfig?.siteLogo?.url || logo} alt={siteConfig?.siteName || "TOYOVOINDIA"} className="h-10 md:h-12 lg:h-11 xl:h-14 w-auto" />
+          <div className="lg:static absolute left-1/2 -translate-x-1/2 lg:left-0 lg:translate-x-0 flex items-center justify-center shrink-0 lg:mr-1 xl:mr-4 z-10">
+            <Link to="/" onClick={handleLinkClick} className="flex items-center justify-center">
+              <img src={siteConfig?.siteLogo?.url || logo} alt={siteConfig?.siteName || "TOYOVOINDIA"} className="h-[50px] md:h-12 lg:h-11 xl:h-14 w-auto" />
             </Link>
           </div>
 
