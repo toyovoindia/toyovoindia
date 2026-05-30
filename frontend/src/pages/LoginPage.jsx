@@ -89,9 +89,9 @@ export function LoginPage() {
       {/* Left Side: Premium Banner (Only on Desktop) */}
       <div className="hidden lg:flex lg:w-1/2 h-full p-4 flex-col justify-center">
         <div className="w-full h-full relative rounded-[32px] overflow-hidden shadow-2xl">
-          <img 
+          <img
             src={loginImage}
-            alt="Toyovo India Login" 
+            alt="Toyovo India Login"
             className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700 ease-out"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#6651A4]/40 via-black/10 to-transparent" />
@@ -113,7 +113,7 @@ export function LoginPage() {
             </span>
           </Link>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full bg-[#F9EAD3] border-[1.6px] border-dashed border-[#333]/15 rounded-[32px] p-6 sm:p-8 shadow-xl"
@@ -135,9 +135,9 @@ export function LoginPage() {
                   <p className="text-sm font-semibold text-[#333]">OTP sent to {pendingVerification.phone}</p>
                 </div>
                 <div>
-                  <input 
-                    type="text" 
-                    placeholder="Enter 6-digit OTP" 
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit OTP"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl px-4 outline-none focus:border-[#E84949] transition-all text-center tracking-[0.5em] text-lg font-bold"
@@ -145,14 +145,14 @@ export function LoginPage() {
                   />
                 </div>
                 <div className="space-y-3 pt-3">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isSubmitting}
                     className="w-full h-12 bg-[#E84949] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center"
                   >
                     {isSubmitting ? 'VERIFYING...' : 'VERIFY OTP'}
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setPendingVerification(null)}
                     className="w-full h-12 bg-transparent border border-[#333]/20 text-[#333] font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#FDF4E6] transition-all flex items-center justify-center"
@@ -164,13 +164,13 @@ export function LoginPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <input 
-                    type="text" 
-                    placeholder="Email or Mobile Number" 
+                  <input
+                    type="text"
+                    placeholder="Email"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value)
-                      if (fieldErrors.email) setFieldErrors({...fieldErrors, email: ''})
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: '' })
                     }}
                     className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl px-4 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 text-sm font-medium"
                     required
@@ -181,13 +181,13 @@ export function LoginPage() {
                 </div>
                 <div>
                   <div className="relative">
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      placeholder="Password" 
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Password"
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value)
-                        if (fieldErrors.password) setFieldErrors({...fieldErrors, password: ''})
+                        if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: '' })
                       }}
                       className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl pl-4 pr-12 outline-none focus:border-[#E84949] transition-all placeholder-[#333]/40 text-sm font-medium"
                       required
@@ -204,20 +204,20 @@ export function LoginPage() {
                     <p className="mt-1 text-[#E84949] text-[10px] font-bold uppercase tracking-wide ml-1">{fieldErrors.password}</p>
                   )}
                   <div className="flex justify-between items-center px-1 pt-2">
-                      <Link to="/forgot-password" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Forgot password?</Link>
-                      <Link to="/" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Back to store</Link>
+                    <Link to="/forgot-password" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Forgot password?</Link>
+                    <Link to="/" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Back to store</Link>
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-3">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isSubmitting}
                     className="w-full h-12 bg-[#E84949] text-white font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#333] transition-all shadow-md active:scale-95 flex items-center justify-center"
                   >
                     {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
                   </button>
-                  <Link 
+                  <Link
                     to={`/register${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`}
                     className="w-full h-12 bg-[#333] text-[#FDF4E6] font-bold text-[12px] tracking-[0.2em] uppercase rounded-xl hover:bg-[#E84949] hover:text-white transition-all shadow-md flex items-center justify-center"
                   >

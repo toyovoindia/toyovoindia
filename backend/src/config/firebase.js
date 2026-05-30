@@ -39,7 +39,7 @@ export const initializeFirebase = () => {
         configStr = configStr.replace(/^['"]|['"]$/g, '');
         serviceAccount = JSON.parse(configStr);
       } catch (err) {
-        // Silent fallback
+        logger.error(`FCM: Error parsing FIREBASE_CONFIG env variable: ${err.message}`);
       }
     }
 
