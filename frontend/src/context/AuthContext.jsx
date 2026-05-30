@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { getCurrentUser, loginUser, logoutUser, registerUser, verifyOtpUser } from '../services/authApi'
+import { getCurrentUser, loginUser, logoutUser, registerUser, verifyOtpUser, resendOtpUser } from '../services/authApi'
 import { getMyAccountData, updateMyAccountData } from '../services/userAccountApi'
 import { requestForToken } from '../config/firebase'
 import { removeFcmToken } from '../services/notificationApi'
@@ -166,6 +166,15 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const resendOtp = async (phone, purpose) => {
+    try {
+      const result = await resendOtpUser({ phone, purpose })
+      return { success: true, message: result.message || 'OTP resent successfully' }
+    } catch (error) {
+      return { success: false, message: error.message || 'Failed to resend OTP' }
+    }
+  }
+
   const logout = async () => {
     try {
       try {
@@ -230,6 +239,7 @@ export function AuthProvider({ children }) {
       refreshUser,
       login,
       verifyOtp,
+      resendOtp,
       register,
       logout,
       updateUser,

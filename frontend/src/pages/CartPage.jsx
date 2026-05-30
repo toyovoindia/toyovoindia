@@ -129,16 +129,27 @@ export function CartPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="bg-[#FDF4E6] min-h-screen py-24 flex flex-col items-center justify-center font-roboto">
-        <div className="p-12 bg-[#FAEAD3] border-[1.6px] border-dashed border-[#333]/15 rounded-[40px] text-center max-w-lg mx-4 shadow-xl">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                <ShoppingBag size={32} className="text-[#E84949]" />
+      <div className="bg-[#FDF4E6] min-h-screen py-24 flex items-center font-roboto">
+        <div className="shell text-center w-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center"
+          >
+            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-[#E84949] mb-10 shadow-sm">
+              <ShoppingBag size={40} className="text-[#E84949]" />
             </div>
-            <h1 className="text-3xl font-grandstander font-bold text-[#333] mb-4 tracking-tight">Your Cart is Empty</h1>
-            <p className="text-[#666] mb-8 font-medium italic leading-relaxed">It looks like you haven't added any magic to your cart yet. Browse our collections to find the perfect joy for your child!</p>
-            <Link to="/" className="inline-flex items-center gap-3 px-12 py-4 bg-[#E84949] text-white font-bold rounded-full tracking-widest uppercase hover:bg-[#333] transition-all shadow-lg active:scale-95">
-                START SHOPPING <ArrowRight size={18}/>
+            <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] mb-6 tracking-tighter">Your Cart is Empty</h1>
+            <p className="max-w-xl mx-auto font-roboto text-[16px] md:text-[18px] text-[#333] leading-relaxed mb-12 opacity-70">
+              It looks like you haven't added any magic to your cart yet. Browse our collections to find the perfect joy for your child!
+            </p>
+            <Link 
+              to="/" 
+              className="h-14 px-12 bg-[#E84949] text-white rounded-full font-bold text-[13px] tracking-[0.2em] uppercase hover:bg-[#333] transition-all flex items-center gap-3 shadow-lg"
+            >
+              <ShoppingBag size={18} /> START SHOPPING
             </Link>
+          </motion.div>
         </div>
       </div>
     )

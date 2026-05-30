@@ -137,6 +137,10 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
     return next(new AppError('Your current password is wrong', 401));
   }
 
+  if (await user.comparePassword(newPassword)) {
+    return next(new AppError('New password cannot be the same as your current password. Please enter a different new password.', 400));
+  }
+
   const salt = await bcrypt.genSalt(10);
   user.passwordHash = await bcrypt.hash(newPassword, salt);
   // Subtract 1 second from now to prevent race conditions with newly issued JWT's iat

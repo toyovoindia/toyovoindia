@@ -204,8 +204,8 @@ export function LoginPage() {
                     <p className="mt-1 text-[#E84949] text-[10px] font-bold uppercase tracking-wide ml-1">{fieldErrors.password}</p>
                   )}
                   <div className="flex justify-between items-center px-1 pt-2">
-                      <Link to="/forgot-password" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline">Forgot password?</Link>
-                      <Link to="/" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold">Back to store</Link>
+                      <Link to="/forgot-password" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Forgot password?</Link>
+                      <Link to="/" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Back to store</Link>
                   </div>
                 </div>
 

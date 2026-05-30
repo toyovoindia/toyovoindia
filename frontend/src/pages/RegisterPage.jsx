@@ -20,9 +20,11 @@ export function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingVerification, setPendingVerification] = useState(null)
   const [otp, setOtp] = useState('')
-  const { register, verifyOtp } = useAuth()
+  const { register, verifyOtp, resendOtp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -125,6 +127,19 @@ export function RegisterPage() {
     setIsSubmitting(false)
   }
 
+  const handleResendOtp = async () => {
+    setResendLoading(true)
+    setError('')
+    setResendMessage('')
+    const res = await resendOtp(pendingVerification.phone, pendingVerification.purpose)
+    if (res.success) {
+      setResendMessage(res.message)
+    } else {
+      setError(res.message)
+    }
+    setResendLoading(false)
+  }
+
   return (
     <div className="min-h-[100dvh] lg:h-[100dvh] w-screen bg-[#FDF4E6] flex flex-col lg:flex-row overflow-hidden font-roboto">
       {/* Left Side: Premium Banner (Only on Desktop) */}
@@ -178,6 +193,19 @@ export function RegisterPage() {
                     className="w-full h-12 bg-transparent border-[1.2px] border-dashed border-[#333]/20 rounded-xl px-4 outline-none focus:border-[#E84949] transition-all text-center tracking-[0.5em] text-lg font-bold"
                     required
                   />
+                </div>
+                {resendMessage && (
+                  <p className="text-green-600 text-xs text-center font-bold">{resendMessage}</p>
+                )}
+                <div className="text-right">
+                  <button 
+                    type="button"
+                    disabled={resendLoading}
+                    onClick={handleResendOtp}
+                    className="text-xs font-bold text-[#E84949] underline hover:no-underline hover:text-[#333] transition-colors disabled:opacity-50"
+                  >
+                    {resendLoading ? 'Resending OTP...' : 'Resend OTP'}
+                  </button>
                 </div>
                 <div className="space-y-3 pt-3">
                   <button 
@@ -307,9 +335,14 @@ export function RegisterPage() {
                   >
                     {isSubmitting ? 'CREATING...' : 'CREATE'}
                   </button>
-                  <div className="flex flex-col gap-1.5">
-                      <p className="text-[12px] text-[#666]">Already have an account?</p>
-                      <Link to={`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="text-[11px] font-bold text-[#333] underline hover:text-[#E84949] uppercase tracking-widest">Login here</Link>
+                  <div className="flex flex-col gap-2 pt-2">
+                      <div>
+                        <p className="text-[12px] text-[#666] inline mr-1">Already have an account?</p>
+                        <Link to={`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="text-[11px] font-bold text-[#333] underline hover:no-underline hover:text-[#E84949] uppercase tracking-widest transition-colors">Login here</Link>
+                      </div>
+                      <div>
+                        <Link to="/" className="text-[11px] text-[#666] hover:text-[#E84949] font-semibold underline hover:no-underline transition-colors">Back to store</Link>
+                      </div>
                   </div>
                 </div>
               </form>

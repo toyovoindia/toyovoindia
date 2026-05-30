@@ -91,26 +91,27 @@ export const login = asyncHandler(async (req, res, next) => {
   if (user.status !== 'Active') {
     return next(new AppError(`Account is ${user.status.toLowerCase()}. Please contact support.`, 403));
   }
-  
-  if (!user.phone) {
-    return next(new AppError('Account does not have a registered mobile number for OTP.', 400));
-  }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  user.phoneOtp = otp;
-  user.phoneOtpExpires = Date.now() + 10 * 60 * 1000;
+  // Log in immediately (no OTP during login as requested)
+  const { accessToken, refreshTokenPlain, refreshTokenHash } = generateTokens(user._id);
+
+  await RefreshToken.createTokenRecord(user._id, refreshTokenHash, req);
+  
+  user.lastLoginAt = new Date();
   await user.save({ validateBeforeSave: false });
 
-  try {
-    await sendOtpSms(user.phone, otp, 'login');
-  } catch (err) {
-    logger.error('Failed to send login SMS', { error: err });
-  }
+  await Order.updateMany(
+    { user: null, 'customer.email': user.email.toLowerCase() },
+    { $set: { user: user._id } }
+  );
 
-  return successResponse(res, 200, 'Credentials verified. Please verify OTP sent to your mobile.', {
-    requireOtp: true,
-    phone: user.phone,
-    purpose: 'login'
+  setAuthCookies(res, accessToken, refreshTokenPlain);
+
+  Promise.resolve(notifySecurityLogin(user)).catch(() => {});
+
+  return successResponse(res, 200, 'Login successful.', {
+    ...user.toJSON(),
+    accessToken,
   });
 });
 
@@ -286,6 +287,12 @@ export const verifyOtp = asyncHandler(async (req, res, next) => {
     if (!password) {
       return next(new AppError('Please provide new password', 400));
     }
+    
+    const userWithPassword = await User.findById(user._id).select('+passwordHash');
+    if (userWithPassword.passwordHash && await userWithPassword.comparePassword(password)) {
+      return next(new AppError('New password cannot be the same as your previous password. Please enter a different new password.', 400));
+    }
+
     const salt = await bcrypt.genSalt(10);
     user.passwordHash = await bcrypt.hash(password, salt);
     user.passwordChangedAt = Date.now();
@@ -319,4 +326,38 @@ export const verifyOtp = asyncHandler(async (req, res, next) => {
     ...user.toJSON(),
     accessToken,
   });
+});
+
+export const resendOtp = asyncHandler(async (req, res, next) => {
+  const { phone, purpose } = req.body;
+  if (!phone || !purpose) {
+    return next(new AppError('Please provide phone and purpose', 400));
+  }
+
+  const isPhone = /^\d{10}$/.test(phone.trim());
+  const phoneQuery = isPhone ? '+91' + phone.trim() : phone.trim();
+
+  const user = await User.findOne({ phone: phoneQuery });
+  if (!user) {
+    return next(new AppError('User with this mobile number does not exist.', 404));
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  user.phoneOtp = otp;
+  user.phoneOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await sendOtpSms(user.phone, otp, purpose);
+    return successResponse(res, 200, 'OTP resent successfully.', {
+      phone: user.phone,
+      purpose
+    });
+  } catch (error) {
+    user.phoneOtp = undefined;
+    user.phoneOtpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(new AppError('Error sending SMS. Please try again later.', 500));
+  }
 });

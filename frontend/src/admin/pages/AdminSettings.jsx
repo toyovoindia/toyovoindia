@@ -4,12 +4,13 @@ import {
   User, Shield, Bell, Palette, Globe, 
   Save, RefreshCcw, Camera, Mail, Lock,
   Truck, IndianRupee, MessageSquare, Image as ImageIcon,
-  ExternalLink, Power, Zap
+  ExternalLink, Power, Zap, Eye, EyeOff
 } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { getAdminStorefrontSettings, updateAdminStorefrontSettings } from '../../services/siteApi'
 import { updateMyProfile } from '../../services/userProfileApi'
+import { apiRequest } from '../../services/api'
 
 // Social Icons (Fallbacks for older lucide versions)
 const FbIcon = () => (
@@ -362,7 +363,8 @@ function ProfileSettings() {
   const [profile, setProfile] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    email: user?.email || ''
+    email: user?.email || '',
+    phone: user?.phone || ''
   })
   const [isSyncing, setIsSyncing] = useState(false)
   const [formErrors, setFormErrors] = useState({})
@@ -375,6 +377,10 @@ function ProfileSettings() {
     if (!profile.lastName.trim()) errors.lastName = 'Last name is required'
     else if (!/^[a-zA-Z\s]+$/.test(profile.lastName)) errors.lastName = 'Last name must contain only alphabets'
     
+    if (profile.phone && !/^\+91[6-9][0-9]{9}$/.test(profile.phone)) {
+      errors.phone = 'Please enter a valid 10-digit mobile number'
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
       return
@@ -387,7 +393,17 @@ function ProfileSettings() {
       updateUser(updated)
       success('Admin profile synchronized!')
     } catch (err) {
-      error(err.message || 'Profile sync failed')
+      const msg = err.message || 'Profile sync failed'
+      const lower = msg.toLowerCase()
+      if (lower.includes('phone') || lower.includes('mobile')) {
+        setFormErrors({ phone: msg })
+      } else if (lower.includes('first name') || lower.includes('firstname')) {
+        setFormErrors({ firstName: msg })
+      } else if (lower.includes('last name') || lower.includes('lastname')) {
+        setFormErrors({ lastName: msg })
+      } else {
+        setFormErrors({ phone: msg })
+      }
     } finally {
       setIsSyncing(false)
     }
@@ -399,7 +415,7 @@ function ProfileSettings() {
           <div className="w-32 h-32 bg-[#FAEAD3] rounded-[40px] flex items-center justify-center text-[#6651A4] relative shadow-xl overflow-hidden">
              <User size={64} className="opacity-20" />
              <span className="text-4xl font-grandstander font-bold absolute">
-               {profile.firstName?.[0]}{profile.lastName?.[0]}
+                {profile.firstName?.[0]}{profile.lastName?.[0]}
              </span>
           </div>
           <div>
@@ -438,10 +454,27 @@ function ProfileSettings() {
                 <input 
                   type="email" 
                   value={profile.email}
-                  onChange={(e) => setProfile({...profile, email: e.target.value})}
-                  className="w-full h-14 pl-14 pr-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/20 font-bold" 
+                  disabled
+                  className="w-full h-14 pl-14 pr-6 bg-gray-100 rounded-2xl outline-none border border-transparent font-bold cursor-not-allowed text-gray-500" 
                 />
              </div>
+          </div>
+          <div className="md:col-span-2 space-y-3">
+             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Mobile Number</label>
+             <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500 pointer-events-none">+91</span>
+                <input 
+                  type="tel" 
+                  value={profile.phone?.replace(/^\+91/, '') || ''}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '').slice(0, 10)
+                    setProfile({...profile, phone: clean ? '+91' + clean : ''})
+                  }}
+                  placeholder="Enter 10-digit mobile number"
+                  className={`w-full h-14 pl-14 pr-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.phone ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
+                />
+             </div>
+             {formErrors.phone && <p className="text-red-500 text-xs px-2">{formErrors.phone}</p>}
           </div>
        </div>
 
@@ -460,43 +493,172 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
-  const { user } = useAuth()
   const { success, error } = useToast()
   const [loading, setLoading] = useState(false)
+  const [passwords, setPasswords] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [formErrors, setFormErrors] = useState({})
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showPass, setShowPass] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  })
 
-  const handleResetPassword = async () => {
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setSuccessMessage('')
+    const errors = {}
+    if (!passwords.currentPassword) errors.currentPassword = 'Current password is required'
+    if (!passwords.newPassword) errors.newPassword = 'New password is required'
+    else if (passwords.newPassword.length < 8) errors.newPassword = 'Password must be at least 8 characters long'
+    
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({})
     setLoading(true)
+
     try {
-      // Admin is already logged in, so we send the OTP to their email
-      const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email })
+      await apiRequest('/users/me/password', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          currentPassword: passwords.currentPassword,
+          newPassword: passwords.newPassword
+        })
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to send OTP')
-      success('Password reset OTP sent to your email.')
+      setSuccessMessage('Password changed successfully!')
+      setPasswords({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
     } catch (err) {
-      error(err.message || 'Failed to send reset email')
+      const msg = err.message || 'Failed to change password'
+      const lower = msg.toLowerCase()
+      if (lower.includes('current password') || lower.includes('current_password') || lower.includes('wrong')) {
+        setFormErrors({ currentPassword: msg })
+      } else if (lower.includes('new password') || lower.includes('new_password') || lower.includes('same as')) {
+        setFormErrors({ newPassword: msg })
+      } else {
+        setFormErrors({ currentPassword: msg })
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="space-y-8 text-center py-10">
+    <form onSubmit={handlePasswordChange} className="space-y-8 max-w-xl mx-auto py-6">
        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-red-500/10 mb-6">
           <Lock size={32} />
        </div>
-       <h3 className="text-2xl font-grandstander font-bold text-gray-800">Admin Credentials</h3>
-       <p className="text-gray-500 max-w-sm mx-auto text-sm">Regularly rotate your password to protect the admin command center.</p>
-       <button 
-         onClick={handleResetPassword}
-         disabled={loading}
-         className="h-14 px-12 bg-white text-red-500 border-2 border-red-100 rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-red-500 hover:text-white transition-all shadow-lg mt-4 disabled:opacity-50"
-       >
-          {loading ? 'Sending OTP...' : 'Reset Password'}
-       </button>
-    </div>
+       <div className="text-center">
+         <h3 className="text-2xl font-grandstander font-bold text-gray-800">Admin Credentials</h3>
+         <p className="text-gray-500 text-sm mt-1">Regularly rotate your password to protect the admin command center.</p>
+       </div>
+
+       {successMessage && (
+         <div className="bg-green-50 border border-green-200 text-green-700 px-5 py-4 rounded-2xl text-center text-xs font-bold font-grandstander shadow-sm">
+           {successMessage}
+         </div>
+       )}
+
+       <div className="space-y-5">
+         <div className="space-y-2 text-left">
+           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Current Password</label>
+           <div className="relative">
+             <input 
+               type={showPass.current ? "text" : "password"}
+               value={passwords.currentPassword}
+               onChange={(e) => {
+                 setPasswords({...passwords, currentPassword: e.target.value})
+                 if (formErrors.currentPassword) setFormErrors({...formErrors, currentPassword: ''})
+                 if (successMessage) setSuccessMessage('')
+               }}
+               className={`w-full h-14 pl-6 pr-12 bg-gray-50 rounded-2xl outline-none border-2 font-bold focus:bg-white transition-all ${formErrors.currentPassword ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
+               placeholder="••••••••"
+             />
+             <button
+               type="button"
+               onClick={() => setShowPass({ ...showPass, current: !showPass.current })}
+               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6651A4] transition-colors"
+             >
+               {showPass.current ? <EyeOff size={18} /> : <Eye size={18} />}
+             </button>
+           </div>
+           {formErrors.currentPassword && <p className="text-red-500 text-xs px-2">{formErrors.currentPassword}</p>}
+         </div>
+
+         <div className="space-y-2 text-left">
+           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">New Password</label>
+           <div className="relative">
+             <input 
+               type={showPass.new ? "text" : "password"}
+               value={passwords.newPassword}
+               onChange={(e) => {
+                 setPasswords({...passwords, newPassword: e.target.value})
+                 if (formErrors.newPassword) setFormErrors({...formErrors, newPassword: ''})
+                 if (successMessage) setSuccessMessage('')
+               }}
+               className={`w-full h-14 pl-6 pr-12 bg-gray-50 rounded-2xl outline-none border-2 font-bold focus:bg-white transition-all ${formErrors.newPassword ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
+               placeholder="•••••••• (Min 8 chars)"
+             />
+             <button
+               type="button"
+               onClick={() => setShowPass({ ...showPass, new: !showPass.new })}
+               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6651A4] transition-colors"
+             >
+               {showPass.new ? <EyeOff size={18} /> : <Eye size={18} />}
+             </button>
+           </div>
+           {formErrors.newPassword && <p className="text-red-500 text-xs px-2">{formErrors.newPassword}</p>}
+         </div>
+
+         <div className="space-y-2 text-left">
+           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Confirm New Password</label>
+           <div className="relative">
+             <input 
+               type={showPass.confirm ? "text" : "password"}
+               value={passwords.confirmPassword}
+               onChange={(e) => {
+                 setPasswords({...passwords, confirmPassword: e.target.value})
+                 if (formErrors.confirmPassword) setFormErrors({...formErrors, confirmPassword: ''})
+                 if (successMessage) setSuccessMessage('')
+               }}
+               className={`w-full h-14 pl-6 pr-12 bg-gray-50 rounded-2xl outline-none border-2 font-bold focus:bg-white transition-all ${formErrors.confirmPassword ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
+               placeholder="••••••••"
+             />
+             <button
+               type="button"
+               onClick={() => setShowPass({ ...showPass, confirm: !showPass.confirm })}
+               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#6651A4] transition-colors"
+             >
+               {showPass.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+             </button>
+           </div>
+           {formErrors.confirmPassword && <p className="text-red-500 text-xs px-2">{formErrors.confirmPassword}</p>}
+         </div>
+       </div>
+
+       <div className="pt-6 border-t border-black/[0.03] flex justify-end">
+         <button 
+           type="submit"
+           disabled={loading}
+           className="h-14 px-12 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+         >
+           {loading ? <RefreshCcw size={18} className="animate-spin" /> : <Save size={18} />}
+           {loading ? 'Updating...' : 'Update Password'}
+         </button>
+       </div>
+    </form>
   )
 }

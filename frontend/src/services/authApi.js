@@ -32,3 +32,11 @@ export const verifyOtpUser = async (data) => {
   })
   return payload.data
 }
+
+export const resendOtpUser = async (data) => {
+  const payload = await apiRequest('/auth/resend-otp', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+  return payload.data
+}

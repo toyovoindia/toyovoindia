@@ -154,16 +154,35 @@ function AppContent() {
 
   if (maintenanceMode && !isSiteAdmin && !isAdmin && !isAuthPage) {
     return (
-      <div className="min-h-screen bg-[#FDF4E6] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6 border border-[#F1641E]/20">
-          <svg className="w-10 h-10 text-[#F1641E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+      <div className="min-h-screen bg-[#FDF4E6] flex flex-col items-center justify-center p-6 text-center overflow-hidden relative">
+        {/* Floating background toys */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 select-none overflow-hidden">
+          <div className="absolute top-[10%] left-[10%] text-5xl animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '4s' }}>🧸</div>
+          <div className="absolute top-[20%] right-[15%] text-5xl animate-pulse" style={{ animationDelay: '0.5s', animationDuration: '3s' }}>🚀</div>
+          <div className="absolute bottom-[20%] left-[15%] text-5xl animate-bounce" style={{ animationDelay: '0.8s', animationDuration: '5s' }}>🚂</div>
+          <div className="absolute bottom-[15%] right-[10%] text-5xl animate-pulse" style={{ animationDelay: '1.2s', animationDuration: '4s' }}>🧩</div>
+          <div className="absolute top-[50%] left-[5%] text-5xl animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '6s' }}>🎈</div>
+          <div className="absolute top-[45%] right-[5%] text-5xl animate-bounce" style={{ animationDelay: '1.8s', animationDuration: '3.5s' }}>🎨</div>
         </div>
-        <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-gray-800 mb-4">We'll be back soon!</h1>
-        <p className="text-gray-500 font-medium max-w-md mx-auto text-sm md:text-base leading-relaxed">
-          Toyovo India is currently undergoing scheduled maintenance to improve your shopping experience. Please check back shortly.
-        </p>
+
+        {/* Central Card with animation */}
+        <div className="relative z-10 max-w-lg w-full bg-white/70 backdrop-blur-md border border-white/40 p-8 md:p-12 rounded-[40px] shadow-xl shadow-orange-500/5">
+          <div className="w-28 h-28 bg-[#FAEAD3] rounded-[36px] flex items-center justify-center mx-auto mb-8 relative shadow-lg shadow-orange-900/5">
+            <span className="text-6xl animate-bounce" style={{ animationDuration: '2s' }}>🧸</span>
+            <span className="absolute -bottom-1 -right-1 text-3xl animate-pulse">🔧</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-grandstander font-bold text-gray-800 mb-4 tracking-tight">Store Under Maintenance</h1>
+          <p className="text-gray-500 font-medium text-sm md:text-base leading-relaxed mb-6">
+            We are polishing up the toy shelves and adding exciting new products to improve your shopping experience. We'll be right back with more joy!
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#F1641E]/10 rounded-full text-[#F1641E] text-xs font-bold uppercase tracking-wider">
+            <span>Checking Back Shortly</span>
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F1641E] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#F1641E]"></span>
+            </span>
+          </div>
+        </div>
       </div>
     )
   }
