@@ -286,7 +286,7 @@ export function AccountPage() {
 
   const canCancelOrder = (order) => ['pending', 'processing'].includes(order?.status)
   const canRequestReturn = (order) => (
-    ['delivered', 'cancelled'].includes(order?.status) &&
+    order?.status === 'delivered' &&
     order?.paymentStatus === 'paid' &&
     ['none', 'rejected'].includes(order?.returnRequest?.status || 'none')
   )
@@ -508,8 +508,8 @@ export function AccountPage() {
                      )}
                      {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && (
                        <p className="mt-2 text-[12px] text-gray-500">
-                         {!['delivered', 'cancelled'].includes(selectedOrder.status)
-                           ? 'Return/refund requests are available for delivered or cancelled orders.'
+                         {selectedOrder.status !== 'delivered'
+                           ? 'Return requests are available only for delivered orders.'
                            : selectedOrder.paymentStatus !== 'paid'
                              ? 'Refund requests are available only for paid orders.'
                              : 'No request submitted yet.'}

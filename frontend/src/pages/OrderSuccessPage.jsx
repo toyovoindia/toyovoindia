@@ -22,6 +22,49 @@ export function OrderSuccessPage() {
   const [order, setOrder] = useState(location.state?.order || null)
   const [loading, setLoading] = useState(!location.state?.order)
 
+  const getProgressWidth = (status) => {
+    switch (status) {
+      case 'pending': return '0%'
+      case 'processing': return '25%'
+      case 'shipped': return '50%'
+      case 'delivered': return '75%'
+      default: return '0%'
+    }
+  }
+
+  const getStepStatus = (step, currentStatus) => {
+    if (currentStatus === 'cancelled') return 'Cancelled'
+    
+    if (step === 'ordered') {
+      return 'Success'
+    }
+    if (step === 'packing') {
+      if (currentStatus === 'pending') return 'Upcoming'
+      if (currentStatus === 'processing') return 'Processing'
+      return 'Success'
+    }
+    if (step === 'transit') {
+      if (currentStatus === 'pending' || currentStatus === 'processing') return 'Upcoming'
+      if (currentStatus === 'shipped') return 'In Transit'
+      return 'Success'
+    }
+    if (step === 'arrival') {
+      if (currentStatus === 'delivered') return 'Success'
+      return 'Upcoming'
+    }
+    return 'Upcoming'
+  }
+
+  const isStepActive = (step, currentStatus) => {
+    if (currentStatus === 'cancelled') return false
+    
+    if (step === 'ordered') return true
+    if (step === 'packing') return ['processing', 'shipped', 'delivered'].includes(currentStatus)
+    if (step === 'transit') return ['shipped', 'delivered'].includes(currentStatus)
+    if (step === 'arrival') return currentStatus === 'delivered'
+    return false
+  }
+
   useEffect(() => {
     window.scrollTo(0, 0)
 
@@ -101,13 +144,13 @@ export function OrderSuccessPage() {
 
                 {/* Tracking Progress */}
                 <div className="mt-12 mb-8 relative">
-                   <div className="absolute top-6 left-[10%] right-[10%] h-[1.5px] bg-[#333]/5" />
-                   <div className="absolute top-6 left-[10%] w-[33%] h-[1.5px] bg-[#E84949]" />
+                   <div className="absolute top-6 left-[12.5%] right-[12.5%] h-[1.5px] bg-[#333]/5" />
+                   <div className="absolute top-6 left-[12.5%] h-[1.5px] bg-[#E84949] transition-all duration-500" style={{ width: getProgressWidth(order.status) }} />
                    <div className="grid grid-cols-4 gap-2">
-                      <TrackingStep icon={ShoppingBag} label="Ordered" status="Success" active={true} />
-                      <TrackingStep icon={Package} label="Packing" status="Processing" active={true} />
-                      <TrackingStep icon={Truck} label="Transit" status="Upcoming" active={false} />
-                      <TrackingStep icon={CheckCircle2} label="Arrival" status="Upcoming" active={false} />
+                      <TrackingStep icon={ShoppingBag} label="Ordered" status={getStepStatus('ordered', order.status)} active={isStepActive('ordered', order.status)} />
+                      <TrackingStep icon={Package} label="Packing" status={getStepStatus('packing', order.status)} active={isStepActive('packing', order.status)} />
+                      <TrackingStep icon={Truck} label="Transit" status={getStepStatus('transit', order.status)} active={isStepActive('transit', order.status)} />
+                      <TrackingStep icon={CheckCircle2} label="Arrival" status={getStepStatus('arrival', order.status)} active={isStepActive('arrival', order.status)} />
                    </div>
                 </div>
 

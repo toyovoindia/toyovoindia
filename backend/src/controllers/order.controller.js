@@ -216,6 +216,16 @@ export const cancelMyOrder = asyncHandler(async (req, res, next) => {
     req.body.reason || `Order cancelled by customer from ${previousStatus}`
   );
 
+  if (order.paymentStatus === 'paid') {
+    order.paymentStatus = 'refunded';
+    appendStatusHistory(
+      order,
+      'Refunded',
+      'system',
+      `Auto-refund of ₹${order.totalAmount} processed for cancelled prepaid order.`
+    );
+  }
+
   await revertFulfilledOrderSideEffects({
     items: order.items,
     couponData: order.coupon,
@@ -235,8 +245,8 @@ export const requestMyOrderReturn = asyncHandler(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  if (!['delivered', 'cancelled'].includes(order.status)) {
-    return next(new AppError('Return/refund requests are allowed only for delivered or cancelled orders', 400));
+  if (order.status !== 'delivered') {
+    return next(new AppError('Return requests are allowed only for delivered orders', 400));
   }
 
   if (order.paymentStatus !== 'paid') {
@@ -389,6 +399,15 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res, next) => {
         items: order.items,
         couponData: order.coupon,
       });
+      if (order.paymentStatus === 'paid') {
+        order.paymentStatus = 'refunded';
+        appendStatusHistory(
+          order,
+          'Refunded',
+          'system',
+          `Auto-refund of ₹${order.totalAmount} processed for cancelled prepaid order.`
+        );
+      }
     }
   }
   if (previousStatus !== req.body.status || req.body.note) {
