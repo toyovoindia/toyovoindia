@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { 
   User, Shield, Bell, Palette, Globe, 
@@ -6,7 +7,6 @@ import {
   Truck, IndianRupee, MessageSquare, Image as ImageIcon,
   ExternalLink, Power, Zap, Eye, EyeOff
 } from 'lucide-react'
-import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { getAdminStorefrontSettings, updateAdminStorefrontSettings } from '../../services/siteApi'
 import { updateMyProfile } from '../../services/userProfileApi'
@@ -37,11 +37,15 @@ const LiIcon = () => (
 )
 
 export function AdminSettings() {
-  const [activeSection, setActiveSection] = useState('site')
-  const { success, error: showError } = useToast()
+  const { tab } = useParams()
+  const navigate = useNavigate()
+  const activeSection = tab || 'storefront'
+
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [settingsMessage, setSettingsMessage] = useState(null)
 
   const [formErrors, setFormErrors] = useState({})
 
@@ -51,24 +55,33 @@ export function AdminSettings() {
 
   const loadSettings = async () => {
     setLoading(true)
+    setLoadError('')
     try {
       const data = await getAdminStorefrontSettings()
       setSettings(data)
     } catch (err) {
-      showError(err.message || 'Failed to load settings')
+      setLoadError(err.message || 'Failed to load settings')
     } finally {
       setLoading(false)
     }
   }
 
   const handleUpdate = async (updatedData) => {
+    setSettingsMessage(null)
     const errors = {}
     
+    // Storefront validation
+    if (!updatedData.siteName || !updatedData.siteName.trim()) {
+      errors.siteName = 'Store name is required'
+    }
+
+    // Communications validation
     if (!updatedData.contactPhone || !updatedData.contactPhone.trim()) {
        errors.contactPhone = 'Support Phone is required'
     } else {
        const digits = updatedData.contactPhone.replace(/\D/g, '')
-       if (digits.length !== 12 || !/^91[6-9]/.test(digits)) {
+       const digits10 = digits.slice(-10)
+       if (digits10.length !== 10 || !/^[6-9]/.test(digits10)) {
          errors.contactPhone = 'Phone must be a valid 10-digit number starting with 6-9'
        }
     }
@@ -79,11 +92,17 @@ export function AdminSettings() {
 
     if (!updatedData.contactEmail || !updatedData.contactEmail.trim()) {
       errors.contactEmail = 'Support Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedData.contactEmail)) {
+      errors.contactEmail = 'Please enter a valid email address'
     }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
-      setActiveSection('contact')
+      if (errors.siteName) {
+        navigate('/admin/settings/storefront')
+      } else {
+        navigate('/admin/settings/communications')
+      }
       return
     }
     
@@ -92,20 +111,36 @@ export function AdminSettings() {
     try {
       const data = await updateAdminStorefrontSettings(updatedData)
       setSettings(data)
-      success('Settings synchronized successfully!')
+      setSettingsMessage({ type: 'success', text: 'Settings synchronized successfully!' })
     } catch (err) {
-      showError(err.message || 'Update failed')
+      setSettingsMessage({ type: 'error', text: err.message || 'Update failed' })
     } finally {
       setSaving(false)
     }
   }
 
   const sections = [
-    { id: 'site', label: 'Storefront', icon: <Globe size={18} /> },
-    { id: 'contact', label: 'Communications', icon: <MessageSquare size={18} /> },
+    { id: 'storefront', label: 'Storefront', icon: <Globe size={18} /> },
+    { id: 'communications', label: 'Communications', icon: <MessageSquare size={18} /> },
     { id: 'profile', label: 'Admin Identity', icon: <User size={18} /> },
     { id: 'security', label: 'Security', icon: <Shield size={18} /> },
   ]
+
+  if (loadError) {
+    return (
+      <div className="shell flex flex-col items-center justify-center h-[60vh] gap-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl text-center text-xs font-bold font-grandstander shadow-sm">
+          {loadError}
+        </div>
+        <button 
+          onClick={loadSettings} 
+          className="h-12 px-6 bg-[#6651A4] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#523e8a] transition-all"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -124,18 +159,17 @@ export function AdminSettings() {
           <p className="text-gray-500 font-medium text-sm mt-1">Manage global storefront parameters and security protocols.</p>
         </div>
         <div className="flex items-center gap-4">
-          <span className="px-4 py-2 bg-green-50 text-green-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-green-100 flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            System Live
-          </span>
-          <button 
-            onClick={() => handleUpdate(settings)}
-            disabled={saving}
-            className="h-12 px-8 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-lg shadow-[#6651A4]/20 flex items-center gap-2 hover:scale-[1.02] transition-all"
-          >
-            {saving ? <RefreshCcw size={16} className="animate-spin" /> : <Save size={16} />}
-            {saving ? 'Syncing...' : 'Save All'}
-          </button>
+          {settings?.maintenanceMode ? (
+            <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-amber-100 flex items-center gap-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              Maintenance Mode
+            </span>
+          ) : (
+            <span className="px-4 py-2 bg-green-50 text-green-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-green-100 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              System Live
+            </span>
+          )}
         </div>
       </div>
 
@@ -144,7 +178,7 @@ export function AdminSettings() {
           {sections.map(section => (
             <button
               key={section.id}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => navigate(`/admin/settings/${section.id}`)}
               className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-[11px] font-bold uppercase tracking-widest transition-all ${
                 activeSection === section.id 
                 ? 'bg-[#6651A4] text-white shadow-xl shadow-[#6651A4]/20 translate-x-2' 
@@ -163,11 +197,29 @@ export function AdminSettings() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-[40px] p-8 md:p-12 shadow-sm border border-black/[0.03]"
           >
-            {activeSection === 'site' && (
-              <StorefrontTab settings={settings} setSettings={setSettings} />
+            {activeSection === 'storefront' && (
+              <StorefrontTab 
+                settings={settings} 
+                setSettings={setSettings} 
+                handleUpdate={handleUpdate} 
+                saving={saving} 
+                formErrors={formErrors} 
+                setFormErrors={setFormErrors}
+                settingsMessage={settingsMessage}
+                setSettingsMessage={setSettingsMessage}
+              />
             )}
-            {activeSection === 'contact' && (
-              <ContactTab settings={settings} setSettings={setSettings} formErrors={formErrors} />
+            {activeSection === 'communications' && (
+              <ContactTab 
+                settings={settings} 
+                setSettings={setSettings} 
+                formErrors={formErrors} 
+                setFormErrors={setFormErrors}
+                handleUpdate={handleUpdate} 
+                saving={saving} 
+                settingsMessage={settingsMessage}
+                setSettingsMessage={setSettingsMessage}
+              />
             )}
             {activeSection === 'profile' && <ProfileSettings />}
             {activeSection === 'security' && <SecuritySettings />}
@@ -178,9 +230,15 @@ export function AdminSettings() {
   )
 }
 
-function StorefrontTab({ settings, setSettings }) {
+function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors, setFormErrors, settingsMessage, setSettingsMessage }) {
   const [uploading, setUploading] = useState(false)
-  const updateField = (field, value) => setSettings({ ...settings, [field]: value })
+  const updateField = (field, value) => {
+    setSettings({ ...settings, [field]: value })
+    if (setSettingsMessage) setSettingsMessage(null)
+    if (setFormErrors) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -206,8 +264,11 @@ function StorefrontTab({ settings, setSettings }) {
             type="text" 
             value={settings.siteName}
             onChange={(e) => updateField('siteName', e.target.value)}
-            className="w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 border-transparent focus:border-[#6651A4]/30 font-bold" 
+            className={`w-full h-14 px-6 bg-[#FDF4E6]/50 rounded-2xl border-2 outline-none font-bold transition-all ${
+              formErrors?.siteName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+            }`} 
           />
+          {formErrors?.siteName && <p className="text-red-500 text-xs px-2">{formErrors.siteName}</p>}
         </div>
         <div className="space-y-3">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Maintenance Mode</label>
@@ -278,15 +339,45 @@ function StorefrontTab({ settings, setSettings }) {
           </div>
         </div>
       </div>
+
+      {settingsMessage?.text && (
+        <div className={`px-6 py-4 rounded-2xl text-xs font-bold font-grandstander shadow-sm text-center ${
+          settingsMessage.type === 'success' 
+            ? 'bg-green-50 border border-green-200 text-green-700' 
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {settingsMessage.text}
+        </div>
+      )}
+
+      <div className="pt-8 border-t border-black/[0.03] flex justify-end">
+        <button 
+          onClick={() => handleUpdate(settings)}
+          disabled={saving}
+          className="h-14 px-12 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+        >
+          {saving ? <RefreshCcw size={18} className="animate-spin" /> : <Save size={18} />}
+          {saving ? 'Syncing...' : 'Save Storefront'}
+        </button>
+      </div>
     </div>
   )
 }
 
 
 
-function ContactTab({ settings, setSettings, formErrors }) {
-  const updateField = (field, value) => setSettings({ ...settings, [field]: value })
-  const updateSocial = (key, val) => setSettings({ ...settings, socialLinks: { ...settings.socialLinks, [key]: val } })
+function ContactTab({ settings, setSettings, formErrors, setFormErrors, handleUpdate, saving, settingsMessage, setSettingsMessage }) {
+  const updateField = (field, value) => {
+    setSettings({ ...settings, [field]: value })
+    if (setSettingsMessage) setSettingsMessage(null)
+    if (setFormErrors) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+  const updateSocial = (key, val) => {
+    setSettings({ ...settings, socialLinks: { ...settings.socialLinks, [key]: val } })
+    if (setSettingsMessage) setSettingsMessage(null)
+  }
 
   return (
     <div className="space-y-12">
@@ -310,7 +401,10 @@ function ContactTab({ settings, setSettings, formErrors }) {
               <input 
                 type="text" 
                 value={settings.contactPhone?.replace('+91', '').trim() || ''}
-                onChange={(e) => updateField('contactPhone', e.target.value ? `+91${e.target.value}` : '')}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  updateField('contactPhone', clean ? `+91${clean}` : '')
+                }}
                 className={`w-full h-14 pl-12 pr-6 bg-[#FDF4E6]/50 rounded-2xl border-2 outline-none font-bold ${formErrors?.contactPhone ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'}`} 
                 placeholder="10 digit number"
               />
@@ -353,13 +447,33 @@ function ContactTab({ settings, setSettings, formErrors }) {
           ))}
         </div>
       </div>
+
+      {settingsMessage?.text && (
+        <div className={`px-6 py-4 rounded-2xl text-xs font-bold font-grandstander shadow-sm text-center ${
+          settingsMessage.type === 'success' 
+            ? 'bg-green-50 border border-green-200 text-green-700' 
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {settingsMessage.text}
+        </div>
+      )}
+
+      <div className="pt-8 border-t border-black/[0.03] flex justify-end">
+        <button 
+          onClick={() => handleUpdate(settings)}
+          disabled={saving}
+          className="h-14 px-12 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+        >
+          {saving ? <RefreshCcw size={18} className="animate-spin" /> : <Save size={18} />}
+          {saving ? 'Syncing...' : 'Save Communications'}
+        </button>
+      </div>
     </div>
   )
 }
 
 function ProfileSettings() {
   const { user, updateUser } = useAuth()
-  const { success, error } = useToast()
   const [profile, setProfile] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -368,8 +482,16 @@ function ProfileSettings() {
   })
   const [isSyncing, setIsSyncing] = useState(false)
   const [formErrors, setFormErrors] = useState({})
+  const [profileMessage, setProfileMessage] = useState(null)
+
+  const updateProfileField = (field, val) => {
+    setProfile(prev => ({ ...prev, [field]: val }))
+    if (formErrors[field]) setFormErrors(prev => ({ ...prev, [field]: '' }))
+    setProfileMessage(null)
+  }
 
   const handleProfileUpdate = async () => {
+    setProfileMessage(null)
     const errors = {}
     if (!profile.firstName.trim()) errors.firstName = 'First name is required'
     else if (!/^[a-zA-Z\s]+$/.test(profile.firstName)) errors.firstName = 'First name must contain only alphabets'
@@ -391,7 +513,7 @@ function ProfileSettings() {
     try {
       const updated = await updateMyProfile(profile)
       updateUser(updated)
-      success('Admin profile synchronized!')
+      setProfileMessage({ type: 'success', text: 'Admin profile synchronized successfully!' })
     } catch (err) {
       const msg = err.message || 'Profile sync failed'
       const lower = msg.toLowerCase()
@@ -402,7 +524,7 @@ function ProfileSettings() {
       } else if (lower.includes('last name') || lower.includes('lastname')) {
         setFormErrors({ lastName: msg })
       } else {
-        setFormErrors({ phone: msg })
+        setProfileMessage({ type: 'error', text: msg })
       }
     } finally {
       setIsSyncing(false)
@@ -432,7 +554,10 @@ function ProfileSettings() {
              <input 
                type="text" 
                value={profile.firstName}
-               onChange={(e) => setProfile({...profile, firstName: e.target.value})}
+               onChange={(e) => {
+                 const clean = e.target.value.replace(/[^a-zA-Z\s]/g, '')
+                 updateProfileField('firstName', clean)
+               }}
                className={`w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.firstName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
              />
              {formErrors.firstName && <p className="text-red-500 text-xs px-2">{formErrors.firstName}</p>}
@@ -442,7 +567,10 @@ function ProfileSettings() {
              <input 
                type="text" 
                value={profile.lastName}
-               onChange={(e) => setProfile({...profile, lastName: e.target.value})}
+               onChange={(e) => {
+                 const clean = e.target.value.replace(/[^a-zA-Z\s]/g, '')
+                 updateProfileField('lastName', clean)
+               }}
                className={`w-full h-14 px-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.lastName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
              />
              {formErrors.lastName && <p className="text-red-500 text-xs px-2">{formErrors.lastName}</p>}
@@ -468,7 +596,7 @@ function ProfileSettings() {
                   value={profile.phone?.replace(/^\+91/, '') || ''}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '').slice(0, 10)
-                    setProfile({...profile, phone: clean ? '+91' + clean : ''})
+                    updateProfileField('phone', clean ? '+91' + clean : '')
                   }}
                   placeholder="Enter 10-digit mobile number"
                   className={`w-full h-14 pl-14 pr-6 bg-gray-50 rounded-2xl outline-none border-2 font-bold ${formErrors.phone ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/20'}`} 
@@ -478,6 +606,16 @@ function ProfileSettings() {
           </div>
        </div>
 
+       {profileMessage?.text && (
+         <div className={`px-6 py-4 rounded-2xl text-xs font-bold font-grandstander shadow-sm text-center ${
+           profileMessage.type === 'success' 
+             ? 'bg-green-50 border border-green-200 text-green-700' 
+             : 'bg-red-50 border border-red-200 text-red-700'
+         }`}>
+           {profileMessage.text}
+         </div>
+       )}
+
        <div className="pt-8 border-t border-black/[0.03] flex justify-end">
           <button 
             onClick={handleProfileUpdate}
@@ -485,7 +623,7 @@ function ProfileSettings() {
             className="h-14 px-12 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
           >
             {isSyncing ? <RefreshCcw size={18} className="animate-spin" /> : <Save size={18} />}
-            {isSyncing ? 'Syncing...' : 'Commit Profile'}
+            {isSyncing ? 'Syncing...' : 'Save Profile'}
           </button>
        </div>
     </div>
@@ -493,7 +631,6 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
-  const { success, error } = useToast()
   const [loading, setLoading] = useState(false)
   const [passwords, setPasswords] = useState({
     currentPassword: '',

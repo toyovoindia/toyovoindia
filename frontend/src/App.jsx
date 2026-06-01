@@ -208,6 +208,7 @@ function AppContent() {
                 <Route path="orders/:id" element={<AdminOrderDetail />} />
                 <Route path="finance" element={<AdminFinance />} />
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="settings/:tab" element={<AdminSettings />} />
                 <Route path="notifications" element={<AdminNotifications />} />
                 <Route path="public-activity" element={<AdminPublicActivity />} />
                 <Route path="messages" element={<AdminMessages />} />

@@ -31,10 +31,12 @@ export function AdminUserDetail() {
   const [saving, setSaving] = useState(false)
   const [user, setUser] = useState(emptyUser)
   const [loadError, setLoadError] = useState('')
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     if (isNew) {
       setUser(emptyUser)
+      setFormErrors({})
       setLoading(false)
       return
     }
@@ -43,6 +45,7 @@ export function AdminUserDetail() {
     const loadUser = async () => {
       setLoading(true)
       setLoadError('')
+      setFormErrors({})
       try {
         const data = await getAdminUser(id)
         if (!isMounted) return
@@ -64,16 +67,41 @@ export function AdminUserDetail() {
   }, [id, isNew])
 
   const handleSave = async () => {
-    if (!user.firstName.trim() || !user.lastName.trim() || !user.email.trim()) {
-      showError('First name, last name, and email are required.')
+    const errors = {}
+
+    // First Name validation
+    if (!user.firstName || !user.firstName.trim()) {
+      errors.firstName = 'First name is required'
+    } else if (!/^[a-zA-Z\s]+$/.test(user.firstName.trim())) {
+      errors.firstName = 'First name must contain only alphabets'
+    }
+
+    // Last Name validation
+    if (!user.lastName || !user.lastName.trim()) {
+      errors.lastName = 'Last name is required'
+    } else if (!/^[a-zA-Z\s]+$/.test(user.lastName.trim())) {
+      errors.lastName = 'Last name must contain only alphabets'
+    }
+
+    // Email validation
+    if (!user.email || !user.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email.trim())) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // Password validation for new users
+    if (isNew && (!user.password || user.password.length < 8)) {
+      errors.password = 'Password must be at least 8 characters long'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      showError('Please resolve the validation errors in the form.')
       return
     }
 
-    if (isNew && user.password.length < 8) {
-      showError('Password must be at least 8 characters long.')
-      return
-    }
-
+    setFormErrors({})
     setSaving(true)
     try {
       const payload = {
@@ -98,7 +126,26 @@ export function AdminUserDetail() {
         navigate(`/admin/users/${savedUser.id}`, { replace: true })
       }
     } catch (err) {
-      showError(err.message || 'Save failed')
+      const msg = err.message || 'Save failed'
+      showError(msg)
+
+      const lower = msg.toLowerCase()
+      const newErrors = {}
+      if (lower.includes('first name') || lower.includes('firstname')) {
+        newErrors.firstName = msg
+      }
+      if (lower.includes('last name') || lower.includes('lastname')) {
+        newErrors.lastName = msg
+      }
+      if (lower.includes('email')) {
+        newErrors.email = msg
+      }
+      if (lower.includes('password')) {
+        newErrors.password = msg
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setFormErrors(newErrors)
+      }
     } finally {
       setSaving(false)
     }
@@ -168,7 +215,7 @@ export function AdminUserDetail() {
           {isEditing ? (
             <>
               {!isNew && (
-                <button onClick={() => setIsEditing(false)} className="h-10 px-4 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm hover:bg-gray-50 flex items-center gap-2 transition-all">
+                <button onClick={() => { setIsEditing(false); setFormErrors({}); }} className="h-10 px-4 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm hover:bg-gray-50 flex items-center gap-2 transition-all">
                   <X size={14} /> Cancel
                 </button>
               )}
@@ -178,7 +225,7 @@ export function AdminUserDetail() {
             </>
           ) : (
             <>
-              <button onClick={() => setIsEditing(true)} className="h-10 px-6 bg-white border border-[#6651A4]/20 text-[#6651A4] rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm hover:bg-[#FAEAD3] flex items-center gap-2 transition-all">
+              <button onClick={() => { setIsEditing(true); setFormErrors({}); }} className="h-10 px-6 bg-white border border-[#6651A4]/20 text-[#6651A4] rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm hover:bg-[#FAEAD3] flex items-center gap-2 transition-all">
                 <Edit2 size={14} /> Edit Identity
               </button>
               <button onClick={handleSuspend} className="h-10 px-4 bg-red-50 text-[#E8312A] rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm hover:bg-[#E8312A] hover:text-white transition-all flex items-center gap-2">
@@ -231,12 +278,17 @@ export function AdminUserDetail() {
                 <div>
                   <p className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2"><Mail size={14} /> Explorer Email</p>
                   {isEditing ? (
-                    <input
-                      type="email"
-                      value={user.email}
-                      onChange={(event) => setUser({ ...user, email: event.target.value })}
-                      className="w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border border-transparent focus:border-[#6651A4]/30"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        type="email"
+                        value={user.email}
+                        onChange={(event) => setUser({ ...user, email: event.target.value })}
+                        className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all ${
+                          formErrors.email ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+                        }`}
+                      />
+                      {formErrors.email && <p className="text-red-500 text-xs px-1">{formErrors.email}</p>}
+                    </div>
                   ) : (
                     <p className="text-[14px] font-bold text-gray-700">{user.email}</p>
                   )}
@@ -248,12 +300,17 @@ export function AdminUserDetail() {
                 {isNew && (
                   <div>
                     <p className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Temporary Password</p>
-                    <input
-                      type="password"
-                      value={user.password}
-                      onChange={(event) => setUser({ ...user, password: event.target.value })}
-                      className="w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border border-transparent focus:border-[#6651A4]/30"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        type="password"
+                        value={user.password}
+                        onChange={(event) => setUser({ ...user, password: event.target.value })}
+                        className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all ${
+                          formErrors.password ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+                        }`}
+                      />
+                      {formErrors.password && <p className="text-red-500 text-xs px-1">{formErrors.password}</p>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -262,23 +319,39 @@ export function AdminUserDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">First Name</p>
-                    <input
-                      disabled={!isEditing}
-                      type="text"
-                      value={user.firstName}
-                      onChange={(event) => setUser({ ...user, firstName: event.target.value })}
-                      className="w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border border-transparent focus:border-[#6651A4]/30 disabled:opacity-70"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        disabled={!isEditing}
+                        type="text"
+                        value={user.firstName}
+                        onChange={(event) => {
+                          const clean = event.target.value.replace(/[^a-zA-Z\s]/g, '')
+                          setUser({ ...user, firstName: clean })
+                        }}
+                        className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all disabled:opacity-70 ${
+                          formErrors.firstName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+                        }`}
+                      />
+                      {formErrors.firstName && <p className="text-red-500 text-xs px-1">{formErrors.firstName}</p>}
+                    </div>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Last Name</p>
-                    <input
-                      disabled={!isEditing}
-                      type="text"
-                      value={user.lastName}
-                      onChange={(event) => setUser({ ...user, lastName: event.target.value })}
-                      className="w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border border-transparent focus:border-[#6651A4]/30 disabled:opacity-70"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        disabled={!isEditing}
+                        type="text"
+                        value={user.lastName}
+                        onChange={(event) => {
+                          const clean = event.target.value.replace(/[^a-zA-Z\s]/g, '')
+                          setUser({ ...user, lastName: clean })
+                        }}
+                        className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all disabled:opacity-70 ${
+                          formErrors.lastName ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+                        }`}
+                      />
+                      {formErrors.lastName && <p className="text-red-500 text-xs px-1">{formErrors.lastName}</p>}
+                    </div>
                   </div>
                 </div>
 
