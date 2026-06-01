@@ -10,6 +10,9 @@ export const shippingMethodSchema = z.object({
     rule: z.string().trim().max(160).optional().or(z.literal('')),
     status: z.enum(['active', 'inactive']).optional(),
     sortOrder: z.coerce.number().int().min(0).optional(),
+  }).refine((data) => data.minDays <= data.maxDays, {
+    message: "Minimum days must be less than or equal to maximum days",
+    path: ["minDays"],
   }),
 });
 

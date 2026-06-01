@@ -95,3 +95,11 @@ export const validateCoupon = asyncHandler(async (req, res) => {
     finalSubtotal: result.finalSubtotal,
   });
 });
+
+export const adminDeleteCoupon = asyncHandler(async (req, res, next) => {
+  const coupon = await Coupon.findByIdAndDelete(req.params.id);
+  if (!coupon) {
+    return next(new AppError('Coupon not found', 404));
+  }
+  return successResponse(res, 200, 'Coupon deleted successfully');
+});

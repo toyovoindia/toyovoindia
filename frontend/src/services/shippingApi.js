@@ -32,3 +32,10 @@ export const updateAdminShippingMethod = async (id, data) => {
   })
   return normalizeShippingMethod(payload.data)
 }
+
+export const deleteAdminShippingMethod = async (id) => {
+  const payload = await apiRequest(`/admin/shipping-methods/${id}`, {
+    method: 'DELETE',
+  })
+  return payload
+}

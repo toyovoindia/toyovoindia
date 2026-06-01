@@ -5,6 +5,7 @@ import {
   adminUpdateCoupon,
   adminUpdateCouponStatus,
   validateCoupon,
+  adminDeleteCoupon,
 } from '../controllers/coupon.controller.js';
 import { protect, authorizeRoles } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
@@ -26,6 +27,7 @@ adminRouter.get('/', validate(listCouponsSchema), adminListCoupons);
 adminRouter.post('/', validate(createCouponSchema), adminCreateCoupon);
 adminRouter.patch('/:id', validate(updateCouponSchema), adminUpdateCoupon);
 adminRouter.patch('/:id/status', validate(updateCouponStatusSchema), adminUpdateCouponStatus);
+adminRouter.delete('/:id', adminDeleteCoupon);
 
 export { adminRouter as adminCouponRoutes };
 export default router;

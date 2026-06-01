@@ -44,3 +44,10 @@ export const validateCouponCode = async (data) => {
   })
   return payload.data
 }
+
+export const deleteAdminCoupon = async (id) => {
+  const payload = await apiRequest(`/admin/coupons/${id}`, {
+    method: 'DELETE',
+  })
+  return payload
+}

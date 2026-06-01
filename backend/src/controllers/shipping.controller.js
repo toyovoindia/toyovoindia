@@ -56,3 +56,9 @@ export const adminUpdateShippingMethod = asyncHandler(async (req, res, next) => 
   if (!method) return next(new AppError('Shipping method not found', 404));
   return successResponse(res, 200, 'Shipping method updated successfully', method);
 });
+
+export const adminDeleteShippingMethod = asyncHandler(async (req, res, next) => {
+  const method = await ShippingMethod.findByIdAndDelete(req.params.id);
+  if (!method) return next(new AppError('Shipping method not found', 404));
+  return successResponse(res, 200, 'Shipping method deleted successfully');
+});
