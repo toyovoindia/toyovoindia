@@ -32,6 +32,36 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     },
   });
 
+  // Pre-create pending order in MongoDB
+  const order = await Order.create({
+    user: req.user?._id || null,
+    customer: {
+      ...req.body.customer,
+      email: req.body.customer.email.toLowerCase(),
+    },
+    shippingAddress: req.body.shippingAddress,
+    items: draft.items,
+    status: 'pending',
+    paymentStatus: 'pending',
+    paymentMethod: 'razorpay',
+    shippingMethod: req.body.shippingMethod,
+    subtotal: draft.subtotal,
+    shippingAmount: draft.shippingAmount,
+    discountAmount: draft.discountAmount,
+    totalAmount: draft.totalAmount,
+    coupon: draft.couponData,
+    notes: req.body.notes || undefined,
+    paymentGateway: {
+      provider: 'razorpay',
+      razorpayOrderId: razorpayOrder.id,
+    },
+  });
+
+  logger.info('Pending order pre-created in MongoDB', {
+    orderNumber: order.orderNumber,
+    razorpayOrderId: razorpayOrder.id,
+  });
+
   return successResponse(res, 201, 'Razorpay order created successfully', {
     razorpayOrderId: razorpayOrder.id,
     amount: draft.totalAmount,
@@ -67,9 +97,17 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res, next) => {
     return next(new AppError('Payment verification failed. Signature mismatch.', 400));
   }
 
-  const existingOrder = await Order.findOne({ 'paymentGateway.razorpayPaymentId': req.body.razorpayPaymentId });
-  if (existingOrder) {
-    return successResponse(res, 200, 'Payment already verified', existingOrder.toObject ? existingOrder.toObject() : existingOrder);
+  // Find the pending order by razorpayOrderId
+  const order = await Order.findOne({ 'paymentGateway.razorpayOrderId': req.body.razorpayOrderId });
+  if (!order) {
+    logger.warn('Associated pending order not found for verification', {
+      razorpayOrderId: req.body.razorpayOrderId,
+    });
+    return next(new AppError('Associated order not found', 404));
+  }
+
+  if (order.paymentStatus === 'paid') {
+    return successResponse(res, 200, 'Payment already verified', order);
   }
 
   const draft = await buildOrderDraftFromCheckout(req.body.checkoutData);
@@ -80,38 +118,28 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res, next) => {
     itemCount: draft.items.length,
   });
 
-  const order = await Order.create({
-    user: req.user?._id || null,
-    customer: {
-      ...req.body.checkoutData.customer,
-      email: req.body.checkoutData.customer.email.toLowerCase(),
-    },
-    shippingAddress: req.body.checkoutData.shippingAddress,
-    items: draft.items,
+  // Update order status to paid & processing
+  order.status = 'processing';
+  order.paymentStatus = 'paid';
+  order.paymentGateway.razorpayPaymentId = req.body.razorpayPaymentId;
+  order.paymentGateway.razorpaySignature = req.body.razorpaySignature;
+  order.paymentGateway.paymentMethodLabel = req.body.paymentMethodLabel || undefined;
+  order.paymentGateway.verifiedAt = new Date();
+
+  // Add timeline entry
+  order.statusHistory.push({
     status: 'processing',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    shippingMethod: req.body.checkoutData.shippingMethod,
-    subtotal: draft.subtotal,
-    shippingAmount: draft.shippingAmount,
-    discountAmount: draft.discountAmount,
-    totalAmount: draft.totalAmount,
-    coupon: draft.couponData,
-    notes: req.body.checkoutData.notes || undefined,
-    paymentGateway: {
-      provider: 'razorpay',
-      razorpayOrderId: req.body.razorpayOrderId,
-      razorpayPaymentId: req.body.razorpayPaymentId,
-      razorpaySignature: req.body.razorpaySignature,
-      paymentMethodLabel: req.body.paymentMethodLabel || undefined,
-      verifiedAt: new Date(),
-    },
+    note: 'Payment verified and order confirmed.',
+    actorRole: 'system',
+    createdAt: new Date(),
   });
 
   await applyFulfilledOrderSideEffects({
     resolvedItems: draft.resolvedItems,
     couponData: draft.couponData,
   });
+
+  await order.save();
 
   Promise.resolve(sendOrderConfirmationEmail(order)).catch((error) => {
     logger.warn(`Order confirmation email failed for ${order.orderNumber}: ${error.message}`);
@@ -151,7 +179,12 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res, next) => {
   const refundEntity = req.body.payload?.refund?.entity;
 
   if (paymentEntity?.id) {
-    const order = await Order.findOne({ 'paymentGateway.razorpayPaymentId': paymentEntity.id });
+    // Try finding by paymentId first, otherwise fallback to pre-created order via order_id
+    let order = await Order.findOne({ 'paymentGateway.razorpayPaymentId': paymentEntity.id });
+    if (!order && paymentEntity.order_id) {
+      order = await Order.findOne({ 'paymentGateway.razorpayOrderId': paymentEntity.order_id });
+    }
+
     if (order) {
       order.paymentGateway = {
         ...order.paymentGateway,
@@ -159,13 +192,56 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res, next) => {
         lastWebhookAt: new Date(),
       };
 
-      if (event === 'payment.captured') {
+      if (event === 'payment.captured' && order.paymentStatus !== 'paid') {
         order.paymentStatus = 'paid';
+        order.status = 'processing';
+        order.paymentGateway.razorpayPaymentId = paymentEntity.id;
+        order.paymentGateway.verifiedAt = new Date();
+
+        order.statusHistory.push({
+          status: 'processing',
+          note: 'Payment captured via Webhook fallback.',
+          actorRole: 'system',
+          createdAt: new Date(),
+        });
+
+        // Apply side effects
+        const checkoutData = {
+          customer: order.customer,
+          shippingAddress: order.shippingAddress,
+          items: order.items.map(item => ({
+            productId: item.product,
+            quantity: item.quantity
+          })),
+          shippingMethod: order.shippingMethod,
+          couponCode: order.coupon?.code || ''
+        };
+
+        const draft = await buildOrderDraftFromCheckout(checkoutData);
+        await applyFulfilledOrderSideEffects({
+          resolvedItems: draft.resolvedItems,
+          couponData: draft.couponData,
+        });
+
+        Promise.resolve(sendOrderConfirmationEmail(order)).catch((error) => {
+          logger.warn(`Order confirmation email failed for ${order.orderNumber}: ${error.message}`);
+        });
+
         Promise.resolve(notifyPaymentSuccess(order)).catch(() => {});
       }
 
-      if (event === 'payment.failed') {
+      if (event === 'payment.failed' && order.paymentStatus !== 'paid') {
         order.paymentStatus = 'failed';
+        order.status = 'cancelled';
+        order.paymentGateway.razorpayPaymentId = paymentEntity.id;
+
+        order.statusHistory.push({
+          status: 'cancelled',
+          note: 'Payment failed on gateway.',
+          actorRole: 'system',
+          createdAt: new Date(),
+        });
+
         Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
       }
 
