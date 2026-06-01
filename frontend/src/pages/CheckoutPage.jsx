@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { validateCouponCode } from '../services/couponApi'
 import { createRazorpayPaymentOrder, verifyRazorpayPayment } from '../services/orderApi'
 import { getShippingMethods } from '../services/shippingApi'
+import { getStorefrontSettings } from '../services/siteApi'
 
 const countries = ["India"]
 import { indianStates, commonCities } from '../utils/indiaData'
@@ -162,6 +163,17 @@ export function CheckoutPage() {
   const [shippingMethods, setShippingMethods] = useState([])
   const [checkoutNotes, setCheckoutNotes] = useState({ orderMessage: '', giftWrap: false, giftMessage: '' })
   const [isHydrated, setIsHydrated] = useState(false)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(999)
+
+  useEffect(() => {
+    getStorefrontSettings()
+      .then((data) => {
+        if (data && typeof data.freeShippingThreshold === 'number') {
+          setFreeShippingThreshold(data.freeShippingThreshold)
+        }
+      })
+      .catch(console.error)
+  }, [])
   // Ref to skip the coupon-reset effect on the very first render
   const couponResetSkipRef = useRef(false)
   
@@ -279,7 +291,7 @@ export function CheckoutPage() {
       } catch {
         if (!isMounted) return
         const fallbackMethods = [
-          { id: 'standard', code: 'standard', name: 'Standard Shipping', minDays: 3, maxDays: 5, charge: subtotal >= 999 ? 0 : 15 },
+          { id: 'standard', code: 'standard', name: 'Standard Shipping', minDays: 3, maxDays: 5, charge: subtotal >= freeShippingThreshold ? 0 : 15 },
           { id: 'express', code: 'express', name: 'Express Delivery', minDays: 1, maxDays: 2, charge: 45 },
         ]
         setShippingMethods(fallbackMethods)

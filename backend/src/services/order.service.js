@@ -1,6 +1,7 @@
 import Coupon from '../models/Coupon.js';
 import Product from '../models/Product.js';
 import ShippingMethod from '../models/ShippingMethod.js';
+import SiteConfig from '../models/SiteConfig.js';
 import AppError from '../utils/AppError.js';
 import { getValidatedCouponResult } from './coupon.service.js';
 
@@ -58,8 +59,14 @@ export const buildOrderDraftFromCheckout = async (checkoutInput) => {
     status: 'active',
   }).lean();
   const shippingFallback = DEFAULT_SHIPPING_METHODS[String(checkoutInput.shippingMethod || 'standard').toLowerCase()] || DEFAULT_SHIPPING_METHODS.standard;
-  const shippingAmount = Number(shippingMethodDoc?.charge ?? shippingFallback.charge);
+  let shippingAmount = Number(shippingMethodDoc?.charge ?? shippingFallback.charge);
   const estimatedDeliveryDays = Number(shippingMethodDoc?.maxDays ?? shippingFallback.maxDays);
+
+  const siteConfigDoc = await SiteConfig.findOne({ key: 'default' }).lean();
+  const threshold = siteConfigDoc?.freeShippingThreshold ?? 999;
+  if (subtotal >= threshold && String(checkoutInput.shippingMethod || 'standard').toLowerCase() === 'standard') {
+    shippingAmount = 0;
+  }
 
   let discountAmount = 0;
   let couponData;

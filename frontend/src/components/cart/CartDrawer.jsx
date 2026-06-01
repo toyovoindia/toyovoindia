@@ -4,13 +4,26 @@ import { X, Trash2, Plus, Minus, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { getStorefrontSettings } from '../../services/siteApi';
+
 const CartDrawer = ({ isOpen, onClose }) => {
   const { cartItems, updateQuantity, removeFromCart, subtotal } = useCart();
   const { user } = useAuth();
   const [orderMessageOpen, setOrderMessageOpen] = useState(false);
   const navigate = useNavigate();
 
-  const freeShippingThreshold = 1780.00;
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(999);
+
+  useEffect(() => {
+    getStorefrontSettings()
+      .then((data) => {
+        if (data && typeof data.freeShippingThreshold === 'number') {
+          setFreeShippingThreshold(data.freeShippingThreshold);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   const progressPercent = Math.min((subtotal / freeShippingThreshold) * 100, 100);
 

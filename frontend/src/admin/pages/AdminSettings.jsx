@@ -320,6 +320,54 @@ function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors
       </div>
 
       <div className="space-y-6">
+        <h4 className="text-[11px] font-bold text-[#F1641E] uppercase tracking-[0.2em] border-b pb-4">Financial & Shipping</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Free Shipping Threshold (₹)</label>
+            <input 
+              type="number" 
+              min="0"
+              value={settings.freeShippingThreshold !== undefined ? settings.freeShippingThreshold : ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? '' : Math.max(0, Number(e.target.value));
+                updateField('freeShippingThreshold', val)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                  e.preventDefault();
+                }
+              }}
+              className="w-full h-14 px-6 bg-[#FDF4E6]/30 rounded-2xl border border-gray-100 font-medium" 
+            />
+            <p className="text-[11px] text-gray-400 font-medium px-2 leading-relaxed">
+              If the order subtotal is greater than or equal to this limit, the Standard shipping method charge becomes ₹0 (Free).
+            </p>
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Default Shipping Fee (₹)</label>
+            <input 
+              type="number" 
+              min="0"
+              value={settings.defaultShippingFee !== undefined ? settings.defaultShippingFee : ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? '' : Math.max(0, Number(e.target.value));
+                updateField('defaultShippingFee', val)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                  e.preventDefault();
+                }
+              }}
+              className="w-full h-14 px-6 bg-[#FDF4E6]/30 rounded-2xl border border-gray-100 font-medium" 
+            />
+            <p className="text-[11px] text-gray-400 font-medium px-2 leading-relaxed">
+              Fallback fee applied only if no active shipping methods are found in the database.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
         <h4 className="text-[11px] font-bold text-[#F1641E] uppercase tracking-[0.2em] border-b pb-4">Brand Identity</h4>
         <div className="flex items-center gap-8 p-8 bg-[#FDF4E6]/30 rounded-[32px] border border-dashed border-[#F1641E]/20">
           <div className="w-24 h-24 bg-white rounded-[24px] shadow-sm flex items-center justify-center border-2 border-white overflow-hidden">

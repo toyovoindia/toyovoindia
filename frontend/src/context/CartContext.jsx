@@ -187,13 +187,21 @@ export function CartProvider({ children }) {
   }
 
   const updateQuantity = (id, delta) => {
-    setCartItems((prev) => prev.map((item) => {
-      if (item.id === id) {
-        return { ...item, qty: Math.max(1, item.qty + delta) }
-      }
-      return item
-    }))
-  }
+    setCartItems((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const nextQty = item.qty + delta;
+            if (nextQty < 1) {
+              return null;
+            }
+            return { ...item, qty: nextQty };
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
+  };
 
   const clearCart = () => setCartItems([])
 
