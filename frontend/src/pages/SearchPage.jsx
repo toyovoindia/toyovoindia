@@ -106,7 +106,7 @@ export function SearchPage() {
                   </Link>
                   <div className="flex items-center justify-center gap-3 mt-1">
                     {p.oldPrice && p.oldPrice > (p.price || 0) && (
-                      <span className="text-[12px] text-gray-400 line-through font-bold">₹{p.oldPrice.toFixed(2)}</span>
+                      <span className="text-[12px] text-gray-600 line-through font-bold">₹{p.oldPrice.toFixed(2)}</span>
                     )}
                     <span className="text-[15px] font-bold text-[#FF4E50] font-grandstander tracking-tight">₹{(p.price || 0).toFixed(2)}</span>
                   </div>

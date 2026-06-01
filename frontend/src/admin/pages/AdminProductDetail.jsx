@@ -115,7 +115,11 @@ export function AdminProductDetail() {
 
   const handleSave = async () => {
     const errors = {}
-    if (!product.name.trim()) errors.name = 'Toy name is required.'
+    if (!product.name.trim()) {
+      errors.name = 'Toy name is required.'
+    } else if (!/[A-Za-z]/.test(product.name)) {
+      errors.name = 'Toy name must contain at least one letter (cannot be purely numeric).'
+    }
     if (!product.category) errors.category = 'Please select a category.'
 
     const currentPrice = Number(product.price || 0)
@@ -128,6 +132,12 @@ export function AdminProductDetail() {
 
     if (currentOldPrice !== null && currentPrice > currentOldPrice) {
       errors.price = 'Selling Price cannot be greater than MRP / Old Price.'
+    }
+
+    if (product.brand && product.brand.trim() !== '') {
+      if (!/[A-Za-z]/.test(product.brand)) {
+        errors.brand = 'Brand name must contain at least one letter (cannot be purely numeric).'
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -373,7 +383,8 @@ export function AdminProductDetail() {
                     type="text" 
                     value={product.name} 
                     onChange={(e) => {
-                      setProduct({...product, name: e.target.value})
+                      const val = e.target.value.replace(/[^A-Za-z0-9\s\-_]/g, '')
+                      setProduct({...product, name: val})
                       if(formErrors.name) setFormErrors({...formErrors, name: null})
                     }}
                     placeholder="e.g. Playbox The Builder"
@@ -426,8 +437,12 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.price} 
+                        onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                         onChange={(e) => {
-                          setProduct({...product, price: e.target.value})
+                          const val = e.target.value
+                          if (val === '' || Number(val) >= 0) {
+                            setProduct({...product, price: val})
+                          }
                           if(formErrors.price) setFormErrors({...formErrors, price: null})
                         }}
                         className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-700 transition-all disabled:opacity-60 ${formErrors.price ? 'border-red-400' : 'border-transparent'}`}
@@ -443,11 +458,15 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.oldPrice} 
+                        onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                         onChange={(e) => {
-                          setProduct({...product, oldPrice: e.target.value})
+                          const val = e.target.value
+                          if (val === '' || Number(val) >= 0) {
+                            setProduct({...product, oldPrice: val})
+                          }
                           if(formErrors.oldPrice) setFormErrors({...formErrors, oldPrice: null})
                         }}
-                        className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-400/60 transition-all disabled:opacity-60 ${formErrors.oldPrice ? 'border-red-400' : 'border-transparent'}`}
+                        className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-grandstander font-bold text-xl text-gray-600 transition-all disabled:opacity-60 ${formErrors.oldPrice ? 'border-red-400' : 'border-transparent'}`}
                       />
                     </div>
                     {formErrors.oldPrice && <p className="text-red-500 text-[11px] font-bold">{formErrors.oldPrice}</p>}
@@ -460,8 +479,12 @@ export function AdminProductDetail() {
                         disabled={!isEditing}
                         type="number" 
                         value={product.stock} 
+                        onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                         onChange={(e) => {
-                          setProduct({...product, stock: e.target.value})
+                          const val = e.target.value
+                          if (val === '' || Number(val) >= 0) {
+                            setProduct({...product, stock: val})
+                          }
                           if(formErrors.stock) setFormErrors({...formErrors, stock: null})
                         }}
                         className={`w-full h-14 pl-12 pr-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60 ${formErrors.stock ? 'border-red-400' : 'border-transparent'}`}
@@ -491,11 +514,17 @@ export function AdminProductDetail() {
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Brand</label>
                       <input 
                         disabled={!isEditing}
-                        type="text" value={product.brand} 
-                        onChange={(e) => setProduct({...product, brand: e.target.value.replace(/[^A-Za-z0-9\s]/g, '')})}
+                        type="text" 
+                        value={product.brand} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^A-Za-z0-9\s\-_]/g, '')
+                          setProduct({...product, brand: val})
+                          if (formErrors.brand) setFormErrors({...formErrors, brand: null})
+                        }}
                         placeholder="e.g. Babyhug"
-                        className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60"
+                        className={`w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60 ${formErrors.brand ? 'border-red-400' : 'border-transparent'}`}
                       />
+                      {formErrors.brand && <p className="text-red-500 text-[11px] font-bold px-2">{formErrors.brand}</p>}
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Age Group</label>

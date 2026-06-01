@@ -7,6 +7,7 @@ import {
   adminUpdateProduct,
   adminUpdateProductStatus,
   adminUpdateProductStock,
+  getProductBrands,
   getProductBySlug,
   listBestSellers,
   listFeaturedProducts,
@@ -33,6 +34,7 @@ router.get('/featured', listFeaturedProducts);
 router.get('/trending', listTrendingProducts);
 router.get('/new-arrivals', listNewArrivals);
 router.get('/best-sellers', listBestSellers);
+router.get('/brands', getProductBrands);
 router.get('/:slug', getProductBySlug);
 
 adminRouter.use(protect, authorizeRoles('admin', 'super_admin'));

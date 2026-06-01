@@ -135,9 +135,52 @@ export function AdminCoupons() {
           <textarea value={formData.description} onChange={(event) => setFormData({ ...formData, description: event.target.value })} placeholder="Optional internal description" className="w-full min-h-[110px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px] resize-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <input type="number" min="0" step="0.01" value={formData.value} onChange={(event) => setFormData({ ...formData, value: event.target.value })} placeholder={formData.type === 'percentage' ? 'Discount %' : 'Discount value'} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" required />
-            <input type="number" min="0" step="0.01" value={formData.minOrderValue} onChange={(event) => setFormData({ ...formData, minOrderValue: event.target.value })} placeholder="Minimum order value" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" />
-            <input type="number" min="0" step="0.01" value={formData.maxDiscountAmount} onChange={(event) => setFormData({ ...formData, maxDiscountAmount: event.target.value })} placeholder="Max discount cap" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={formData.value} 
+              onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+              onChange={(event) => {
+                const val = event.target.value
+                if (val === '' || Number(val) >= 0) {
+                  setFormData({ ...formData, value: val })
+                }
+              }} 
+              placeholder={formData.type === 'percentage' ? 'Discount %' : 'Discount value'} 
+              className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
+              required 
+            />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={formData.minOrderValue} 
+              onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+              onChange={(event) => {
+                const val = event.target.value
+                if (val === '' || Number(val) >= 0) {
+                  setFormData({ ...formData, minOrderValue: val })
+                }
+              }} 
+              placeholder="Minimum order value" 
+              className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
+            />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={formData.maxDiscountAmount} 
+              onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+              onChange={(event) => {
+                const val = event.target.value
+                if (val === '' || Number(val) >= 0) {
+                  setFormData({ ...formData, maxDiscountAmount: val })
+                }
+              }} 
+              placeholder="Max discount cap" 
+              className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
+            />
             <input type="datetime-local" value={formData.expiresAt} onChange={(event) => setFormData({ ...formData, expiresAt: event.target.value })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" />
           </div>
 

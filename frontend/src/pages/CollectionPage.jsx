@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, SlidersHorizontal, ChevronLeft, ChevronDown, Check, X, ChevronRight } from 'lucide-react'
 import { categoryData } from '../data/navigationData'
 import { ProductCard } from '../components/ui/ProductCard'
-import { getCategoryTree, getProducts } from '../services/catalogApi'
+import { getCategoryTree, getProducts, getProductBrands } from '../services/catalogApi'
 
 const SkeletonCard = () => (
   <div className="bg-transparent rounded-[30px] p-2 animate-pulse">
@@ -83,6 +83,24 @@ export function CollectionPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [gridCols, setGridCols] = useState(3)
   const itemsPerPage = 12
+
+  const [dynamicBrands, setDynamicBrands] = useState(['Toyovo', 'Babyhug', 'Sanjary', 'Play Nation', 'Intellibaby', 'Bonfino'])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadBrands = async () => {
+      try {
+        const list = await getProductBrands()
+        if (isMounted && list && list.length > 0) {
+          setDynamicBrands(list)
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    loadBrands()
+    return () => { isMounted = false }
+  }, [])
 
   const [filters, setFilters] = useState({
     availability: [],
@@ -255,7 +273,7 @@ export function CollectionPage() {
     <div className="space-y-1">
       {[
         { id: 'availability', title: 'availability', items: ['in stock', 'out of stock'] },
-        { id: 'brand', title: 'brands', items: ['Toyovo', 'Babyhug', 'Sanjary', 'Play Nation', 'Intellibaby', 'Bonfino'] },
+        { id: 'brand', title: 'brands', items: dynamicBrands },
         { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
         { id: 'age', title: 'age', items: ['0-10 Years', '0-24 Months', '2 Years+', '3 Years+', '5 Years+'] },
         { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },

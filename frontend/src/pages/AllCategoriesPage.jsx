@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, SlidersHorizontal, ChevronLeft, ChevronDown, Check, X, ChevronRight } from 'lucide-react'
 import { ProductCard } from '../components/ui/ProductCard'
-import { getCategoryTree, getProducts, getTrendingProducts } from '../services/catalogApi'
+import { getCategoryTree, getProducts, getTrendingProducts, getProductBrands } from '../services/catalogApi'
 
 const fallbackCategories = [{ id: 'musical-toys', slug: 'musical-toys', name: 'Musical Toys' }]
 
@@ -68,7 +68,7 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
   )
 }
 
-const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFilterOpen, filters, toggleFilter, setFilters }) => (
+const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFilterOpen, filters, toggleFilter, setFilters, brands }) => (
   <div className="space-y-1">
     <FilterSection title="Categories">
       <div className="space-y-1">
@@ -86,7 +86,7 @@ const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFil
 
     {[
       { id: 'availability', title: 'availability', items: ['in stock', 'out of stock'] },
-      { id: 'brand', title: 'brands', items: ['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'] },
+      { id: 'brand', title: 'brands', items: brands || ['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'] },
       { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
       { id: 'age', title: 'age', items: ['0-2 Years', '2-4 Years', '4-6 Years', '6-8 Years', '8+ Years'] },
       { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
@@ -134,6 +134,24 @@ export function AllCategoriesPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [gridCols, setGridCols] = useState(3)
   const itemsPerPage = 12
+
+  const [dynamicBrands, setDynamicBrands] = useState(['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadBrands = async () => {
+      try {
+        const list = await getProductBrands()
+        if (isMounted && list && list.length > 0) {
+          setDynamicBrands(list)
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    loadBrands()
+    return () => { isMounted = false }
+  }, [])
 
   const [filters, setFilters] = useState({
     availability: [],
@@ -318,6 +336,7 @@ export function AllCategoriesPage() {
                 filters={filters}
                 toggleFilter={toggleFilter}
                 setFilters={setFilters}
+                brands={dynamicBrands}
               />
             </div>
           </aside>
@@ -472,6 +491,7 @@ export function AllCategoriesPage() {
                   filters={filters}
                   toggleFilter={toggleFilter}
                   setFilters={setFilters}
+                  brands={dynamicBrands}
                 />
               </div>
             </motion.div>

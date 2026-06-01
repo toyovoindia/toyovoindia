@@ -96,11 +96,59 @@ export function AdminShipping() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <input value={newMethod.name} onChange={(e) => setNewMethod((prev) => ({ ...prev, name: e.target.value }))} placeholder="Method name" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
           <input value={newMethod.code} onChange={(e) => setNewMethod((prev) => ({ ...prev, code: e.target.value }))} placeholder="Code" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-          <input type="number" value={newMethod.minDays} onChange={(e) => setNewMethod((prev) => ({ ...prev, minDays: e.target.value }))} placeholder="Min days" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-          <input type="number" value={newMethod.maxDays} onChange={(e) => setNewMethod((prev) => ({ ...prev, maxDays: e.target.value }))} placeholder="Max days" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-          <input type="number" value={newMethod.charge} onChange={(e) => setNewMethod((prev) => ({ ...prev, charge: e.target.value }))} placeholder="Charge" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
+          <input 
+            type="number" 
+            value={newMethod.minDays} 
+            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || Number(val) >= 0) {
+                setNewMethod((prev) => ({ ...prev, minDays: val }))
+              }
+            }} 
+            placeholder="Min days" 
+            className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+          />
+          <input 
+            type="number" 
+            value={newMethod.maxDays} 
+            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || Number(val) >= 0) {
+                setNewMethod((prev) => ({ ...prev, maxDays: val }))
+              }
+            }} 
+            placeholder="Max days" 
+            className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+          />
+          <input 
+            type="number" 
+            value={newMethod.charge} 
+            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || Number(val) >= 0) {
+                setNewMethod((prev) => ({ ...prev, charge: val }))
+              }
+            }} 
+            placeholder="Charge" 
+            className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+          />
           <input value={newMethod.rule} onChange={(e) => setNewMethod((prev) => ({ ...prev, rule: e.target.value }))} placeholder="Rule" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-          <input type="number" value={newMethod.sortOrder} onChange={(e) => setNewMethod((prev) => ({ ...prev, sortOrder: e.target.value }))} placeholder="Sort order" className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
+          <input 
+            type="number" 
+            value={newMethod.sortOrder} 
+            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || Number(val) >= 0) {
+                setNewMethod((prev) => ({ ...prev, sortOrder: val }))
+              }
+            }} 
+            placeholder="Sort order" 
+            className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+          />
           <button onClick={handleCreate} className="h-11 px-6 bg-[#6651A4] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-lg hover:bg-[#5a4892] transition-all w-full flex items-center justify-center gap-2">
             <Plus size={16} /> New Rate
           </button>
@@ -122,10 +170,54 @@ export function AdminShipping() {
             <input value={method.name} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, name: e.target.value } : item))} className="w-full text-xl font-grandstander font-bold text-gray-800 outline-none" />
             <input value={method.rule} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, rule: e.target.value } : item))} className="w-full text-[12px] text-gray-500 outline-none" />
             <div className="grid grid-cols-2 gap-3">
-              <input type="number" value={method.minDays} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, minDays: e.target.value } : item))} className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-              <input type="number" value={method.maxDays} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, maxDays: e.target.value } : item))} className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-              <input type="number" value={method.charge} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, charge: e.target.value } : item))} className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
-              <input type="number" value={method.sortOrder} onChange={(e) => setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, sortOrder: e.target.value } : item))} className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" />
+              <input 
+                type="number" 
+                value={method.minDays} 
+                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === '' || Number(val) >= 0) {
+                    setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, minDays: val } : item))
+                  }
+                }} 
+                className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+              />
+              <input 
+                type="number" 
+                value={method.maxDays} 
+                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === '' || Number(val) >= 0) {
+                    setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, maxDays: val } : item))
+                  }
+                }} 
+                className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+              />
+              <input 
+                type="number" 
+                value={method.charge} 
+                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === '' || Number(val) >= 0) {
+                    setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, charge: val } : item))
+                  }
+                }} 
+                className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+              />
+              <input 
+                type="number" 
+                value={method.sortOrder} 
+                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val === '' || Number(val) >= 0) {
+                    setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, sortOrder: val } : item))
+                  }
+                }} 
+                className="h-11 px-4 rounded-xl bg-[#FDF4E6]/60 outline-none" 
+              />
             </div>
             <div className="pt-5 border-t border-gray-100 flex items-center justify-between gap-4">
               <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 uppercase tracking-widest"><Route size={13} /> {method.etaLabel}</span>

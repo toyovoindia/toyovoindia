@@ -71,3 +71,8 @@ export const getBestSellerProducts = async () => {
   const payload = await apiRequest('/products/best-sellers')
   return (payload.data || []).map(normalizeProduct)
 }
+
+export const getProductBrands = async () => {
+  const payload = await apiRequest('/products/brands')
+  return payload.data || []
+}

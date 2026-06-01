@@ -284,7 +284,7 @@ export function ProductDetailPage() {
                   <h4 className="text-[14px] font-bold text-[#333333] hidden lg:block font-grandstander tracking-tight">{product.title || product.name}</h4>
                   <div className="flex items-center gap-2">
                     <span className="text-[#E84949] font-bold text-[18px]">₹{Number(product.price || 0).toFixed(2)}</span>
-                    {product.oldPrice && <span className="text-[12px] text-gray-400 line-through font-bold">₹{Number(product.oldPrice).toFixed(2)}</span>}
+                    {product.oldPrice && <span className="text-[12px] text-gray-600 line-through font-bold">₹{Number(product.oldPrice).toFixed(2)}</span>}
                   </div>
                 </div>
               </div>
@@ -428,7 +428,7 @@ export function ProductDetailPage() {
                   <div className="flex items-baseline gap-3">
                     <span className="text-2xl md:text-3xl font-black text-[#E84949] tracking-tight">₹{Number(product.price || 0).toFixed(2)}</span>
                     {product.oldPrice && (
-                      <span className="text-lg text-gray-400 line-through font-bold tracking-tight">₹{Number(product.oldPrice).toFixed(2)}</span>
+                      <span className="text-lg text-gray-600 line-through font-bold tracking-tight">₹{Number(product.oldPrice).toFixed(2)}</span>
                     )}
                   </div>
                   {product.oldPrice && product.oldPrice > product.price && (

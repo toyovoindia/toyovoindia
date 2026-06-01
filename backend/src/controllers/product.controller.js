@@ -167,6 +167,31 @@ export const listProducts = asyncHandler(async (req, res) => {
   });
 });
 
+export const getProductBrands = asyncHandler(async (req, res) => {
+  const brands = await Product.distinct('brand', { 
+    status: 'active', 
+    brand: { $ne: null, $ne: '' } 
+  });
+
+  const uniqueBrandsMap = new Map();
+  for (const b of brands) {
+    const trimmed = b.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    
+    // Capitalize first letter of brand to normalize "toyovo", "TOYOVO" -> "Toyovo"
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    
+    if (!uniqueBrandsMap.has(lower)) {
+      uniqueBrandsMap.set(lower, formatted);
+    }
+  }
+
+  const cleanBrands = Array.from(uniqueBrandsMap.values());
+  cleanBrands.sort((a, b) => a.localeCompare(b));
+  return successResponse(res, 200, 'Brands fetched successfully', cleanBrands);
+});
+
 export const getProductBySlug = asyncHandler(async (req, res, next) => {
   const product = await Product.findOne({ slug: req.params.slug, status: 'active' })
     .populate('category', 'name slug')

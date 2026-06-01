@@ -95,7 +95,7 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
 
               <div className="flex items-center gap-4 py-4 md:py-6 border-y border-dashed border-black/10">
                 <span className="text-3xl md:text-5xl font-black text-[#E84949]">₹{p.price}</span>
-                {p.oldPrice && <span className="text-base md:text-xl text-gray-400 line-through font-bold">₹{p.oldPrice}</span>}
+                {p.oldPrice && <span className="text-base md:text-xl text-gray-600 line-through font-bold">₹{p.oldPrice}</span>}
               </div>
 
               <p className="text-[13px] md:text-[15px] text-gray-500 leading-relaxed font-roboto italic opacity-80">Experience the joy of premium toys crafted with love. Perfect for gifts and creative playtime adventures that inspire imagination and endless smiles.</p>
@@ -237,7 +237,7 @@ export function ProductCard({ p, i, isGridOne = false }) {
           
           <div className={`flex items-center gap-2 ${isGridOne ? 'justify-start' : 'justify-center'}`}>
             {finalOldPrice && (
-              <span className={`${isGridOne ? 'text-sm md:text-lg' : 'text-[10px] md:text-[11px]'} text-[#444]/20 line-through font-bold tracking-tight whitespace-nowrap`}>
+              <span className={`${isGridOne ? 'text-sm md:text-lg' : 'text-[10px] md:text-[11px]'} text-[#444]/50 line-through font-bold tracking-tight whitespace-nowrap`}>
                 ₹{finalOldPrice}
               </span>
             )}
