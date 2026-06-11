@@ -35,8 +35,14 @@ const LiIcon = () => (
     <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
   </svg>
 )
+const YtIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+)
 
 export function AdminSettings() {
+  const { user, updateUser } = useAuth()
   const { tab } = useParams()
   const navigate = useNavigate()
   const activeSection = tab || 'storefront'
@@ -112,6 +118,21 @@ export function AdminSettings() {
       const data = await updateAdminStorefrontSettings(updatedData)
       setSettings(data)
       setSettingsMessage({ type: 'success', text: 'Settings synchronized successfully!' })
+      
+      // Synchronize Admin Profile Phone if it has changed
+      if (updatedData.contactPhone && user && user.phone !== updatedData.contactPhone) {
+        try {
+          const updatedProfile = await updateMyProfile({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: updatedData.contactPhone
+          })
+          updateUser(updatedProfile)
+        } catch (profileErr) {
+          console.error('Failed to sync profile phone:', profileErr)
+        }
+      }
     } catch (err) {
       setSettingsMessage({ type: 'error', text: err.message || 'Update failed' })
     } finally {
@@ -478,6 +499,7 @@ function ContactTab({ settings, setSettings, formErrors, setFormErrors, handleUp
           {[
             { id: 'instagram', label: 'Instagram', icon: <IgIcon />, color: 'hover:border-pink-500' },
             { id: 'facebook', label: 'Facebook', icon: <FbIcon />, color: 'hover:border-blue-600' },
+            { id: 'youtube', label: 'YouTube', icon: <YtIcon />, color: 'hover:border-red-600' },
             { id: 'twitter', label: 'Twitter (X)', icon: <XIcon />, color: 'hover:border-black' },
             { id: 'linkedin', label: 'LinkedIn', icon: <LiIcon />, color: 'hover:border-blue-700' },
           ].map((soc) => (
@@ -562,6 +584,21 @@ function ProfileSettings() {
       const updated = await updateMyProfile(profile)
       updateUser(updated)
       setProfileMessage({ type: 'success', text: 'Admin profile synchronized successfully!' })
+
+      // Synchronize storefront contactPhone if changed
+      if (profile.phone) {
+        try {
+          const currentSettings = await getAdminStorefrontSettings()
+          if (currentSettings.contactPhone !== profile.phone) {
+            await updateAdminStorefrontSettings({
+              ...currentSettings,
+              contactPhone: profile.phone
+            })
+          }
+        } catch (settingsErr) {
+          console.error('Failed to sync settings phone:', settingsErr)
+        }
+      }
     } catch (err) {
       const msg = err.message || 'Profile sync failed'
       const lower = msg.toLowerCase()

@@ -36,14 +36,15 @@ const siteConfigSchema = new mongoose.Schema({
   codEnabled: { type: Boolean, default: true },
 
   // --- Contact & Social ---
-  contactEmail: { type: String, default: 'support@toyoveindia.com' },
-  contactPhone: { type: String, default: '+91 9876543210' },
-  contactAddress: { type: String, default: 'Toyove India HQ, New Delhi' },
+  contactEmail: { type: String, default: 'toyovoindia@gmail.com' },
+  contactPhone: { type: String, default: '+91 7901931534' },
+  contactAddress: { type: String, default: 'UNIT 703, 7th FLOOR, BLOCK 1 MAYAGARDEN, Zirakpur, Rajpura, Mohali- 140603, Punjab' },
   socialLinks: {
-    instagram: { type: String, default: '' },
-    facebook: { type: String, default: '' },
-    twitter: { type: String, default: '' },
-    linkedin: { type: String, default: '' }
+    instagram: { type: String, default: 'https://instagram.com/' },
+    facebook: { type: String, default: 'https://facebook.com/' },
+    twitter: { type: String, default: 'https://twitter.com/' },
+    linkedin: { type: String, default: 'https://linkedin.com/' },
+    youtube: { type: String, default: '' }
   },
 
   // --- Storefront Media (Hero Slider) ---

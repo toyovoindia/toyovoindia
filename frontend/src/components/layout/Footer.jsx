@@ -9,6 +9,7 @@ import { getStorefrontSettings } from '../../services/siteApi'
 const FB = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
 const IG = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg>
 const TW = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+const YT = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
 const PT = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 0a12 12 0 0 0-4.373 23.178c-.01-.937-.002-2.063.232-3.083l1.693-7.174s-.432-.864-.432-2.142c0-2.009 1.164-3.51 2.61-3.51 1.232 0 1.828.925 1.828 2.034 0 1.24-.79 3.095-1.197 4.812-.341 1.438.72 2.608 2.137 2.608 2.565 0 4.292-3.291 4.292-7.183 0-2.961-1.997-5.17-5.614-5.17-4.09 0-6.627 3.048-6.627 6.44 0 1.17.342 1.994.878 2.636a.35.35 0 0 1 .08.337c-.09.37-.289 1.44-.329 1.642-.052.26-.213.316-.49.19-1.816-.84-2.666-3.1-2.666-5.638 0-4.189 3.544-9.234 10.617-9.234 5.712 0 9.488 4.133 9.488 8.572 0 5.884-3.269 10.294-8.071 10.294-1.619 0-3.143-.878-3.664-1.87l-1.026 3.82c-.318 1.183-1.14 2.668-1.727 3.591A12 12 0 1 0 12 0z" /></svg>
 
 const FooterAccordion = ({ title, children, isNewsletter = false }) => {
@@ -124,18 +125,31 @@ export function Footer() {
               </form>
 
               <div className="flex gap-2.5 mt-8">
-                <a href={siteConfig?.socialLinks?.facebook || "#"} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#3B5998] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
-                  <FB />
-                </a>
-                <a href={siteConfig?.socialLinks?.instagram || "#"} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
-                  <IG />
-                </a>
-                <a href={siteConfig?.socialLinks?.twitter || "#"} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#00ACEE] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
-                  <TW />
-                </a>
-                <a href={siteConfig?.socialLinks?.linkedin || "#"} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#0077b5] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
-                </a>
+                {siteConfig?.socialLinks?.facebook && (
+                  <a href={siteConfig.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#3B5998] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
+                    <FB />
+                  </a>
+                )}
+                {siteConfig?.socialLinks?.instagram && (
+                  <a href={siteConfig.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
+                    <IG />
+                  </a>
+                )}
+                {siteConfig?.socialLinks?.youtube && (
+                  <a href={siteConfig.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#FF0000] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
+                    <YT />
+                  </a>
+                )}
+                {siteConfig?.socialLinks?.twitter && (
+                  <a href={siteConfig.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#00ACEE] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
+                    <TW />
+                  </a>
+                )}
+                {siteConfig?.socialLinks?.linkedin && (
+                  <a href={siteConfig.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#0077b5] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                  </a>
+                )}
               </div>
             </FooterAccordion>
           </div>

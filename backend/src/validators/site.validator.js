@@ -36,6 +36,7 @@ export const updateStorefrontSettingsSchema = z.object({
       facebook: optionalString,
       twitter: optionalString,
       linkedin: optionalString,
+      youtube: optionalString,
     }).optional(),
 
     storefrontMedia: z.object({
