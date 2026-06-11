@@ -15,6 +15,7 @@ import { WishlistPage } from './pages/WishlistPage'
 import { SearchPage } from './pages/SearchPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { LoginPage } from './pages/LoginPage'
+import { AdminLoginPage } from './pages/AdminLoginPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AccountPage } from './pages/AccountPage'
@@ -104,7 +105,7 @@ function AdminRouteGate({ children }) {
 
   if (!user) {
     const next = `${location.pathname}${location.search}`
-    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />
+    return <Navigate to={`/admin/login?next=${encodeURIComponent(next)}`} replace />
   }
 
   if (!isAdmin) {
@@ -133,9 +134,9 @@ export default function App() {
 function AppContent() {
   const location = useLocation()
   const isCheckout = location.pathname === '/checkout'
-  const isAdmin = location.pathname.startsWith('/admin')
-  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname)
-  const hideLayouts = isCheckout || isAdmin || isAuthPage
+  const isAdmin = location.pathname.startsWith('/admin') && location.pathname !== '/admin/login'
+  const isAuthPage = ['/login', '/register', '/forgot-password', '/admin/login'].includes(location.pathname)
+  const hideLayouts = isCheckout || location.pathname.startsWith('/admin') || isAuthPage
 
   const { user } = useAuth()
   const isSiteAdmin = ['admin', 'super_admin'].includes(user?.role)
@@ -259,6 +260,7 @@ function AppContent() {
 
             {/* Auth Pages */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/account" element={<AccountPage />} />

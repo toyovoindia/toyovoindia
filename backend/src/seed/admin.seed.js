@@ -31,10 +31,14 @@ const seedAdmin = async () => {
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(process.env.ADMIN_SEED_PASSWORD, salt);
 
+  const phone = (process.env.ADMIN_SEED_PHONE || '+917901931534').trim();
+
   const payload = {
     firstName: process.env.ADMIN_SEED_FIRST_NAME.trim(),
     lastName: process.env.ADMIN_SEED_LAST_NAME.trim(),
     email,
+    phone,
+    phoneVerified: true,
     passwordHash,
     role,
     status: 'Active',
@@ -45,7 +49,7 @@ const seedAdmin = async () => {
 
   if (!existingUser) {
     await User.create(payload);
-    logger.info(`Admin seed completed. Created ${role} account for ${email}.`);
+    logger.info(`Admin seed completed. Created ${role} account for ${email} with phone ${phone}.`);
     process.exit(0);
   }
 
@@ -55,6 +59,8 @@ const seedAdmin = async () => {
   existingUser.role = payload.role;
   existingUser.status = payload.status;
   existingUser.emailVerified = true;
+  existingUser.phone = payload.phone;
+  existingUser.phoneVerified = true;
   await existingUser.save();
 
   logger.info(`Admin seed completed. Updated ${role} account for ${email}.`);

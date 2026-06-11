@@ -186,7 +186,7 @@ export function AdminLayout() {
                 action: async () => {
                   setConfirmModal({ isOpen: false, action: null, message: '', title: '' })
                   await logout()
-                  navigate('/login')
+                  navigate('/admin/login')
                 }
               })
             }}

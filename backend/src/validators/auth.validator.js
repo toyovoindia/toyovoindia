@@ -12,7 +12,13 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().trim().email('Invalid email address').toLowerCase(),
+    email: z.string().trim().toLowerCase().refine((val) => {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      const isPhone = /^[6-9]\d{9}$/.test(val);
+      return isEmail || isPhone;
+    }, {
+      message: 'Invalid email address or 10-digit mobile number starting with 6-9'
+    }),
     password: z.string().min(1, 'Password is required'),
   })
 });
