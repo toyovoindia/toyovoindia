@@ -9,7 +9,7 @@ const faqs = [
   },
   {
     q: '100% Warranty Product',
-    a: 'Every single product sold on TOYOVOINDIA India comes with a 100% satisfaction guarantee. If you are not happy, we will make it right — no questions asked.'
+    a: 'Every single product sold on TOYOVO INDIA (OPC) PRIVATE LIMITED comes with a 100% satisfaction guarantee. If you are not happy, we will make it right — no questions asked.'
   },
   {
     q: 'Premium Product',
@@ -27,75 +27,76 @@ export function AboutSection() {
   const [open, setOpen] = useState(2)
 
   return (
-    <section className="bg-brand-cream py-16 md:py-24">
-      <div className="shell">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="rounded-2xl overflow-hidden shadow-xl"
-          >
-            <img
-              src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&q=80&w=700"
-              alt="Baby playing with toys"
-              className="w-full h-full object-cover aspect-[4/5] md:aspect-auto md:h-[520px]"
-            />
-          </motion.div>
+  <section className="py-16 md:py-24">
+      <div className="shell grid grid-cols-1 lg:grid-cols-10 gap-12 lg:gap-16 xl:gap-32">
+        {/* Left Side: Images */}
+        <div className="lg:col-span-6">
+          <div className="grid grid-cols-1 gap-4">
+            {bottomImages.map((src, i) => (
+              <div key={i} className="overflow-hidden rounded-3xl border border-[#333]/10">
+                <img src={src} alt={`Toy Store ${i + 1}`} className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+              </div>
+            ))}
+          </div>
+        </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="flex flex-col justify-center gap-8"
-          >
-            <h2 className="font-serif text-[26px] md:text-[36px] lg:text-[40px] text-brand-ink font-bold leading-tight">
-              We Have Always Tried To Focus On The People Who Were Going To Use The Products
+        {/* Right Side: Content */}
+        <div className="lg:col-span-4">
+          <div className="space-y-10">
+            {/* Subtitle */}
+            <p className="text-[#E84949] font-medium text-[12px] md:text-[14px] uppercase tracking-[0.4em] font-roboto">
+              What Makes Toyovo Special
+            </p>
+
+            {/* Main Title */}
+            <h2 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333333] leading-[1.2]">
+              Our Commitment
             </h2>
 
-            <div className="flex flex-col divide-y divide-dashed divide-gray-300">
-              {faqs.map((item, i) => (
-                <div key={i}>
-                  <button
-                    onClick={() => setOpen(open === i ? -1 : i)}
-                    className="flex items-center justify-between w-full py-4 text-left"
+            {/* FAQs */}
+            <div className="space-y-4">
+              {faqs.map((item, idx) => (
+                <div key={idx} className="overflow-hidden rounded-3xl border border-[#333]/10">
+                  <div
+                    className="p-6 md:p-8 bg-[#FDF4E6] cursor-pointer flex justify-between items-center"
+                    onClick={() => setOpen(open === idx ? null : idx)}
                   >
-                    <span className={`text-[14px] md:text-[15px] font-semibold ${open === i ? 'text-brand-purple' : 'text-brand-ink'}`}>
-                      {item.q}
-                    </span>
-                    {open === i
-                      ? <Minus className="h-4 w-4 text-brand-purple shrink-0" />
-                      : <Plus className="h-4 w-4 text-brand-muted shrink-0" />
-                    }
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {open === i && (
-                      <motion.p
-                        key="body"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
+                    <span className="text-[16px] md:text-[18px] font-grandstander font-semibold text-[#333333]">{item.q}</span>
+                    {open === idx ? <Minus className="text-[#E84949]" size={20} /> : <Plus className="text-[#E84949]" size={20} />}
+                  </div>
+
+                  <AnimatePresence>
+                    {open === idx && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="overflow-hidden text-[13px] text-brand-muted leading-relaxed pb-4"
+                        className="overflow-hidden"
                       >
-                        {item.a}
-                      </motion.p>
+                        <p className="px-6 pb-6 md:px-8 md:pb-8 text-[14px] md:text-[16px] leading-relaxed text-[#666666] font-roboto border-t border-[#333]/5">
+                          {item.a}
+                        </p>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              {bottomImages.map((src, i) => (
-                <div key={i} className="aspect-square rounded-xl overflow-hidden">
-                  <img src={src} alt="Product" className="w-full h-full object-cover hover:scale-105 transition-transform duration-400" />
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            {/* Contact Button */}
+            <Link to="/contact" className="inline-block">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-[#E84949] text-white font-bold text-[16px] md:text-[18px] uppercase tracking-[0.2em] rounded-lg hover:bg-[#d33f3f] transition-colors duration-300 font-roboto shadow-lg shadow-[#E84949]/20"
+              >
+                Contact Us
+              </motion.button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>
-  )
+)
 }

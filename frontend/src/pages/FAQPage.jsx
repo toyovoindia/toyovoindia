@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus } from 'lucide-react'
 import { PolicyPageLayout } from '../components/layout/PolicyPageLayout'
+import { getPageContent } from '../services/pageApi'
 
 import { Link } from 'react-router-dom'
 
@@ -40,6 +41,24 @@ const FAQItem = ({ question, answer }) => {
 }
 
 export function FAQPage() {
+  const [content, setContent] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    const fetchContent = async () => {
+      try {
+        const data = await getPageContent('faq')
+        setContent(data)
+      } catch (err) {
+        console.error('Failed to fetch FAQ content:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchContent()
+  }, [])
+
   const faqs = [
     {
       q: "What age groups are your toys designed for?",
@@ -66,6 +85,20 @@ export function FAQPage() {
       a: "Once your order is shipped, we'll send you an email with a tracking number and a link to the carrier's website where you can follow its progress in real-time."
     }
   ]
+
+  if (content) {
+    return (
+      <PolicyPageLayout
+        title={content.title}
+        subtitle={`Last updated: ${new Date(content.updatedAt).toLocaleDateString()}`}
+      >
+        <div
+          className="dynamic-content prose prose-orange max-w-none"
+          dangerouslySetInnerHTML={{ __html: content.content }}
+        />
+      </PolicyPageLayout>
+    )
+  }
 
   return (
     <PolicyPageLayout 

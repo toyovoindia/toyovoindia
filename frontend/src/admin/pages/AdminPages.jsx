@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FileText, Save, ChevronRight, 
   ShieldCheck, Truck, RotateCcw, Gavel, 
-  Clock, AlertCircle, Search, Edit3
+  Clock, AlertCircle, Search, Edit3,
+  Info, HelpCircle
 } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { getAdminPages, updateAdminPage } from '../../services/pageApi'
@@ -15,6 +16,8 @@ const PAGE_METADATA = {
   'terms-conditions': { icon: Gavel, color: 'text-purple-500', bg: 'bg-purple-50' },
   'shipping-policy': { icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50' },
   'return-policy': { icon: RotateCcw, color: 'text-red-500', bg: 'bg-red-50' },
+  'about-us': { icon: Info, color: 'text-green-500', bg: 'bg-green-50' },
+  'faq': { icon: HelpCircle, color: 'text-teal-500', bg: 'bg-teal-50' },
 }
 
 export function AdminPages() {
@@ -34,7 +37,7 @@ export function AdminPages() {
     setLoading(true)
     try {
       const data = await getAdminPages()
-      setPages(data)
+      setPages(data.filter(p => p.slug !== 'about-us'))
     } catch (err) {
       showError(err.message || 'Could not load pages')
     } finally {

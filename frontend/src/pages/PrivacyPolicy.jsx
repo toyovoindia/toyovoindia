@@ -76,7 +76,7 @@ export function PrivacyPolicy() {
 
       <section className="space-y-4">
         <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">Personal Information Collection and Use</h2>
-        
+
         <h3 className="text-[18px] font-grandstander font-bold text-[#333]">1. Personal Information Provided During Website Use:</h3>
         <p>To access and purchase Products on the Website, we may collect your Personal Information as required for processing orders. We may disclose such Personal Information to Third Parties solely for purchase, sale, and delivery of Products in accordance with their terms and conditions.</p>
 
@@ -143,7 +143,7 @@ export function PrivacyPolicy() {
         <p>For questions about this Privacy Policy, please contact us at:</p>
         <ul className="list-disc pl-6 space-y-2">
           <li><strong>Email:</strong> <a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a></li>
-          <li><strong>Phone/WhatsApp:</strong> <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}</a></li>
+          <li><strong>Phone/WhatsApp:</strong> <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</a></li>
           <li><strong>Address:</strong> {siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali – 140603, Punjab'}</li>
         </ul>
       </section>

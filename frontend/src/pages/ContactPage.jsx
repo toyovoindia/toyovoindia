@@ -84,7 +84,7 @@ export function ContactPage() {
           <div className="flex flex-col gap-8">
             <h2 className="text-[32px] md:text-[42px] font-grandstander font-bold text-[#333333] leading-tight tracking-tight">Our Information</h2>
             <p className="text-[15px] text-[#666] leading-relaxed font-roboto">
-               TOYOVO INDIA (OPC) PRIVATE LIMITED is an officially registered enterprise committed to bringing high-quality toys and joy to families across India. We believe in creativity, safety, and endless smiles.
+              TOYOVO INDIA (OPC) PRIVATE LIMITED is an officially registered enterprise committed to bringing high-quality toys and joy to families across India. We believe in creativity, safety, and endless smiles.
             </p>
 
             <div className="mt-4 flex flex-col gap-2">
@@ -96,7 +96,7 @@ export function ContactPage() {
               <ContactInfoItem
                 icon={Phone}
                 title="Phone"
-                content={siteConfig?.contactPhone?.replace('+91', '').trim() || "8814040056"}
+                content={siteConfig?.contactPhone?.replace('+91', '').trim() || " 7901931534"}
               />
               <ContactInfoItem
                 icon={Mail}

@@ -67,7 +67,7 @@ export function TermsConditions() {
 
       <section className="space-y-4">
         <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">General Terms of Use</h2>
-        
+
         <h3 className="text-[18px] font-grandstander font-bold text-[#333]">1. Age Requirement:</h3>
         <p>Only individuals 18 years of age or older may use the Website. If you are under 18 and wish to use the Website or purchase products, your parents or legal guardian must acknowledge and agree to these Terms of Use and Privacy Policy.</p>
 
@@ -196,7 +196,7 @@ export function TermsConditions() {
         <p>For questions about these Terms and Conditions, please contact us at:</p>
         <ul className="list-disc pl-6 space-y-2">
           <li><strong>Email:</strong> <a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a></li>
-          <li><strong>Phone/WhatsApp:</strong> <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}</a></li>
+          <li><strong>Phone/WhatsApp:</strong> <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</a></li>
           <li><strong>Address:</strong> {siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali – 140603, Punjab'}</li>
         </ul>
       </section>

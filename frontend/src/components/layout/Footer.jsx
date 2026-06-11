@@ -81,7 +81,7 @@ export function Footer() {
   const handleSubscribe = async (e) => {
     if (e) e.preventDefault()
     if (!email) return error('Please enter your email')
-    
+
     setIsSubmitting(true)
     try {
       await subscribeToNewsletter(email)
@@ -101,8 +101,8 @@ export function Footer() {
 
           {/* Newsletter Column */}
           <div className="lg:pr-0 py-6 lg:py-16">
-            <FooterAccordion 
-              title={user ? "Stay Updated With Our Latest Collections & News." : "Sign Up For News, Updates & 10% Off Your First Order."} 
+            <FooterAccordion
+              title={user ? "Stay Updated With Our Latest Collections & News." : "Sign Up For News, Updates & 10% Off Your First Order."}
               isNewsletter={true}
             >
               <form onSubmit={handleSubscribe} className="flex flex-row gap-2 w-full max-w-xl mt-2 lg:mt-0">
@@ -114,7 +114,7 @@ export function Footer() {
                   className="w-full flex-1 h-11 px-3 sm:px-4 text-[14px] text-[#333] outline-none bg-white rounded-md placeholder:text-gray-500"
                   required
                 />
-                <button 
+                <button
                   type="submit"
                   disabled={isSubmitting}
                   className={`h-11 px-4 sm:px-6 bg-white text-[#333] text-[12px] sm:text-[13px] font-bold rounded-md hover:bg-[#E84949] hover:text-white transition-colors uppercase whitespace-nowrap ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -134,7 +134,7 @@ export function Footer() {
                   <TW />
                 </a>
                 <a href={siteConfig?.socialLinks?.linkedin || "#"} target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-md bg-[#0077b5] flex items-center justify-center text-white hover:opacity-80 transition-opacity">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
                 </a>
               </div>
             </FooterAccordion>
@@ -183,7 +183,7 @@ export function Footer() {
                   <Headset size={32} strokeWidth={1} className="text-white shrink-0 mt-1" />
                   <div className="flex flex-col gap-1">
                     <span className="text-[13px] text-white/90">Hotline free 24/7:</span>
-                    <span className="font-bold text-[18px] leading-none">{siteConfig?.contactPhone?.replace('+91', '').trim() || '8814040056'}</span>
+                    <span className="font-bold text-[18px] leading-none">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</span>
                   </div>
                 </div>
                 <div className="mt-2">

@@ -1,8 +1,12 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import PageContent from '../src/models/PageContent.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const INITIAL_PAGES = [
   {
@@ -10,7 +14,7 @@ const INITIAL_PAGES = [
     title: 'Privacy Policy',
     content: `
       <h2>Our Commitment to Privacy</h2>
-      <p>At TOYOVOINDIA, we respect your privacy and are committed to protecting the personal information you share with us. This policy explains how we collect, use, and safeguard your data.</p>
+      <p>At TOYOVO INDIA(OPC) PRIVATE LIMITED, we respect your privacy and are committed to protecting the personal information you share with us. This policy explains how we collect, use, and safeguard your data.</p>
       
       <h3>Information We Collect</h3>
       <ul>
@@ -69,6 +73,47 @@ const INITIAL_PAGES = [
 
       <h3>Refund Process</h3>
       <p>Once we receive and inspect your return, we will process your refund within 5-7 business days to your original payment method.</p>
+    `
+  },
+  {
+    slug: 'about-us',
+    title: 'About Us',
+    content: `
+      <h2>TOYOVOINDIA Vision</h2>
+      <p>Welcome to TOYOVO INDIA (OPC) PRIVATE LIMITED, where innovation meets the magic of play. Incorporated on April 22, 2026, we are a legally recognized entity committed to transparency and excellence.</p>
+      
+      <h3>Our Story</h3>
+      <p>Our journey began with a simple mission: to create toys that don't just entertain, but inspire children to explore the world with curiosity and joy. As a Ministry of Corporate Affairs registered company, we adhere to the highest safety and quality standards.</p>
+      
+      <h3>Company Details</h3>
+      <ul>
+        <li><strong>Corporate Identity Number (CIN):</strong> U47912PB2026OPC068091</li>
+        <li><strong>PAN:</strong> AANCT0674K</li>
+        <li><strong>TAN:</strong> PTLT16619B</li>
+      </ul>
+    `
+  },
+  {
+    slug: 'faq',
+    title: 'FAQs',
+    content: `
+      <h3>What age groups are your toys designed for?</h3>
+      <p>Our toy collection spans from newborns to 12-year-olds! Each product page specifies the recommended age range.</p>
+      
+      <h3>Are the materials used in your toys safe and eco-friendly?</h3>
+      <p>Yes, absolutely! Safety is our top priority. Most of our toys are made from sustainably sourced wood, organic cotton, or BPA-free recycled plastics. Every toy meets or exceeds international safety standards.</p>
+      
+      <h3>Do you offer gift wrapping and personalized messages?</h3>
+      <p>We certainly do! During the checkout process, you'll see an option to add a gift wrap and a handwritten note to your order for a small additional fee.</p>
+      
+      <h3>How long does shipping typically take?</h3>
+      <p>Standard shipping within India usually takes 3-5 business days. Express shipping options are available for 1-2 day delivery in most major cities.</p>
+      
+      <h3>Can I return a toy if my child doesn't like it?</h3>
+      <p>Yes! We have a 30-day no-hassle return policy for items in their original packaging. Please check our Return Policy page for the full details.</p>
+      
+      <h3>How can I track my order?</h3>
+      <p>Once your order is shipped, we'll send you an email with a tracking number and a link to the carrier's website where you can follow its progress in real-time.</p>
     `
   }
 ];
