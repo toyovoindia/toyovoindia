@@ -98,10 +98,7 @@ export function RegisterPage() {
         setPendingVerification({ phone: res.phone, purpose: res.purpose })
         setError('')
       } else {
-        navigate(`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`, {
-          replace: true,
-          state: { registrationSuccess: true, registeredEmail: formData.email },
-        })
+        navigate(nextPath || '/', { replace: true })
       }
     } else {
       setError(res.message)

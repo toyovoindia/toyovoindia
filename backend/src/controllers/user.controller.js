@@ -115,17 +115,25 @@ export const updateMyPreferences = asyncHandler(async (req, res) => {
 export const updateMe = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, phone } = req.body;
 
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      ...(firstName && { firstName }),
-      ...(lastName && { lastName }),
-      ...(phone !== undefined && { phone }),
-    },
-    { new: true, runValidators: true }
-  );
+  if (phone) {
+    const formattedPhone = phone.trim();
+    const existingPhone = await User.findOne({ phone: formattedPhone, _id: { $ne: req.user._id } });
+    if (existingPhone && existingPhone.phoneVerified) {
+      return next(new AppError('The mobile no has already been verified by another account. Please enter another mobile no.', 400));
+    }
 
-  return successResponse(res, 200, 'Profile updated successfully', updatedUser.toJSON());
+    if (formattedPhone !== req.user.phone) {
+      req.user.phone = formattedPhone;
+      req.user.phoneVerified = false;
+    }
+  }
+
+  if (firstName) req.user.firstName = firstName;
+  if (lastName) req.user.lastName = lastName;
+
+  await req.user.save();
+
+  return successResponse(res, 200, 'Profile updated successfully', req.user.toJSON());
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {

@@ -247,7 +247,7 @@ const TAB_ID_TO_SLUG = {
 }
 
 export function AccountPage() {
-  const { user, authLoading, logout, updateUser, addresses, addAddress, deleteAddress, updateAddress, setAsDefaultAddress } = useAuth()
+  const { user, authLoading, logout, updateUser, addresses, addAddress, deleteAddress, updateAddress, setAsDefaultAddress, verifyOtp, resendOtp } = useAuth()
   const { paymentHistory, savedMethods, addSavedMethod, deleteSavedMethod } = usePayment()
   const { wishlist } = useCart()
   const { success, error: showError } = useToast()
@@ -277,12 +277,67 @@ export function AccountPage() {
   const [siteConfig, setSiteConfig] = useState(null)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
 
+  // Phone Verification States and Handlers
+  const [verificationOtp, setVerificationOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [sendingOtp, setSendingOtp] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [verificationError, setVerificationError] = useState('')
+
+  const handleSendVerificationOtp = async () => {
+    setSendingOtp(true)
+    setVerificationError('')
+    try {
+      const res = await resendOtp(user.phone, 'register')
+      if (res.success) {
+        setOtpSent(true)
+        success('Verification OTP has been sent to your mobile number.')
+      } else {
+        setVerificationError(res.message)
+      }
+    } catch (err) {
+      setVerificationError(err.message || 'Failed to send OTP')
+    } finally {
+      setSendingOtp(false)
+    }
+  }
+
+  const handleVerifyPhoneOtp = async () => {
+    if (verificationOtp.length !== 6) {
+      setVerificationError('Please enter a valid 6-digit OTP')
+      return
+    }
+    setVerifyingOtp(true)
+    setVerificationError('')
+    try {
+      const res = await verifyOtp({ phone: user.phone, otp: verificationOtp, purpose: 'register' })
+      if (res.success) {
+        updateUser(res.user)
+        setOtpSent(false)
+        setVerificationOtp('')
+        success('Your mobile number has been verified successfully!')
+      } else {
+        setVerificationError(res.message)
+      }
+    } catch (err) {
+      setVerificationError(err.message || 'Verification failed')
+    } finally {
+      setVerifyingOtp(false)
+    }
+  }
+
   // Sync active tab when URL param changes (e.g. browser back/forward)
   useEffect(() => {
     const derived = TAB_SLUG_MAP[tabParam] || 'dashboard'
     setActiveTab(derived)
     setViewMode('content')
   }, [tabParam])
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm(user)
+    }
+  }, [user])
 
   const canCancelOrder = (order) => ['pending', 'processing'].includes(order?.status)
   const canRequestReturn = (order) => (
@@ -1124,6 +1179,9 @@ export function AccountPage() {
                             phone: formattedPhone,
                           })
                           updateUser(updatedProfile)
+                          setOtpSent(false)
+                          setVerificationOtp('')
+                          setVerificationError('')
                           success('Your profile is updated successfully.')
                         } catch (err) {
                           showError(err.message || 'Profile update failed')
@@ -1147,14 +1205,92 @@ export function AccountPage() {
                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Email Address</label>
                            <input value={profileForm.email} disabled className="w-full h-12 px-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 border-transparent font-bold text-gray-600 opacity-70 cursor-not-allowed" />
                         </div>
-                        <div className="space-y-2">
-                           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Phone Number</label>
-                           <div className="relative">
-                             <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-500 pointer-events-none">+91</span>
-                             <input maxLength="10" value={(profileForm.phone || '').replace(/^\+91/, '')} onChange={e=>setProfileForm({...profileForm, phone:e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-12 pl-14 pr-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 ${profileErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#6651A4]'} font-bold text-gray-600 transition-colors`} />
-                           </div>
-                           {profileErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight px-4">{profileErrors.phone}</p>}
-                        </div>
+                        {(() => {
+                           const typedPhone = (profileForm.phone || '').replace(/^\+91/, '').replace(/\D/g, '');
+                           const savedPhone = (user?.phone || '').replace(/^\+91/, '').replace(/\D/g, '');
+                           const isPhoneChanged = typedPhone !== savedPhone;
+                           const isVerified = user?.phoneVerified;
+
+                           return (
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">Phone Number</label>
+                                 <div className="relative">
+                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-500 pointer-events-none">+91</span>
+                                    <input maxLength="10" value={typedPhone} onChange={e=>setProfileForm({...profileForm, phone:e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-12 pl-14 pr-6 bg-[#FAEAD3]/50 rounded-2xl outline-none border-b-2 ${profileErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#6651A4]'} font-bold text-gray-600 transition-colors`} />
+                                 </div>
+                                 {profileErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight px-4">{profileErrors.phone}</p>}
+                                 
+                                 {isPhoneChanged ? (
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight px-4 leading-relaxed mt-1">
+                                       Phone number changed. Click 'Update Profile' to save it. You will need to verify the new number after saving.
+                                    </p>
+                                 ) : (
+                                    <>
+                                       {isVerified ? (
+                                          <div className="flex items-center gap-1.5 px-4 mt-1.5 text-[11px] font-bold text-green-600 uppercase tracking-wider">
+                                             <Check size={14} className="stroke-[3]" /> Verified
+                                          </div>
+                                       ) : (
+                                          <div className="mt-2.5 px-4 space-y-2">
+                                             <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 uppercase tracking-wider">
+                                                   <AlertCircle size={14} className="stroke-[3]" /> Unverified
+                                                </div>
+                                                {!otpSent && (
+                                                   <button
+                                                      type="button"
+                                                      disabled={sendingOtp}
+                                                      onClick={handleSendVerificationOtp}
+                                                      className="text-[11px] font-extrabold text-[#E84949] hover:underline uppercase tracking-wider disabled:opacity-50"
+                                                   >
+                                                      {sendingOtp ? 'Sending OTP...' : 'Verify now via OTP'}
+                                                   </button>
+                                                )}
+                                             </div>
+
+                                             {otpSent && (
+                                                <div className="mt-2 bg-[#FAEAD3]/40 border border-dashed border-[#333]/15 rounded-2xl p-4 space-y-3">
+                                                   <p className="text-[11px] font-semibold text-gray-600">Enter the 6-digit OTP sent to +91{savedPhone}</p>
+                                                   <div className="flex gap-2">
+                                                      <input
+                                                         type="text"
+                                                         placeholder="OTP"
+                                                         maxLength="6"
+                                                         value={verificationOtp}
+                                                         onChange={e => setVerificationOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                         className="w-1/2 h-10 px-4 bg-[#FAEAD3]/50 rounded-xl outline-none font-bold text-center tracking-widest text-sm border-b-2 border-transparent focus:border-[#6651A4]"
+                                                      />
+                                                      <button
+                                                         type="button"
+                                                         disabled={verifyingOtp}
+                                                         onClick={handleVerifyPhoneOtp}
+                                                         className="w-1/2 h-10 bg-[#E84949] hover:bg-[#333] text-white rounded-xl font-grandstander font-bold uppercase tracking-wider text-[11px] transition-all flex items-center justify-center disabled:opacity-50"
+                                                      >
+                                                         {verifyingOtp ? 'Verifying...' : 'Submit'}
+                                                      </button>
+                                                   </div>
+                                                   {verificationError && (
+                                                      <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight">{verificationError}</p>
+                                                   )}
+                                                   <div className="text-right">
+                                                      <button
+                                                         type="button"
+                                                         disabled={sendingOtp}
+                                                         onClick={handleSendVerificationOtp}
+                                                         className="text-[10px] font-bold text-gray-500 hover:text-[#6651A4] underline uppercase tracking-wider disabled:opacity-50"
+                                                      >
+                                                         Resend OTP
+                                                      </button>
+                                                   </div>
+                                                </div>
+                                             )}
+                                          </div>
+                                       )}
+                                    </>
+                                 )}
+                              </div>
+                           );
+                        })()}
                         <button type="submit" className="w-full h-16 bg-[#333] text-white rounded-[25px] font-grandstander font-bold uppercase tracking-widest text-[13px] hover:bg-[#6651A4] transition-all shadow-xl">Update Profile</button>
                      </form>
                   </motion.div>

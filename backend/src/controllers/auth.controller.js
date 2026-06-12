@@ -16,7 +16,7 @@ export const register = asyncHandler(async (req, res, next) => {
   const { firstName, lastName, email, password, phone } = req.body;
   
   if (!phone || phone.trim() === '') {
-    return next(new AppError('Mobile number is required for OTP verification.', 400));
+    return next(new AppError('Mobile number is required.', 400));
   }
 
   logger.info('Auth register attempt', { email, phone, hasPassword: Boolean(password), ip: req.ip });
@@ -38,16 +38,13 @@ export const register = asyncHandler(async (req, res, next) => {
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(password, salt);
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
   const newUser = await User.create({
     firstName,
     lastName,
     email: email.toLowerCase(),
     phone: phone.trim(),
     passwordHash,
-    phoneOtp: otp,
-    phoneOtpExpires: Date.now() + 10 * 60 * 1000, // 10 mins
+    phoneVerified: false,
   });
 
   await Order.updateMany(
@@ -55,16 +52,22 @@ export const register = asyncHandler(async (req, res, next) => {
     { $set: { user: newUser._id } }
   );
   
-  try {
-    await sendOtpSms(newUser.phone, otp, 'register');
-  } catch (err) {
-    logger.error('Failed to send registration SMS', { error: err });
-  }
+  // Log in immediately (no OTP during registration)
+  const { accessToken, refreshTokenPlain, refreshTokenHash } = generateTokens(newUser._id);
 
-  return successResponse(res, 201, 'Registration initiated. Please verify OTP sent to your mobile.', {
-    requireOtp: true,
-    phone: newUser.phone,
-    purpose: 'register'
+  await RefreshToken.createTokenRecord(newUser._id, refreshTokenHash, req);
+  
+  newUser.lastLoginAt = new Date();
+  await newUser.save({ validateBeforeSave: false });
+
+  setAuthCookies(res, accessToken, refreshTokenPlain);
+
+  Promise.resolve(notifyWelcome(newUser)).catch(() => {});
+
+  return successResponse(res, 201, 'Registration successful.', {
+    ...newUser.toJSON(),
+    accessToken,
+    requireOtp: false,
   });
 });
 
