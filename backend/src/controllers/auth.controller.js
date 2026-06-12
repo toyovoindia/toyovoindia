@@ -69,10 +69,10 @@ export const register = asyncHandler(async (req, res, next) => {
 });
 
 export const login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body; // email could be phone or email
-  logger.info('Auth login attempt', { email, hasPassword: Boolean(password), ip: req.ip });
+  const { email, password, portal } = req.body; // email could be phone or email
+  logger.info('Auth login attempt', { email, portal, hasPassword: Boolean(password), ip: req.ip });
 
-  const isPhone = /^\d{10}$/.test(email.trim());
+  const isPhone = /^[6-9]\d{9}$/.test(email.trim());
   const phoneQuery = isPhone ? '+91' + email.trim() : email.trim();
 
   const user = await User.findOne({ 
@@ -80,12 +80,20 @@ export const login = asyncHandler(async (req, res, next) => {
   }).select('+passwordHash +phone +status +phoneVerified');
 
   if (!user) {
-    return next(new AppError('Not registered with this email/phone or password', 401));
+    if (portal === 'admin') {
+      return next(new AppError('Invalid email or password. Please try again.', 401));
+    } else {
+      if (isPhone) {
+        return next(new AppError('We cannot find an existing account for this mobile number, first create account', 404));
+      } else {
+        return next(new AppError('We cannot find an existing account with this email, first create account', 404));
+      }
+    }
   }
 
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
-    return next(new AppError('Not registered with this email/phone or password', 401));
+    return next(new AppError('Incorrect password, please try again.', 401));
   }
 
   if (user.status !== 'Active') {

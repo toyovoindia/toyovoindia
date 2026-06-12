@@ -130,9 +130,9 @@ export function AuthProvider({ children }) {
     }
   }, [user?.id, user?._id, user?.email])
 
-  const login = async (email, password) => {
+  const login = async (email, password, portal = 'user') => {
     try {
-      const result = await loginUser({ email, password })
+      const result = await loginUser({ email, password, portal })
       if (result.requireOtp) {
         return { success: true, requireOtp: true, phone: result.phone, purpose: result.purpose }
       }

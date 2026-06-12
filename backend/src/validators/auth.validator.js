@@ -20,5 +20,6 @@ export const loginSchema = z.object({
       message: 'Invalid email address or 10-digit mobile number starting with 6-9'
     }),
     password: z.string().min(1, 'Password is required'),
+    portal: z.string().optional(),
   })
 });

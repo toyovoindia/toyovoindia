@@ -131,7 +131,7 @@ export function LoginPage() {
           >
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-grandstander font-bold text-[#333] tracking-tighter">Login</h1>
-              <p className="text-xs text-[#333]/60 mt-1 font-medium">Enter your email or mobile number and password to log in.</p>
+              {/* <p className="text-xs text-[#333]/60 mt-1 font-medium">Enter your email or mobile number and password to log in.</p> */}
               {location.state?.registrationSuccess && (
                 <p className="mt-2 text-green-600 text-[11px] font-bold uppercase tracking-wider">
                   Account created. Please log in to continue.
@@ -178,7 +178,7 @@ export function LoginPage() {
                 <div>
                   <input
                     type="text"
-                    placeholder="Email"
+                    placeholder="Email or Mobile number"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value)

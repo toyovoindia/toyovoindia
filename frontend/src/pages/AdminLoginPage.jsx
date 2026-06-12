@@ -55,7 +55,7 @@ export function AdminLoginPage() {
       return
     }
 
-    const res = await login(email.trim(), password)
+    const res = await login(email.trim(), password, 'admin')
     if (res.success) {
       if (res.requireOtp) {
         setPendingVerification({ phone: res.phone, purpose: res.purpose })
