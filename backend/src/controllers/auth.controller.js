@@ -23,12 +23,12 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const existingEmail = await User.findOne({ email: email.toLowerCase() });
   if (existingEmail && existingEmail.phoneVerified) {
-    return next(new AppError('This email is already registered. Please log in.', 400));
+    return next(new AppError('The email has already been verified by another account. Please enter another email.', 400));
   }
 
   const existingPhone = await User.findOne({ phone: phone.trim() });
   if (existingPhone && existingPhone.phoneVerified) {
-    return next(new AppError('This mobile number is already registered. Please log in.', 400));
+    return next(new AppError('The mobile no has already been verified by another account. Please enter another mobile no.', 400));
   }
 
   // If unverified exists, we can overwrite or just delete it. We'll just delete unverified duplicates.
