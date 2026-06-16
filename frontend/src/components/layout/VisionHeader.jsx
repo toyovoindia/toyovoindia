@@ -23,9 +23,14 @@ const XIcon = () => (
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
   </svg>
 )
-const PtIcon = () => (
+const YtIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+)
+const LiIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
   </svg>
 )
 
@@ -268,6 +273,14 @@ export function VisionHeader() {
     setMobileOpen(false)
   }
 
+  const socialItems = [
+    { key: 'facebook', icon: FbIcon },
+    { key: 'instagram', icon: IgIcon },
+    { key: 'youtube', icon: YtIcon },
+    { key: 'twitter', icon: XIcon },
+    { key: 'linkedin', icon: LiIcon },
+  ].filter(item => siteConfig?.socialLinks?.[item.key] && siteConfig.socialLinks[item.key].trim() !== '')
+
   return (
     <div 
       id="vision-header-root"
@@ -277,8 +290,17 @@ export function VisionHeader() {
         {/* Desktop Utility Bar (1024px+) */}
         <div className="ann-desk hdr-inner" style={{ gridTemplateColumns: '1fr 1.5fr 1fr', alignItems: 'center' }}>
           <div className="flex items-center gap-4">
-            {[FbIcon, IgIcon, XIcon, PtIcon].map((Icon, i) => (
-              <a key={i} href="#" style={{ color: '#FDF3E7', lineHeight: 0, display: 'flex' }} className="hover:opacity-70 transition-opacity"><Icon /></a>
+            {socialItems.map((item) => (
+              <a 
+                key={item.key} 
+                href={siteConfig.socialLinks[item.key]} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ color: '#FDF3E7', lineHeight: 0, display: 'flex' }} 
+                className="hover:opacity-70 transition-opacity"
+              >
+                <item.icon />
+              </a>
             ))}
           </div>
           
@@ -832,9 +854,15 @@ export function VisionHeader() {
 
 
                   <div className="px-6 py-8 flex items-center gap-6">
-                    {[FbIcon, IgIcon, XIcon, PtIcon].map((Icon, i) => (
-                      <a key={i} href="#" className="text-[#333] hover:text-[#E84949] transition-colors">
-                        <Icon />
+                    {socialItems.map((item) => (
+                      <a 
+                        key={item.key} 
+                        href={siteConfig.socialLinks[item.key]} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#333] hover:text-[#E84949] transition-colors"
+                      >
+                        <item.icon />
                       </a>
                     ))}
                   </div>

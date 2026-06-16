@@ -221,7 +221,7 @@ export function Footer() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-10">
             <div className="flex flex-col gap-2 text-center lg:text-left w-full lg:w-auto">
               {!isStandalone && (
-                <a href="#" target="_blank" rel="noopener noreferrer" className="block hover:scale-105 transition-transform mx-auto lg:mx-0 w-[140px] md:w-[160px]">
+                <a href="https://play.google.com/store/apps/details?id=com.toyovo.user" target="_blank" rel="noopener noreferrer" className="block hover:scale-105 transition-transform mx-auto lg:mx-0 w-[140px] md:w-[160px]">
                   <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="w-full h-auto" />
                 </a>
               )}
