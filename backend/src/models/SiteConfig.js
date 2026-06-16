@@ -10,10 +10,10 @@ const siteConfigSchema = new mongoose.Schema({
   // --- General Settings ---
   siteName: { type: String, default: 'Toyove India' },
   siteLogo: {
-    url: { type: String, default: '' },
-    publicId: { type: String, default: '' }
+    url: { type: String, default: 'https://www.toyovoindia.com/favicon.webp' },
+    publicId: { type: String, default: 'https://www.toyovoindia.com/favicon.webp' }
   },
-  favicon: { type: String, default: '' },
+  favicon: { type: String, default: 'https://www.toyovoindia.com/favicon.webp' },
   maintenanceMode: { type: Boolean, default: false },
 
   // --- Announcement Bar ---
@@ -44,7 +44,7 @@ const siteConfigSchema = new mongoose.Schema({
     facebook: { type: String, default: 'https://facebook.com/' },
     twitter: { type: String, default: 'https://twitter.com/' },
     linkedin: { type: String, default: 'https://linkedin.com/' },
-    youtube: { type: String, default: '' }
+    youtube: { type: String, default: 'https://www.youtube.com/' }
   },
 
   // --- Storefront Media (Hero Slider) ---

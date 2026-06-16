@@ -135,11 +135,11 @@ export function AdminLayout() {
         className={`fixed lg:relative z-[101] h-screen bg-white border-r border-black/[0.05] flex flex-col shrink-0 shadow-2xl lg:shadow-none overflow-hidden`}
       >
         <div className="h-20 flex items-center justify-between px-6 border-b border-black/[0.05] shrink-0">
-          <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+            <div className="w-14 h-14 flex items-center justify-center shrink-0">
                <img src="/favicon.webp" alt="Toyovo Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="font-grandstander font-bold text-[22px] md:text-[26px] text-[#6651A4] tracking-tight -ml-1">Toyovo<span className="text-[#F1641E]">Admin</span></span>
+            <span className="font-grandstander font-bold text-[22px] md:text-[26px] text-[#6651A4] tracking-tight -ml-1.5">Toyovo<span className="text-[#F1641E]">Admin</span></span>
           </div>
           <button className="lg:hidden p-2.5 bg-gray-50 text-gray-400 hover:text-[#E8312A] rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={20} />
