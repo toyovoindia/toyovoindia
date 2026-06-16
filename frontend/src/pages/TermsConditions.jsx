@@ -42,7 +42,15 @@ export function TermsConditions() {
       >
         <div
           className="dynamic-content prose prose-orange max-w-none"
-          dangerouslySetInnerHTML={{ __html: content.content }}
+          dangerouslySetInnerHTML={{ 
+            __html: content.content 
+              ? content.content
+                  .replace(/font-family\s*:\s*[^;"]+;?/gi, '')
+                  .replace(/face\s*=\s*['"][^'"]*['"]/gi, '')
+                  .replace(/\u00a0/g, ' ')
+                  .replace(/&nbsp;/g, ' ') 
+              : '' 
+          }}
         />
       </PolicyPageLayout>
     )
