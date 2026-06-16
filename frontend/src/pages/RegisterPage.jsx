@@ -25,6 +25,7 @@ export function RegisterPage() {
   const location = useLocation()
   const [resendLoading, setResendLoading] = useState(false)
   const [resendMessage, setResendMessage] = useState('')
+  const [agreePolicies, setAgreePolicies] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -68,6 +69,11 @@ export function RegisterPage() {
       errors.password = 'Password is required'
     } else if (formData.password.length < 8) {
       errors.password = 'Password must be at least 8 characters long'
+    }
+
+    // Policies Checkbox Validation
+    if (!agreePolicies) {
+      errors.agreePolicies = 'You must agree to the Terms & Conditions and Privacy Policy'
     }
 
     setFieldErrors(errors)
@@ -323,6 +329,34 @@ export function RegisterPage() {
                     <p className="mt-1 text-[#E84949] text-[9px] font-bold uppercase tracking-wide ml-1.5 leading-tight">{fieldErrors.password}</p>
                   )}
                 </div>
+
+                <div className="flex items-start gap-2.5 pt-1.5 px-1 font-roboto">
+                  <input
+                    type="checkbox"
+                    id="agreePolicies"
+                    checked={agreePolicies}
+                    onChange={(e) => {
+                      setAgreePolicies(e.target.checked)
+                      if (fieldErrors.agreePolicies) setFieldErrors({...fieldErrors, agreePolicies: ''})
+                    }}
+                    className="mt-0.5 w-4.5 h-4.5 accent-[#E84949] cursor-pointer rounded border-[#333]/20"
+                    required
+                  />
+                  <label htmlFor="agreePolicies" className="text-[10px] sm:text-[11px] text-[#666] font-medium leading-tight cursor-pointer select-none text-left">
+                    I agree to the{' '}
+                    <Link to="/pages/terms-conditions" target="_blank" className="text-[#E84949] font-bold underline hover:no-underline">
+                      Terms & Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/pages/privacy-policy" target="_blank" className="text-[#E84949] font-bold underline hover:no-underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </label>
+                </div>
+                {fieldErrors.agreePolicies && (
+                  <p className="text-[#E84949] text-[9px] font-bold uppercase tracking-wide ml-7 leading-tight">{fieldErrors.agreePolicies}</p>
+                )}
 
                 <div className="space-y-3 pt-3 text-center">
                   <button 
