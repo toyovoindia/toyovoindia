@@ -265,6 +265,7 @@ function AppContent() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/account/:tab" element={<AccountPage />} />
+            <Route path="/account/orders/:orderId" element={<AccountPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/order-success" element={<OrderSuccessPage />} />

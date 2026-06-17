@@ -55,7 +55,9 @@ export const normalizeOrder = (order) => ({
   discountDisplay: currencyFormatter.format(Number(order.discount ?? order.discountAmount ?? 0)),
   customerName: order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim(),
   customerEmail: order.customerEmail || order.customer?.email || '',
-  destination: order.destination || '',
+  destination: order.destination || (order.shippingAddress 
+    ? `${order.shippingAddress.address}${order.shippingAddress.apartment ? `, ${order.shippingAddress.apartment}` : ''}, ${order.shippingAddress.city === 'Other' ? order.shippingAddress.district : order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}`
+    : ''),
   deliveryDate: order.deliveryDate || '',
   estimatedDeliveryDate: order.estimatedDeliveryDate || '',
   deliveryDelayReason: order.deliveryDelayReason || '',

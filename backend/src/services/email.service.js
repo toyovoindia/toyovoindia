@@ -119,8 +119,9 @@ const buildOrderConfirmationHtml = (order, isAdmin = false) => {
       <p style="margin: 0 0 5px; color: #6651A4; font-weight: bold; text-transform: uppercase; font-size: 11px;">Shipping Address</p>
       <p style="margin: 0; font-size: 13px;">
         ${order.shippingAddress.firstName} ${order.shippingAddress.lastName}<br/>
+        ${order.shippingAddress.city === 'Other' ? order.shippingAddress.district : order.shippingAddress.city}, ${order.shippingAddress.state}<br/>
         ${order.shippingAddress.address}${order.shippingAddress.apartment ? `, ${order.shippingAddress.apartment}` : ''}<br/>
-        ${order.shippingAddress.city === 'Other' ? order.shippingAddress.district : order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.postalCode}
+        PIN / ZIP: ${order.shippingAddress.postalCode}
       </p>
     </div>
 

@@ -92,5 +92,9 @@ export const printOrderInvoice = (order) => {
 
   invoiceWindow.document.close()
   invoiceWindow.focus()
-  invoiceWindow.print()
+  setTimeout(() => {
+    if (invoiceWindow) {
+      invoiceWindow.print()
+    }
+  }, 500)
 }

@@ -253,10 +253,10 @@ export function AccountPage() {
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
-  const { tab: tabParam } = useParams()
+  const { tab: tabParam, orderId } = useParams()
 
   // Derive active tab from URL param; fallback to 'dashboard'
-  const tabFromUrl = TAB_SLUG_MAP[tabParam] || 'dashboard'
+  const tabFromUrl = orderId ? 'orders' : (TAB_SLUG_MAP[tabParam] || 'dashboard')
   const [activeTab, setActiveTab] = useState(tabFromUrl)
   const [viewMode, setViewMode] = useState('content')
   
@@ -328,10 +328,10 @@ export function AccountPage() {
 
   // Sync active tab when URL param changes (e.g. browser back/forward)
   useEffect(() => {
-    const derived = TAB_SLUG_MAP[tabParam] || 'dashboard'
+    const derived = orderId ? 'orders' : (TAB_SLUG_MAP[tabParam] || 'dashboard')
     setActiveTab(derived)
     setViewMode('content')
-  }, [tabParam])
+  }, [tabParam, orderId])
 
   useEffect(() => {
     if (user) {
@@ -427,7 +427,15 @@ export function AccountPage() {
       setOrdersLoading(true)
       try {
         const { orders: data } = await getMyOrders({ limit: 50 })
-        if (isMounted) setOrders(data)
+        if (isMounted) {
+          setOrders(data)
+          if (orderId) {
+            const found = data.find(o => o.id === orderId || o.orderNumber === orderId)
+            if (found) {
+              setSelectedOrder(found)
+            }
+          }
+        }
       } catch {
         if (isMounted) setOrders([])
       } finally {
@@ -439,7 +447,7 @@ export function AccountPage() {
     return () => {
       isMounted = false
     }
-  }, [user])
+  }, [user, orderId])
 
   if (authLoading) return null
   if (!user) return null
@@ -552,25 +560,25 @@ export function AccountPage() {
                        <p className="mt-2 text-[12px] font-medium text-gray-600">{selectedOrder.deliveryDelayReason}</p>
                      </div>
                    )}
-                   <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
-                     <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Return / Refund</p>
-                     <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.returnRequest?.statusLabel || 'No Request'}</p>
-                     {selectedOrder.returnRequest?.reason && (
-                       <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Reason:</span> {selectedOrder.returnRequest.reason}</p>
-                     )}
-                     {selectedOrder.returnRequest?.adminNote && (
-                       <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Admin Update:</span> {selectedOrder.returnRequest.adminNote}</p>
-                     )}
-                     {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && (
-                       <p className="mt-2 text-[12px] text-gray-500">
-                         {selectedOrder.status !== 'delivered'
-                           ? 'Return requests are available only for delivered orders.'
-                           : selectedOrder.paymentStatus !== 'paid'
+                   {selectedOrder.status === 'delivered' && (
+                     <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
+                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Return / Refund</p>
+                       <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.returnRequest?.statusLabel || 'No Request'}</p>
+                       {selectedOrder.returnRequest?.reason && (
+                         <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Reason:</span> {selectedOrder.returnRequest.reason}</p>
+                       )}
+                       {selectedOrder.returnRequest?.adminNote && (
+                         <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Admin Update:</span> {selectedOrder.returnRequest.adminNote}</p>
+                       )}
+                       {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && (
+                         <p className="mt-2 text-[12px] text-gray-500">
+                           {selectedOrder.paymentStatus !== 'paid'
                              ? 'Refund requests are available only for paid orders.'
                              : 'No request submitted yet.'}
-                       </p>
-                     )}
-                   </div>
+                         </p>
+                       )}
+                     </div>
+                   )}
                    {selectedOrder.statusHistory?.length > 0 && (
                      <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-4">Order Timeline</p>
@@ -858,6 +866,9 @@ export function AccountPage() {
                                 <p className="text-[14px] sm:text-[13px] font-bold text-gray-700 font-grandstander">Order #{order.orderNumber}</p>
                                 <p className="text-[11px] sm:text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-wider">{order.date} · {order.items.length} Items</p>
                                 <p className="text-[11px] sm:text-[10px] text-[#6651A4] font-bold mt-0.5 uppercase tracking-widest">{order.status === 'cancelled' ? 'Cancelled' : `ETA ${order.deliveryDate || '-'}`}</p>
+                                {order.trackingNumber && (
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Tracking: {order.trackingNumber}</p>
+                                )}
                               </div>
                            </div>
                            <div className="text-center sm:text-right flex flex-col sm:flex-row items-center gap-4 md:gap-6 border-t sm:border-t-0 border-black/[0.03] pt-4 sm:pt-0">
@@ -1087,7 +1098,7 @@ export function AccountPage() {
                              </div>
 
                              <div>
-                                <input placeholder="Apartment / Building / House No. / Address Line 2 (optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                                <input placeholder="Apartment, suite, unit, etc. (optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
                              </div>
 
                              <div>

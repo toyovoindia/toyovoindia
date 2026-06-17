@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Package, Truck, ShoppingBag, ArrowRight, ChevronRight, MapPin, ExternalLink, Calendar, Heart } from 'lucide-react'
+import { CheckCircle2, Package, Truck, ShoppingBag, ArrowRight, ChevronRight, MapPin, ExternalLink, Calendar, Heart, Phone } from 'lucide-react'
 import { getOrderSummary } from '../services/orderApi'
 
 const TrackingStep = ({ icon: Icon, label, status, active }) => (
@@ -21,6 +21,34 @@ export function OrderSuccessPage() {
   const navigate = useNavigate()
   const [order, setOrder] = useState(location.state?.order || null)
   const [loading, setLoading] = useState(!location.state?.order)
+
+  const getExpectedArrivalDate = () => {
+    if (order?.deliveryDate) return order.deliveryDate
+    const baseDate = order?.createdAt ? new Date(order.createdAt) : new Date()
+    
+    const minDate = new Date(baseDate)
+    minDate.setDate(minDate.getDate() + 5)
+    
+    const maxDate = new Date(baseDate)
+    maxDate.setDate(maxDate.getDate() + 7)
+    
+    const formatDate = (date) => {
+      const day = date.getDate()
+      const month = date.toLocaleString('en-IN', { month: 'short' })
+      const getSuffix = (d) => {
+        if (d > 3 && d < 21) return 'th'
+        switch (d % 10) {
+          case 1:  return "st"
+          case 2:  return "nd"
+          case 3:  return "rd"
+          default: return "th"
+        }
+      }
+      return `${day}${getSuffix(day)} ${month}`
+    }
+    
+    return `${formatDate(minDate)} - ${formatDate(maxDate)}`
+  }
 
   const getProgressWidth = (status) => {
     switch (status) {
@@ -99,6 +127,7 @@ export function OrderSuccessPage() {
     restoreOrder()
     return () => {
       isMounted = false
+      sessionStorage.removeItem('TOYOVOINDIA_last_order')
     }
   }, [location.state, navigate])
 
@@ -165,7 +194,10 @@ export function OrderSuccessPage() {
                          <p className="text-[13px] text-[#333]/60 leading-relaxed font-medium">
                             {order.shippingAddress.address}, {order.shippingAddress.city === 'Other' ? order.shippingAddress.district : order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
                          </p>
-                         <p className="text-[12px] text-[#333]/40 mt-3 font-bold uppercase tracking-widest">T: {order.shippingAddress.phone}</p>
+                         <p className="text-[12px] text-[#333]/60 mt-3 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+                            <Phone size={12} className="text-[#E84949]" />
+                            {order.shippingAddress.phone}
+                         </p>
                       </div>
                    </div>
                    
@@ -174,7 +206,7 @@ export function OrderSuccessPage() {
                         <Calendar size={14} className="text-[#E84949]"/> Expected Arrival
                       </h4>
                       <div className="p-6 bg-white/50 rounded-xl border border-[#333]/5 flex flex-col justify-center min-h-[120px]">
-                         <p className="text-4xl font-bold font-grandstander text-[#333] tracking-tighter">{order.deliveryDate || '28th April'}</p>
+                         <p className="text-3xl font-bold font-grandstander text-[#333] tracking-tighter">{getExpectedArrivalDate()}</p>
                          <p className="text-[10px] text-[#E84949] font-bold uppercase tracking-widest mt-2">Standard Delivery Method</p>
                          {order.deliveryDelayReason && <p className="text-[11px] text-[#333]/60 mt-3 font-medium">{order.deliveryDelayReason}</p>}
                       </div>
@@ -207,9 +239,8 @@ export function OrderSuccessPage() {
                 <div className="space-y-6 max-h-[340px] overflow-y-auto px-2 py-4 custom-scrollbar">
                    {order.items.map((item, idx) => (
                      <div key={idx} className="flex items-center gap-4 group">
-                        <div className="w-14 h-14 bg-white rounded-xl shrink-0 border border-[#333]/5 relative shadow-sm">
+                        <div className="w-14 h-14 bg-white rounded-xl shrink-0 border border-[#333]/5 relative shadow-sm overflow-hidden">
                            <img src={item.img} className="w-full h-full object-contain p-1 rounded-xl" />
-                           <span className="absolute -top-2 -right-2 w-7 h-7 bg-[#333] text-white text-[11px] rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm z-20 translate-x-1 translate-y-[-2px]">{item.qty}</span>
                         </div>
                         <div className="grow">
                            <h4 className="text-[13px] font-bold text-[#333] font-grandstander line-clamp-1">{item.title}</h4>
