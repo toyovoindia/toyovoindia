@@ -189,8 +189,8 @@ export function AdminProducts() {
                   <Tag size={10} /> {product.categoryName || product.category}
                 </div>
 
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-mono font-bold text-gray-500 shadow-sm">
-                  {(product._id || product.id || '').slice(-6).toUpperCase()}
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-mono font-bold text-[#6651A4] shadow-sm">
+                  {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}
                 </div>
 
                 {/* Hover Actions */}

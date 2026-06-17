@@ -46,6 +46,7 @@ const emptyProduct = {
   isNewArrival: false,
   isBestSeller: false,
   images: [],
+  sku: '',
 }
 
 export function AdminProductDetail() {
@@ -91,6 +92,7 @@ export function AdminProductDetail() {
             stock: String(data.stock ?? ''),
             images: data.images || [],
             brand: data.brand || '',
+            sku: data.sku || '',
             ageGroup: data.ageGroup || '',
             gender: data.gender || 'Unisex',
             material: data.material || '',
@@ -153,6 +155,7 @@ export function AdminProductDetail() {
         description: product.description || '',
         category: product.category,
         brand: product.brand || '',
+        sku: product.sku ? product.sku.trim().toUpperCase() : undefined,
         price: Number(product.price || 0),
         ...(product.oldPrice !== '' && { oldPrice: Number(product.oldPrice) }),
         stock: Number(product.stock || 0),
@@ -509,7 +512,7 @@ export function AdminProductDetail() {
                 <div className="pt-4 border-t border-gray-50 space-y-8">
                   <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#6651A4]/60">Advanced Details</h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Brand</label>
                       <input 
@@ -525,6 +528,20 @@ export function AdminProductDetail() {
                         className={`w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border focus:border-[#6651A4]/30 font-bold text-gray-700 transition-all disabled:opacity-60 ${formErrors.brand ? 'border-red-400' : 'border-transparent'}`}
                       />
                       {formErrors.brand && <p className="text-red-500 text-[11px] font-bold px-2">{formErrors.brand}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">SKU Number</label>
+                      <input 
+                        disabled={!isEditing}
+                        type="text" 
+                        value={product.sku || ''} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^A-Za-z0-9\-_]/g, '')
+                          setProduct({...product, sku: val})
+                        }}
+                        placeholder="e.g. TOY-WD-CAR-01"
+                        className="w-full h-14 px-5 bg-[#FDF4E6]/50 rounded-2xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[#6651A4] transition-all disabled:opacity-60"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Age Group</label>

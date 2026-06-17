@@ -462,7 +462,7 @@ export function ProductDetailPage() {
                     </button>
                     <button onClick={handleCompare} className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform"><Repeat size={16} /></button>
                   </div>
-                  <p className="text-[13px] text-[#666] font-medium">Sku: {product.sku}</p>
+                  <p className="text-[13px] text-[#666] font-medium">Sku: {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}</p>
                 </div>
 
                 {(product.size?.length > 0 || product.color?.length > 0) && (
@@ -734,7 +734,7 @@ export function ProductDetailPage() {
                 <div className="text-center sm:text-left">
                   <h4 className="font-grandstander font-bold text-xl text-[#333]">{product.title || product.name}</h4>
                   <p className="text-[#E84949] font-black text-lg mt-1">₹{Number(product.price || 0).toFixed(2)}</p>
-                  <p className="text-[12px] text-[#666] mt-2"><strong>SKU:</strong> {product.sku}</p>
+                  <p className="text-[12px] text-[#666] mt-2"><strong>SKU:</strong> {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}</p>
                 </div>
               </div>
 

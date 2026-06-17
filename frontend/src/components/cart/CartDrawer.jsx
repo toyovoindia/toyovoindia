@@ -143,7 +143,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                               <span className="text-[14px] font-bold text-[#333]">₹{(item.price * item.qty).toFixed(2)}</span>
                             </div>
                             <p className="text-[14px] text-[#333] mb-0.5">₹{item.price.toFixed(2)}</p>
-                            <p className="text-[11px] text-[#333]/50 italic mb-3">SKU: {item.sku}</p>
+                            <p className="text-[11px] text-[#333]/50 italic mb-3">SKU: {item.sku || (item._id || item.id || '').slice(-6).toUpperCase()}</p>
 
                             <div className="flex items-center gap-3">
                               {/* High-Fidelity Quantity Box with Interior Dividers - Matching Cart BG Color */}
