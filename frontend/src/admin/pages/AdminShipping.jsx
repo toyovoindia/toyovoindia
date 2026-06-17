@@ -6,12 +6,12 @@ import { createAdminShippingMethod, getAdminShippingMethods, updateAdminShipping
 const defaultForm = {
   name: '',
   code: '',
-  minDays: 0,
-  maxDays: 0,
-  charge: 0,
+  minDays: '',
+  maxDays: '',
+  charge: '',
   rule: '',
   status: 'active',
-  sortOrder: 0,
+  sortOrder: '',
 }
 
 export function AdminShipping() {
@@ -67,16 +67,16 @@ export function AdminShipping() {
     const order = Number(newMethod.sortOrder);
     const chg = Number(newMethod.charge);
 
-    if (isNaN(minD) || minD < 0) {
+    if (newMethod.minDays === '' || isNaN(minD) || minD < 0) {
       errors.minDays = 'Must be >= 0.'
     }
-    if (isNaN(maxD) || maxD < 0) {
+    if (newMethod.maxDays === '' || isNaN(maxD) || maxD < 0) {
       errors.maxDays = 'Must be >= 0.'
     }
-    if (isNaN(chg) || chg < 0) {
+    if (newMethod.charge === '' || isNaN(chg) || chg < 0) {
       errors.charge = 'Must be >= 0.'
     }
-    if (isNaN(order) || order < 0) {
+    if (newMethod.sortOrder === '' || isNaN(order) || order < 0) {
       errors.sortOrder = 'Must be >= 0.'
     }
 

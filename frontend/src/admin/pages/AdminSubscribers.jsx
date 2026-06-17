@@ -49,7 +49,7 @@ export function AdminSubscribers() {
     const headers = ['Email', 'Subscribed Date', 'Status']
     const rows = filteredSubscribers.map(s => [
       `"${s.email.replace(/"/g, '""')}"`,
-      `"${new Date(s.subscribedAt).toLocaleString().replace(/"/g, '""')}"`,
+      `"${new Date(s.subscribedAt || s.createdAt || new Date()).toLocaleString().replace(/"/g, '""')}"`,
       `"${s.status.replace(/"/g, '""')}"`
     ])
 
@@ -159,7 +159,7 @@ export function AdminSubscribers() {
                     <td className="py-4 px-6 text-right">
                       <p className="text-[13px] font-bold text-gray-600 flex items-center justify-end gap-2">
                         <Calendar size={14} className="text-gray-400" />
-                        {new Date(sub.subscribedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                        {new Date(sub.subscribedAt || sub.createdAt || new Date()).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
                       </p>
                     </td>
                     <td className="py-4 px-6 text-right">

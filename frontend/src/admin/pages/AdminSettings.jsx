@@ -305,8 +305,8 @@ function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors
 
       <div className="space-y-6">
         <h4 className="text-[11px] font-bold text-[#F1641E] uppercase tracking-[0.2em] border-b pb-4">Announcement Bar</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="md:col-span-1 lg:col-span-2 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Prime Message</label>
             <input 
               type="text" 

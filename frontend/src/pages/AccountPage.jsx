@@ -623,13 +623,29 @@ export function AccountPage() {
                          value={returnReason}
                          onChange={(event) => setReturnReason(event.target.value)}
                          onFocus={(event) => {
+                           const inputEl = event.target
                            setTimeout(() => {
-                             event.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                             inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                             const scrollContainer = inputEl.closest('.overflow-y-auto')
+                             if (scrollContainer) {
+                               scrollContainer.scrollTo({
+                                 top: scrollContainer.scrollHeight,
+                                 behavior: 'smooth'
+                               })
+                             }
                            }, 150)
                          }}
                          onClick={(event) => {
+                           const inputEl = event.target
                            setTimeout(() => {
-                             event.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                             inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                             const scrollContainer = inputEl.closest('.overflow-y-auto')
+                             if (scrollContainer) {
+                               scrollContainer.scrollTo({
+                                 top: scrollContainer.scrollHeight,
+                                 behavior: 'smooth'
+                               })
+                             }
                            }, 150)
                          }}
                          placeholder="Reason for return or refund request"
