@@ -22,7 +22,7 @@ const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholde
   <div className="relative group w-full mb-4">
     <div className="relative">
       {prefix && (
-        <span className="absolute left-4 top-[21px] text-[14px] font-bold text-[#333] leading-none pointer-events-none select-none z-10 font-sans">
+        <span className="absolute left-4 top-[22px] text-[14px] font-bold text-[#333] leading-none pointer-events-none select-none z-10">
           {prefix}
         </span>
       )}
@@ -32,9 +32,9 @@ const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholde
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className={`peer w-full h-14 ${prefix ? 'pl-11' : 'px-4'} pt-4 pb-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent text-[14px] font-bold text-[#333]`}
+        className={`peer w-full h-14 ${prefix ? 'pl-10' : 'px-4'} pt-4 pb-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent text-[14px] font-bold text-[#333]`}
       />
-      <label className={`absolute left-4 ${prefix ? 'peer-placeholder-shown:left-11' : ''} top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] ${prefix ? 'peer-placeholder-shown:top-[21px]' : 'peer-placeholder-shown:top-4'} peer-focus:top-1 peer-focus:left-4 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none truncate max-w-[calc(100%-32px)] block`}>
+      <label className={`absolute left-4 ${prefix ? 'peer-placeholder-shown:left-10' : ''} top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] ${prefix ? 'peer-placeholder-shown:top-[22px]' : 'peer-placeholder-shown:top-4'} peer-focus:top-1 peer-focus:left-4 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none truncate max-w-[calc(100%-32px)] block`}>
         {label}
       </label>
     </div>

@@ -966,12 +966,18 @@ export function AccountPage() {
 
                {activeTab === 'addresses' && (
                   <motion.div key="addresses" initial={{opacity:0}} animate={{opacity:1}} className="space-y-10">
-                     <div className="flex justify-between items-center px-4">
+                     <div id="addresses-tab-header" className="flex justify-between items-center px-4">
                         <h3 className="text-2xl font-grandstander font-bold text-gray-700">Saved Addresses</h3>
                         <button onClick={() => { 
                            setEditingAddressId(null); 
                            setAddressForm({ type: 'Home', firstName: user.firstName || '', lastName: user.lastName || '', address: '', apartment: '', city: '', state: '', postalCode: '', phone: '', district: '', country: 'India' });
-                           setShowAddAddress(!showAddAddress); 
+                           const nextShow = !showAddAddress;
+                           setShowAddAddress(nextShow); 
+                           if (nextShow) {
+                              setTimeout(() => {
+                                 document.getElementById('addresses-tab-header')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }, 100);
+                           }
                         }} className="text-[11px] font-bold text-[#6651A4] uppercase flex items-center gap-2 hover:underline transition-all">
                            {showAddAddress ? <X size={18}/> : <Plus size={18}/>} {showAddAddress ? 'Cancel' : 'Add New Address'}
                         </button>
@@ -991,7 +997,8 @@ export function AccountPage() {
                                else if (!/^[A-Za-z\s]+$/.test(addressForm.lastName)) newErrors.lastName = 'Last name must contain alphabets only';
                                
                                if (!addressForm.address.trim()) newErrors.address = 'Street address is required';
-                               if (!addressForm.country) newErrors.country = 'Country/Region is required';
+                               const countryVal = addressForm.country || 'India';
+                               if (!countryVal) newErrors.country = 'Country/Region is required';
                                if (!addressForm.state) newErrors.state = 'State is required';
                                if (!addressForm.city) newErrors.city = 'City is required';
                                if (addressForm.city === 'Other' && !addressForm.district.trim()) newErrors.district = 'City/District is required';
@@ -999,7 +1006,10 @@ export function AccountPage() {
                                if (!addressForm.postalCode) newErrors.postalCode = 'ZIP code is required';
                                else if (!/^\d{6}$/.test(addressForm.postalCode)) newErrors.postalCode = 'ZIP code must be exactly 6 digits';
                                
-                               const cleanPhone = addressForm.phone.replace(/\D/g, '');
+                               let cleanPhone = addressForm.phone.replace(/\D/g, '');
+                               if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+                                 cleanPhone = cleanPhone.slice(2);
+                               }
                                if (!cleanPhone) newErrors.phone = 'Mobile number is required';
                                else if (!/^[6-9]\d{9}$/.test(cleanPhone)) newErrors.phone = 'Mobile number must be 10 digits starting with 6-9';
 
@@ -1012,7 +1022,7 @@ export function AccountPage() {
                                const formattedPhone = cleanPhone.startsWith('91') && cleanPhone.length === 12 
                                   ? '+' + cleanPhone 
                                   : '+91' + cleanPhone;
-                               const finalAddress = { ...addressForm, phone: formattedPhone };
+                               const finalAddress = { ...addressForm, country: countryVal, phone: formattedPhone };
 
                                if (editingAddressId) updateAddress(editingAddressId, finalAddress);
                                else addAddress(finalAddress);
@@ -1140,7 +1150,9 @@ export function AccountPage() {
                                        setEditingAddressId(addr.id); 
                                        setAddressForm(addr); 
                                        setShowAddAddress(true); 
-                                       window.scrollTo({top: 0, behavior: 'smooth'}); 
+                                       setTimeout(() => {
+                                         document.getElementById('addresses-tab-header')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                       }, 100);
                                     }} className="w-10 h-10 rounded-xl flex items-center justify-center text-[#6651A4] bg-[#6651A4]/10 hover:bg-[#6651A4] hover:text-white transition-all shadow-sm"><Edit2 size={16}/></button>
                                     {!addr.isDefault && (
                                        <button onClick={() => deleteAddress(addr.id)} className="w-10 h-10 rounded-xl flex items-center justify-center text-[#E84949] bg-[#E84949]/10 hover:bg-[#E84949] hover:text-white transition-all shadow-sm"><Trash2 size={16}/></button>

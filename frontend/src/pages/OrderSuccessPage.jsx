@@ -96,17 +96,23 @@ export function OrderSuccessPage() {
   useEffect(() => {
     window.scrollTo(0, 0)
 
-    if (location.state?.order) {
+    const orderObj = location.state?.order
+    if (orderObj) {
+      const orderNum = orderObj.orderNumber
+      if (sessionStorage.getItem(`TOYOVOINDIA_order_visited_${orderNum}`) === 'true') {
+        navigate('/', { replace: true })
+        return
+      }
       sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
-        orderNumber: location.state.order.orderNumber,
-        email: location.state.order.customerEmail,
+        orderNumber: orderNum,
+        email: orderObj.customerEmail,
       }))
       return
     }
 
     const lastOrder = sessionStorage.getItem('TOYOVOINDIA_last_order')
     if (!lastOrder) {
-      navigate('/')
+      navigate('/', { replace: true })
       return
     }
 
@@ -118,7 +124,7 @@ export function OrderSuccessPage() {
         const data = await getOrderSummary(orderNumber, email)
         if (isMounted) setOrder(data)
       } catch {
-        if (isMounted) navigate('/')
+        if (isMounted) navigate('/', { replace: true })
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -127,6 +133,14 @@ export function OrderSuccessPage() {
     restoreOrder()
     return () => {
       isMounted = false
+      if (orderObj) {
+        sessionStorage.setItem(`TOYOVOINDIA_order_visited_${orderObj.orderNumber}`, 'true')
+      } else if (lastOrder) {
+        try {
+          const { orderNumber } = JSON.parse(lastOrder)
+          sessionStorage.setItem(`TOYOVOINDIA_order_visited_${orderNumber}`, 'true')
+        } catch {}
+      }
       sessionStorage.removeItem('TOYOVOINDIA_last_order')
     }
   }, [location.state, navigate])
