@@ -959,7 +959,7 @@ export function AccountPage() {
                         <h3 className="text-2xl font-grandstander font-bold text-gray-700">Saved Addresses</h3>
                         <button onClick={() => { 
                            setEditingAddressId(null); 
-                           setAddressForm({ type: 'Home', firstName: user.firstName || '', lastName: user.lastName || '', address: '', apartment: '', city: '', state: '', postalCode: '', phone: '', district: '' });
+                           setAddressForm({ type: 'Home', firstName: user.firstName || '', lastName: user.lastName || '', address: '', apartment: '', city: '', state: '', postalCode: '', phone: '', district: '', country: 'India' });
                            setShowAddAddress(!showAddAddress); 
                         }} className="text-[11px] font-bold text-[#6651A4] uppercase flex items-center gap-2 hover:underline transition-all">
                            {showAddAddress ? <X size={18}/> : <Plus size={18}/>} {showAddAddress ? 'Cancel' : 'Add New Address'}
@@ -980,6 +980,7 @@ export function AccountPage() {
                                else if (!/^[A-Za-z\s]+$/.test(addressForm.lastName)) newErrors.lastName = 'Last name must contain alphabets only';
                                
                                if (!addressForm.address.trim()) newErrors.address = 'Street address is required';
+                               if (!addressForm.country) newErrors.country = 'Country/Region is required';
                                if (!addressForm.state) newErrors.state = 'State is required';
                                if (!addressForm.city) newErrors.city = 'City is required';
                                if (addressForm.city === 'Other' && !addressForm.district.trim()) newErrors.district = 'City/District is required';
@@ -1018,7 +1019,8 @@ export function AccountPage() {
                                    </button>
                                 ))}
                              </div>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2">Contact Information</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                   <input required placeholder="First Name" value={addressForm.firstName} onChange={e=>setAddressForm({...addressForm, firstName: e.target.value.replace(/[^A-Za-z\s]/g, '')})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.firstName ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
                                   {addressErrors.firstName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.firstName}</p>}
@@ -1028,12 +1030,27 @@ export function AccountPage() {
                                   {addressErrors.lastName && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.lastName}</p>}
                                 </div>
                              </div>
-                             <div>
-                               <input required placeholder="Street Address" value={addressForm.address} onChange={e=>setAddressForm({...addressForm, address: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.address ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
-                               {addressErrors.address && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.address}</p>}
-                             </div>
+
+                              <div>
+                                 <div className="relative">
+                                   <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#333] pointer-events-none select-none z-10">+91</span>
+                                   <input required placeholder="Phone Number" maxLength="10" value={addressForm.phone.replace(/^\+91/, '')} onChange={e=>setAddressForm({...addressForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-14 pl-14 pr-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                                 </div>
+                                {addressErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.phone}</p>}
+                              </div>
+
+                              {/* Delivery Address Header and Country Selection */}
+                              <div className="space-y-4 pt-4 border-t border-black/[0.03]">
+                                 <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Delivery Address</h4>
+                                 <div className="relative">
+                                    <select required value={addressForm.country || 'India'} onChange={e=>setAddressForm({...addressForm, country: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.country ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} appearance-none cursor-pointer`}>
+                                       <option value="India">India</option>
+                                    </select>
+                                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                 </div>
+                                 {addressErrors.country && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.country}</p>}
+                              </div>
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <input placeholder="Apartment, Suite (Optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
                                 <div>
                                   <div className="relative">
                                     <select required value={addressForm.state} onChange={e=>setAddressForm({...addressForm, state: e.target.value, city: ''})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.state ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} appearance-none cursor-pointer`}>
@@ -1044,8 +1061,6 @@ export function AccountPage() {
                                   </div>
                                   {addressErrors.state && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.state}</p>}
                                 </div>
-                             </div>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                   <div className="relative">
                                     <select required value={addressForm.city} onChange={e=>setAddressForm({...addressForm, city: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.city ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} appearance-none cursor-pointer`}>
@@ -1057,23 +1072,34 @@ export function AccountPage() {
                                   </div>
                                   {addressErrors.city && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.city}</p>}
                                 </div>
-                                {addressForm.city === 'Other' && (
-                                   <div>
-                                     <input required placeholder="Enter City/District" value={addressForm.district} onChange={e=>setAddressForm({...addressForm, district: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.district ? 'border-red-400' : 'border-[#E84949]'}`} />
-                                     {addressErrors.district && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.district}</p>}
-                                   </div>
-                                )}
-                                <div>
-                                  <input required placeholder="ZIP Code" maxLength="6" value={addressForm.postalCode} onChange={e=>setAddressForm({...addressForm, postalCode: e.target.value.replace(/\D/g, '').slice(0, 6)})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.postalCode ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
-                                  {addressErrors.postalCode && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.postalCode}</p>}
-                                </div>
                              </div>
+
+                             {addressForm.city === 'Other' && (
+                                <div>
+                                  <input required placeholder="Enter City/District" value={addressForm.district} onChange={e=>setAddressForm({...addressForm, district: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.district ? 'border-red-400' : 'border-[#E84949]'}`} />
+                                  {addressErrors.district && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.district}</p>}
+                                </div>
+                             )}
+
                              <div>
-                               <div className="relative">
+                               <input required placeholder="Street Address / Address Line 1" value={addressForm.address} onChange={e=>setAddressForm({...addressForm, address: e.target.value})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.address ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                               {addressErrors.address && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.address}</p>}
+                             </div>
+
+                             <div>
+                                <input placeholder="Apartment / Building / House No. / Address Line 2 (optional)" value={addressForm.apartment} onChange={e=>setAddressForm({...addressForm, apartment: e.target.value})} className="w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 border-transparent focus:border-[#E84949] transition-all" />
+                             </div>
+
+                             <div>
+                               <input required placeholder="Postal Code / ZIP Code" maxLength="6" value={addressForm.postalCode} onChange={e=>setAddressForm({...addressForm, postalCode: e.target.value.replace(/\D/g, '').slice(0, 6)})} className={`w-full h-14 px-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.postalCode ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
+                               {addressErrors.postalCode && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.postalCode}</p>}
+                             </div>
+                             <div className="hidden">
+                               <div className="hidden">
                                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[13px] font-bold text-gray-500 pointer-events-none">+91</span>
                                  <input required placeholder="Phone Number" maxLength="10" value={addressForm.phone.replace(/^\+91/, '')} onChange={e=>setAddressForm({...addressForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className={`w-full h-14 pl-14 pr-6 bg-[#FDF4E6] rounded-2xl text-[13px] font-bold outline-none border-2 ${addressErrors.phone ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} transition-all`} />
                                </div>
-                               {addressErrors.phone && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 mt-1">{addressErrors.phone}</p>}
+                               
                              </div>
                              
                              <button type="submit" className="w-full h-16 bg-[#333] text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-[#E84949] transition-all shadow-xl active:scale-[0.98] mt-4 flex items-center justify-center gap-3">
@@ -1110,13 +1136,16 @@ export function AccountPage() {
                                     )}
                                  </div>
                               </div>
-                              <div className="space-y-1.5 text-[14px] font-medium text-gray-500 mb-8 pl-1 relative z-10 leading-relaxed">
-                                 <p className="text-[#333] font-bold">{addr.address}</p>
-                                 {addr.apartment && <p>{addr.apartment}</p>}
-                                 <p>{addr.city === 'Other' ? addr.district : addr.city}, {addr.state} {addr.postalCode}</p>
-                                 <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400 mt-4 uppercase tracking-widest">
+                              <div className="space-y-1 text-[13px] font-bold text-gray-500 mb-8 pl-1 relative z-10 leading-relaxed">
+                                 <p className="text-[#333] font-extrabold flex items-center gap-2 mb-2 text-[11px] uppercase tracking-widest text-[#E84949]">
                                     <Smartphone size={12}/> {addr.phone}
-                                 </div>
+                                 </p>
+                                 <p className="text-[#333] text-[14px]">{addr.country || 'India'}</p>
+                                 <p>{addr.state}</p>
+                                 <p>{addr.city === 'Other' ? addr.district : addr.city}{addr.district && addr.city !== 'Other' ? ` (${addr.district})` : ''}</p>
+                                 <p className="text-gray-700">{addr.address}</p>
+                                 {addr.apartment && <p className="text-gray-600">{addr.apartment}</p>}
+                                 <p className="text-gray-800 tracking-wider font-mono">{addr.postalCode}</p>
                               </div>
                               <div className="flex items-center justify-between mt-auto relative z-10 pt-4 border-t border-black/[0.03]">
                                  {!addr.isDefault ? (

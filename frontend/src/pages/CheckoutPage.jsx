@@ -22,7 +22,7 @@ const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholde
   <div className="relative group w-full mb-4">
     <div className="relative">
       {prefix && (
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 mt-2 text-[13px] font-bold text-gray-500 pointer-events-none select-none z-10">
+        <span className="absolute left-4 top-[22px] text-[14px] font-bold text-[#333] pointer-events-none select-none z-10">
           {prefix}
         </span>
       )}
@@ -32,9 +32,9 @@ const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholde
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className={`peer w-full h-14 ${prefix ? 'pl-[52px]' : 'px-4'} pt-4 pb-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent`}
+        className={`peer w-full h-14 ${prefix ? 'pl-12' : 'px-4'} pt-4 pb-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] focus:ring-1 focus:ring-[#E84949] placeholder-transparent text-[14px] font-bold text-[#333]`}
       />
-      <label className={`absolute ${prefix ? 'left-[52px]' : 'left-4'} top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] peer-placeholder-shown:top-4 peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none`}>
+      <label className={`absolute left-4 ${prefix ? 'peer-placeholder-shown:left-12' : ''} top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest transition-all peer-placeholder-shown:text-[13px] ${prefix ? 'peer-placeholder-shown:top-[22px]' : 'peer-placeholder-shown:top-4'} peer-focus:top-1 peer-focus:left-4 peer-focus:text-[10px] peer-focus:text-[#E84949] pointer-events-none truncate max-w-[calc(100%-32px)] block`}>
         {label}
       </label>
     </div>
@@ -51,7 +51,14 @@ const FloatingSelect = ({ label, name, value, onChange, options, error }) => (
         onChange={onChange}
         className={`peer w-full h-14 px-4 pt-4 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-xl outline-none transition-all focus:border-[#E84949] appearance-none`}
       >
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        {options.map(opt => {
+          let labelText = opt;
+          if (opt === "") {
+            if (name === "state") labelText = "Select State";
+            else if (name === "city") labelText = "Select City";
+          }
+          return <option key={opt} value={opt}>{labelText}</option>;
+        })}
       </select>
       <label className={`absolute left-4 top-1 text-[10px] font-bold ${error ? 'text-red-500' : 'text-gray-400'} uppercase tracking-widest pointer-events-none`}>
         {label}
@@ -380,6 +387,10 @@ export function CheckoutPage() {
       errors.address = 'Street address is required'
     }
 
+    if (!formData.country) {
+      errors.country = 'Country is required'
+    }
+
     if (!formData.state) {
       errors.state = 'State is required'
     }
@@ -684,22 +695,27 @@ export function CheckoutPage() {
            <span className="text-[#333]">Payment</span>
         </nav>
 
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} className="space-y-10">
+         <motion.div initial={{opacity:0}} animate={{opacity:1}} className="space-y-10">
             <section className="space-y-6">
                <div className="flex justify-between items-center">
-                 <h2 className="text-xl font-bold text-[#333] font-grandstander">Contact</h2>
+                 <h2 className="text-xl font-bold text-[#333] font-grandstander">Contact Information</h2>
                  {!user ? (
                    <Link to="/login" className="text-[13px] text-[#E84949] underline font-bold">Log in</Link>
                  ) : (
                    <p className="text-[13px] text-green-600 font-bold">Logged in as {user.firstName}</p>
                  )}
                </div>
-               <FloatingInput label="Email or mobile phone number" name="email" value={formData.email} onChange={handleInputChange} error={formErrors.email} />
+               <FloatingInput label="Email Address" name="email" value={formData.email} onChange={handleInputChange} error={formErrors.email} />
+               <div className="grid grid-cols-2 gap-4">
+                  <FloatingInput label="First name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={formErrors.firstName} />
+                  <FloatingInput label="Last name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={formErrors.lastName} />
+               </div>
+               <FloatingInput label="Phone number" name="phone" value={formData.phone} onChange={handleInputChange} error={formErrors.phone} prefix="+91" />
             </section>
 
             <section className="space-y-6">
                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-[#333] font-grandstander">Delivery</h2>
+                  <h2 className="text-xl font-bold text-[#333] font-grandstander">Delivery Address</h2>
                   {addresses?.length > 0 && (
                      <button onClick={() => setUseSavedAddress(!useSavedAddress)} className="text-[11px] font-bold text-[#005BD1] uppercase underline">
                         {useSavedAddress ? 'Enter New Address' : 'Use Saved Address'}
@@ -734,9 +750,16 @@ export function CheckoutPage() {
                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#005BD1] bg-blue-50 px-2 py-0.5 rounded">{addr.type}</span>
                                  {selectedAddressId === addr.id && <Check size={16} className="text-[#005BD1]"/>}
                               </div>
-                              <p className="text-[13px] font-bold text-[#333]">{addr.firstName} {addr.lastName}</p>
-                              <p className="text-[12px] text-gray-500 line-clamp-2">{addr.address}, {addr.city === 'Other' ? addr.district : addr.city}, {addr.state}</p>
-                              <p className="text-[11px] font-bold text-gray-400 mt-2">T: {addr.phone}</p>
+                              <p className="text-[13px] font-bold text-[#333] font-grandstander">{addr.firstName} {addr.lastName}</p>
+                              <p className="text-[11px] font-bold text-gray-400 mt-1">Phone: {addr.phone}</p>
+                              <div className="text-[12px] text-gray-500 mt-2 space-y-0.5">
+                                 <p>{addr.country || 'India'}</p>
+                                 <p>{addr.state}</p>
+                                 <p>{addr.city === 'Other' ? addr.district : addr.city}{addr.district && addr.city !== 'Other' ? ` (${addr.district})` : ''}</p>
+                                 <p>{addr.address}</p>
+                                 {addr.apartment && <p>{addr.apartment}</p>}
+                                 <p>{addr.postalCode}</p>
+                              </div>
                            </div>
                         ))}
                      </div>
@@ -745,24 +768,15 @@ export function CheckoutPage() {
                   <div className="space-y-4">
                      <FloatingSelect label="Country/Region" name="country" value={formData.country} onChange={handleInputChange} options={countries} error={formErrors.country} />
                      <div className="grid grid-cols-2 gap-4">
-                        <FloatingInput label="First name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={formErrors.firstName} />
-                        <FloatingInput label="Last name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={formErrors.lastName} />
-                     </div>
-                     <FloatingInput label="Address" name="address" value={formData.address} onChange={handleInputChange} error={formErrors.address} />
-                     <FloatingInput label="Apartment, suite, etc. (optional)" name="apartment" value={formData.apartment} onChange={handleInputChange} error={formErrors.apartment} />
-                     <div className="grid grid-cols-2 gap-4">
-                        <FloatingSelect label="State" name="state" value={formData.state} onChange={handleInputChange} options={["", ...indianStates]} error={formErrors.state} />
+                        <FloatingSelect label="State / Province" name="state" value={formData.state} onChange={handleInputChange} options={["", ...indianStates]} error={formErrors.state} />
                         <FloatingSelect label="City" name="city" value={formData.city} onChange={handleInputChange} options={["", ...(commonCities[formData.state] || []), "Other"]} error={formErrors.city} />
                      </div>
                      {formData.city === 'Other' && (
-                        <FloatingInput label="Enter City/District" name="district" value={formData.district} onChange={handleInputChange} error={formErrors.district} />
+                        <FloatingInput label="Area / District" name="district" value={formData.district} onChange={handleInputChange} error={formErrors.district} />
                      )}
-                     <div className="grid grid-cols-2 gap-4">
-                        <FloatingInput label="ZIP code" name="postalCode" value={formData.postalCode} onChange={handleInputChange} error={formErrors.postalCode} />
-                        <FloatingInput label="Phone number" name="phone" value={formData.phone} onChange={handleInputChange} error={formErrors.phone} prefix="+91" />
-                     </div>
-
-
+                     <FloatingInput label="Street Address / Address Line 1" name="address" value={formData.address} onChange={handleInputChange} error={formErrors.address} />
+                     <FloatingInput label="Apartment / Building / House No. / Address Line 2 (optional)" name="apartment" value={formData.apartment} onChange={handleInputChange} error={formErrors.apartment} />
+                     <FloatingInput label="Postal Code / ZIP Code" name="postalCode" value={formData.postalCode} onChange={handleInputChange} error={formErrors.postalCode} />
                   </div>
                )}
             </section>

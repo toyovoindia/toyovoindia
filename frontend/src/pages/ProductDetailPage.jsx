@@ -54,6 +54,7 @@ export function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState([])
   const [isLoadingProduct, setIsLoadingProduct] = useState(true)
   const [productError, setProductError] = useState('')
+  const [showShareDropdown, setShowShareDropdown] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -158,11 +159,12 @@ export function ProductDetailPage() {
           url: window.location.href,
         })
       } catch (err) {
-        console.log('Error sharing:', err)
+        if (err.name !== 'AbortError') {
+          setShowShareDropdown(prev => !prev)
+        }
       }
     } else {
-      navigator.clipboard.writeText(window.location.href)
-      success('Link copied to clipboard!')
+      setShowShareDropdown(prev => !prev)
     }
   }
 
@@ -457,10 +459,70 @@ export function ProductDetailPage() {
                         success(isCurrentlyWishlisted ? `${product.title || product.name} removed from wishlist.` : `${product.title || product.name} added to wishlist!`);
                       }}
                       className={`w-9 h-9 rounded flex items-center justify-center hover:scale-110 transition-transform bg-[#E84949] text-white`}
+                      title="Add to Wishlist"
                     >
                       <Heart size={16} fill={isWishlisted ? 'white' : 'none'} />
                     </button>
-                    <button onClick={handleCompare} className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform"><Repeat size={16} /></button>
+                    <button onClick={handleCompare} className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform" title="Compare"><Repeat size={16} /></button>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={handleShare} 
+                        className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform" 
+                        title="Share Product"
+                      >
+                        <Share2 size={16} />
+                      </button>
+                      
+                      {showShareDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-[90]" onClick={() => setShowShareDropdown(false)} />
+                          <div className="absolute left-0 mt-2 w-48 bg-white border border-[#E5E5E5] rounded-xl shadow-xl z-[100] py-2">
+                            <a 
+                              href={`https://api.whatsapp.com/send?text=${encodeURIComponent('Check out this amazing toy: ' + (product.title || product.name) + ' - ' + window.location.href)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                              onClick={() => setShowShareDropdown(false)}
+                            >
+                              <span className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px] font-bold">W</span>
+                              Share on WhatsApp
+                            </a>
+                            <a 
+                              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                              onClick={() => setShowShareDropdown(false)}
+                            >
+                              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">F</span>
+                              Share on Facebook
+                            </a>
+                            <a 
+                              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out this amazing toy: ' + (product.title || product.name))}&url=${encodeURIComponent(window.location.href)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                              onClick={() => setShowShareDropdown(false)}
+                            >
+                              <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold">X</span>
+                              Share on Twitter
+                            </a>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(window.location.href)
+                                success('Link copied to clipboard!')
+                                setShowShareDropdown(false)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                            >
+                              <span className="w-5 h-5 rounded-full bg-gray-500 text-white flex items-center justify-center text-[10px] font-bold">🔗</span>
+                              Copy Link
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[13px] text-[#666] font-medium">Sku: {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}</p>
                 </div>
@@ -546,13 +608,6 @@ export function ProductDetailPage() {
                   <div className="pt-4 border-t border-dashed border-gray-300 space-y-2">
                     <p><span className="font-medium text-[11px] text-gray-400 mr-2 font-grandstander">Categories:</span> <Link to="/collections/toys" className="underline hover:text-[#E84949] font-medium">{product.category}</Link></p>
                   </div>
-
-                  <button
-                    onClick={handleShare}
-                    className="w-[30%] py-3 bg-[#E84949] text-white rounded font-bold text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
-                  >
-                    <Share size={14} /> SHARE
-                  </button>
                 </div>
               </div>
             </div>
