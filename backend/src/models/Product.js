@@ -138,6 +138,11 @@ const productSchema = new mongoose.Schema({
     default: 0,
     index: true,
   },
+  views: {
+    type: Number,
+    default: 0,
+    index: true,
+  },
   isFeatured: {
     type: Boolean,
     default: false,

@@ -193,7 +193,11 @@ export const getProductBrands = asyncHandler(async (req, res) => {
 });
 
 export const getProductBySlug = asyncHandler(async (req, res, next) => {
-  const product = await Product.findOne({ slug: req.params.slug, status: 'active' })
+  const product = await Product.findOneAndUpdate(
+    { slug: req.params.slug, status: 'active' },
+    { $inc: { views: 1 } },
+    { new: true, runValidators: true }
+  )
     .populate('category', 'name slug')
     .populate('subcategories', 'name slug');
 

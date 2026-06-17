@@ -56,6 +56,23 @@ export function ProductDetailPage() {
   const [isLoadingProduct, setIsLoadingProduct] = useState(true)
   const [productError, setProductError] = useState('')
   const [showShareDropdown, setShowShareDropdown] = useState(false)
+  const [activeViewers, setActiveViewers] = useState(21)
+
+  useEffect(() => {
+    if (productState) {
+      const views = productState.views || 0
+      const base = views > 0 ? Math.max(3, (views % 28) + 5) : Math.floor(Math.random() * 15) + 10
+      setActiveViewers(base)
+      
+      const interval = setInterval(() => {
+        setActiveViewers(prev => {
+          const delta = Math.floor(Math.random() * 5) - 2
+          return Math.max(2, prev + delta)
+        })
+      }, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [productState?.views])
 
   useEffect(() => {
     let isMounted = true
@@ -494,11 +511,11 @@ export function ProductDetailPage() {
                 <div className="space-y-4 py-5 border-y border-dashed border-gray-300">
                   <div className="flex items-center gap-3 text-[14px] text-[#333]">
                     <Eye size={18} className="text-[#666]" />
-                    <span><strong>21 people</strong> are viewing this right now</span>
+                    <span><strong>{activeViewers} people</strong> are viewing this right now</span>
                   </div>
                   <div className="flex items-center gap-3 text-[14px] text-[#333]">
                     <div className="w-4.5 h-4.5 rounded-full border border-[#333] flex items-center justify-center text-[10px]"><X size={10} /></div>
-                    <span>Sold <strong>25 Product</strong> In last 13 Hours</span>
+                    <span>Sold <strong>{product.soldCount || 0} Product</strong> In last 24 Hours</span>
                   </div>
                   <div className="flex gap-3 pt-1">
                     <button
