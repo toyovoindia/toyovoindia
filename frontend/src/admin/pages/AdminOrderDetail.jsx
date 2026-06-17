@@ -239,9 +239,16 @@ export function AdminOrderDetail() {
 
           {/* Logistics Timeline */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-[32px] p-6 md:p-8 shadow-sm border border-black/[0.03]">
-            <h3 className="text-lg md:text-xl font-grandstander font-bold text-gray-800 mb-8 flex items-center gap-2">
-              <Truck size={20} className="text-[#6651A4]" /> Journey Tracker
-            </h3>
+            <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+              <h3 className="text-lg md:text-xl font-grandstander font-bold text-gray-800 flex items-center gap-2">
+                <Truck size={20} className="text-[#6651A4]" /> Journey Tracker
+              </h3>
+              {order.trackingNumber && (
+                <span className="px-4 py-1.5 bg-[#6651A4]/10 text-[#6651A4] rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Tracking: {order.trackingNumber}
+                </span>
+              )}
+            </div>
             <div className="space-y-8 relative before:absolute before:left-4 md:before:left-5 before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-100">
               {timeline.map((step, i) => (
                 <div key={i} className="relative pl-12 md:pl-16">
@@ -375,7 +382,10 @@ export function AdminOrderDetail() {
                 <p className="text-[10px] text-white/70 font-medium leading-relaxed">
                   Tracking number should be added once the order is shipped so the customer can follow courier movement.
                 </p>
-                <button className="w-full h-11 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all mt-2 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => printOrderInvoice(order)}
+                  className="w-full h-11 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all mt-2 flex items-center justify-center gap-2"
+                >
                    View Receipt <ExternalLink size={14} />
                 </button>
               </div>

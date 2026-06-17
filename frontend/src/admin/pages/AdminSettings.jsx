@@ -305,8 +305,8 @@ function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors
 
       <div className="space-y-6">
         <h4 className="text-[11px] font-bold text-[#F1641E] uppercase tracking-[0.2em] border-b pb-4">Announcement Bar</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="md:col-span-1 lg:col-span-2 space-y-3">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Prime Message</label>
             <input 
               type="text" 
@@ -319,9 +319,9 @@ function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors
               className="w-full h-14 px-6 bg-[#FDF4E6]/30 rounded-2xl border border-gray-100 font-medium" 
             />
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 min-w-0">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Bar Color (HEX/RGB)</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <input 
                 type="color" 
                 value={settings.announcementBg?.startsWith('#') ? settings.announcementBg : '#6651A4'}
@@ -333,7 +333,7 @@ function StorefrontTab({ settings, setSettings, handleUpdate, saving, formErrors
                 value={settings.announcementBg || '#6651A4'}
                 onChange={(e) => updateField('announcementBg', e.target.value)}
                 placeholder="e.g. #FF4E50 or rgb(255, 78, 80)"
-                className="flex-1 h-14 bg-gray-50 rounded-2xl px-4 font-mono text-[12px] text-gray-700 outline-none border border-transparent focus:border-[#6651A4]/30"
+                className="flex-1 min-w-0 h-14 bg-gray-50 rounded-2xl px-4 font-mono text-[12px] text-gray-700 outline-none border border-transparent focus:border-[#6651A4]/30"
               />
             </div>
           </div>

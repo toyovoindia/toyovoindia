@@ -40,25 +40,26 @@ export function AdminSubscribers() {
     }
   }
 
-  const filteredSubscribers = subscribers.filter(s =>
-    s.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredSubscribers = subscribers.filter(s => {
+    const cleanSearch = search.trim().toLowerCase()
+    return !cleanSearch || s.email.toLowerCase().includes(cleanSearch)
+  })
 
   const downloadCSV = () => {
-    const headers = ['Email', 'Subscribed At', 'Status']
+    const headers = ['Email', 'Subscribed Date', 'Status']
     const rows = filteredSubscribers.map(s => [
-      s.email,
-      new Date(s.subscribedAt).toLocaleString(),
-      s.status
+      `"${s.email.replace(/"/g, '""')}"`,
+      `"${new Date(s.subscribedAt).toLocaleString().replace(/"/g, '""')}"`,
+      `"${s.status.replace(/"/g, '""')}"`
     ])
 
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + headers.join(",") + "\n"
+    const csvContent = headers.map(h => `"${h}"`).join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n")
 
-    const encodedUri = encodeURI(csvContent)
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
+    link.setAttribute("href", url)
     link.setAttribute("download", `toyovo_subscribers_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()

@@ -36,7 +36,7 @@ const buildProductFilter = async (query, publicOnly = true) => {
   const subcategoryId = await resolveCategoryId(query.subcategory);
   if (subcategoryId) filter.subcategories = subcategoryId;
 
-  if (query.search) {
+  if (query.search && query.search.trim()) {
     const searchRegex = new RegExp(escapeRegExp(query.search.trim()), 'i');
     
     // Find any categories that match the search term

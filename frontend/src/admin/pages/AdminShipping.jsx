@@ -205,6 +205,7 @@ export function AdminShipping() {
             <input 
               type="number" 
               value={newMethod.minDays} 
+              onFocus={() => { if (newMethod.minDays === 0 || newMethod.minDays === '0') setNewMethod(prev => ({ ...prev, minDays: '' })) }}
               onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
               onChange={(e) => {
                 const val = e.target.value
@@ -222,6 +223,7 @@ export function AdminShipping() {
             <input 
               type="number" 
               value={newMethod.maxDays} 
+              onFocus={() => { if (newMethod.maxDays === 0 || newMethod.maxDays === '0') setNewMethod(prev => ({ ...prev, maxDays: '' })) }}
               onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
               onChange={(e) => {
                 const val = e.target.value
@@ -239,6 +241,7 @@ export function AdminShipping() {
             <input 
               type="number" 
               value={newMethod.charge} 
+              onFocus={() => { if (newMethod.charge === 0 || newMethod.charge === '0') setNewMethod(prev => ({ ...prev, charge: '' })) }}
               onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
               onChange={(e) => {
                 const val = e.target.value
@@ -260,6 +263,7 @@ export function AdminShipping() {
             <input 
               type="number" 
               value={newMethod.sortOrder} 
+              onFocus={() => { if (newMethod.sortOrder === 0 || newMethod.sortOrder === '0') setNewMethod(prev => ({ ...prev, sortOrder: '' })) }}
               onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
               onChange={(e) => {
                 const val = e.target.value
@@ -328,6 +332,7 @@ export function AdminShipping() {
                 <input 
                   type="number" 
                   value={method.minDays} 
+                  onFocus={() => { if (method.minDays === 0 || method.minDays === '0') setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, minDays: '' } : item)) }}
                   onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                   onChange={(e) => {
                     const val = e.target.value
@@ -344,6 +349,7 @@ export function AdminShipping() {
                 <input 
                   type="number" 
                   value={method.maxDays} 
+                  onFocus={() => { if (method.maxDays === 0 || method.maxDays === '0') setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, maxDays: '' } : item)) }}
                   onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                   onChange={(e) => {
                     const val = e.target.value
@@ -360,6 +366,7 @@ export function AdminShipping() {
                 <input 
                   type="number" 
                   value={method.charge} 
+                  onFocus={() => { if (method.charge === 0 || method.charge === '0') setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, charge: '' } : item)) }}
                   onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                   onChange={(e) => {
                     const val = e.target.value
@@ -376,6 +383,7 @@ export function AdminShipping() {
                 <input 
                   type="number" 
                   value={method.sortOrder} 
+                  onFocus={() => { if (method.sortOrder === 0 || method.sortOrder === '0') setMethods((prev) => prev.map((item) => item.id === method.id ? { ...item, sortOrder: '' } : item)) }}
                   onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                   onChange={(e) => {
                     const val = e.target.value

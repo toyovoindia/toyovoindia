@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Search, Filter, MoreVertical, ShoppingBag, Eye, Calendar, MapPin, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, MoreVertical, ShoppingBag, Eye, Calendar, MapPin, CreditCard, ChevronLeft, ChevronRight, Printer } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { getAdminOrders, updateAdminOrderStatus } from '../../services/orderApi'
+import { printOrderInvoice } from '../../utils/invoice'
 
 const getAllowedStatusOptions = (status) => {
   switch (status) {
@@ -32,6 +33,13 @@ export function AdminOrders() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 })
+  const [menuOpenOrderId, setMenuOpenOrderId] = useState(null)
+
+  useEffect(() => {
+    const handleClick = () => setMenuOpenOrderId(null)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -156,7 +164,9 @@ export function AdminOrders() {
                     className="border-b border-gray-50 last:border-0 hover:bg-[#FDF4E6]/50 transition-colors group cursor-pointer"
                   >
                     <td className="py-4 px-6">
-                      <p className="text-[14px] font-bold text-[#6651A4] font-mono">#{order.orderNumber}</p>
+                      <p className="text-[14px] font-bold text-[#6651A4] font-mono" title={order.orderNumber}>
+                        #{order.orderNumber ? order.orderNumber.replace(/-\d{8}-/, '-') : ''}
+                      </p>
                       <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1 mt-1"><Calendar size={10}/> {order.date}</p>
                       <p className="text-[10px] text-gray-400 font-medium mt-1">ETA: {order.deliveryDate || '-'}</p>
                     </td>
@@ -197,7 +207,12 @@ export function AdminOrders() {
                         ))}
                       </select>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td 
+                      className="py-4 px-6 text-right relative"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseEnter={() => setMenuOpenOrderId(order.id)}
+                      onMouseLeave={() => setMenuOpenOrderId(null)}
+                    >
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={(e) => {
@@ -205,19 +220,49 @@ export function AdminOrders() {
                             navigate(`/admin/orders/${order.id}`);
                           }}
                           className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#6651A4] bg-white border border-gray-100 hover:border-[#6651A4]/30 hover:bg-[#FAEAD3] rounded-lg transition-all shadow-sm"
+                          title="View Order"
                         >
                           <Eye size={14} />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/admin/orders/${order.id}`);
+                            setMenuOpenOrderId(menuOpenOrderId === order.id ? null : order.id)
                           }}
-                          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#6651A4] bg-white border border-gray-100 hover:border-[#6651A4]/30 hover:bg-[#FAEAD3] rounded-lg transition-all shadow-sm"
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all shadow-sm ${menuOpenOrderId === order.id ? 'bg-[#6651A4] text-white' : 'text-gray-400 hover:text-[#6651A4] bg-white border border-gray-100 hover:border-[#6651A4]/30 hover:bg-[#FAEAD3]'}`}
+                          title="Actions"
                         >
                           <MoreVertical size={14} />
                         </button>
                       </div>
+
+                      <AnimatePresence>
+                        {menuOpenOrderId === order.id && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                            className="absolute right-6 top-[60%] z-[200] w-48 bg-white rounded-2xl shadow-xl border border-black/[0.05] py-2 overflow-hidden text-left"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => navigate(`/admin/orders/${order.id}`)}
+                              className="w-full px-5 py-3 text-left text-[12px] font-bold text-gray-600 hover:bg-[#FDF4E6]/50 hover:text-[#6651A4] flex items-center gap-3 transition-colors"
+                            >
+                              <Eye size={14} className="text-[#6651A4]" /> View Details
+                            </button>
+                            <button
+                              onClick={() => {
+                                setMenuOpenOrderId(null);
+                                printOrderInvoice(order);
+                              }}
+                              className="w-full px-5 py-3 text-left text-[12px] font-bold text-gray-600 hover:bg-[#FDF4E6]/50 hover:text-[#6651A4] flex items-center gap-3 transition-colors"
+                            >
+                              <Printer size={14} className="text-gray-500" /> Print Invoice
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </td>
                   </motion.tr>
                 ))

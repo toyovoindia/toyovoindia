@@ -50,10 +50,12 @@ export function AdminReviews() {
 
   const filteredReviews = reviews.filter(r => {
     const matchesStatus = filterStatus === 'all' || r.status === filterStatus
+    const cleanSearch = searchTerm.trim().toLowerCase()
     const matchesSearch = 
-      r.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (r.product?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      !cleanSearch ||
+      r.userName.toLowerCase().includes(cleanSearch) ||
+      r.comment.toLowerCase().includes(cleanSearch) ||
+      (r.product?.name || '').toLowerCase().includes(cleanSearch)
     return matchesStatus && matchesSearch
   })
 

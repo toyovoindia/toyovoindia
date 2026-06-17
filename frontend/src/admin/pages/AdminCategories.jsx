@@ -332,7 +332,7 @@ export function AdminCategories() {
                     <p className="text-[11px] text-gray-400 font-mono mt-1">/{category.slug}</p>
                     {category.children.filter(child => child.isActive).length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {category.children.filter(child => child.isActive).map(child => (
+                        {category.children.filter(child => child.isActive).slice().sort((a, b) => a.name.localeCompare(b.name)).map(child => (
                           <div key={child.id} className="group/child flex items-center gap-2 px-3 py-1 bg-[#FDF4E6] border border-dashed border-black/5 rounded-full transition-all hover:border-[#E8312A]/30">
                             <span className="text-[10px] font-bold text-gray-500">{child.name}</span>
                             <button 

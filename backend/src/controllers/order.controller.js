@@ -265,7 +265,7 @@ export const requestMyOrderReturn = asyncHandler(async (req, res, next) => {
     reviewedAt: null,
   };
 
-  appendStatusHistory(order, 'Refund Requested', 'customer', `Return requested: ${req.body.reason.trim()}`);
+  appendStatusHistory(order, 'Pending Return', 'customer', 'pending return order created');
   await order.save();
 
   // Push notification
@@ -307,12 +307,15 @@ export const adminListOrders = asyncHandler(async (req, res) => {
     filter.paymentStatus = req.query.paymentStatus;
   }
   if (req.query.search) {
-    filter.$or = [
-      { orderNumber: new RegExp(req.query.search, 'i') },
-      { 'customer.firstName': new RegExp(req.query.search, 'i') },
-      { 'customer.lastName': new RegExp(req.query.search, 'i') },
-      { 'customer.email': new RegExp(req.query.search, 'i') },
-    ];
+    const cleanSearch = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (cleanSearch) {
+      filter.$or = [
+        { orderNumber: new RegExp(cleanSearch, 'i') },
+        { 'customer.firstName': new RegExp(cleanSearch, 'i') },
+        { 'customer.lastName': new RegExp(cleanSearch, 'i') },
+        { 'customer.email': new RegExp(cleanSearch, 'i') },
+      ];
+    }
   }
 
   const [orders, total] = await Promise.all([
@@ -475,12 +478,16 @@ export const adminUpdateOrderReturnRequest = asyncHandler(async (req, res, next)
     order.paymentStatus = 'refunded';
   }
 
-  const displayStatus = nextStatus === 'requested' ? 'Refund Update' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;
+  const displayStatus = nextStatus === 'requested' ? 'Pending Return' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;
+  const displayNote = nextStatus === 'requested' 
+    ? 'pending return order created' 
+    : `Return request marked ${nextStatus}${order.returnRequest.adminNote ? `: ${order.returnRequest.adminNote}` : ''}`;
+
   appendStatusHistory(
     order,
     displayStatus,
     req.user.role,
-    `Return request marked ${nextStatus}${order.returnRequest.adminNote ? `: ${order.returnRequest.adminNote}` : ''}`
+    displayNote
   );
 
   await order.save();

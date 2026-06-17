@@ -560,25 +560,31 @@ export function AccountPage() {
                        <p className="mt-2 text-[12px] font-medium text-gray-600">{selectedOrder.deliveryDelayReason}</p>
                      </div>
                    )}
-                   {selectedOrder.status === 'delivered' && (
-                     <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
-                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Return / Refund</p>
-                       <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.returnRequest?.statusLabel || 'No Request'}</p>
-                       {selectedOrder.returnRequest?.reason && (
-                         <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Reason:</span> {selectedOrder.returnRequest.reason}</p>
-                       )}
-                       {selectedOrder.returnRequest?.adminNote && (
-                         <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Admin Update:</span> {selectedOrder.returnRequest.adminNote}</p>
-                       )}
-                       {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && (
-                         <p className="mt-2 text-[12px] text-gray-500">
-                           {selectedOrder.paymentStatus !== 'paid'
-                             ? 'Refund requests are available only for paid orders.'
-                             : 'No request submitted yet.'}
-                         </p>
-                       )}
-                     </div>
-                   )}
+                   {(selectedOrder.status === 'delivered' || selectedOrder.paymentStatus === 'refunded' || (selectedOrder.returnRequest && selectedOrder.returnRequest.status !== 'none')) && (
+                      <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Return / Refund</p>
+                        <p className="mt-2 text-[13px] font-bold text-gray-700">{selectedOrder.returnRequest?.statusLabel || (selectedOrder.paymentStatus === 'refunded' ? 'Refunded' : 'No Request')}</p>
+                        {selectedOrder.returnRequest?.reason && (
+                          <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Reason:</span> {selectedOrder.returnRequest.reason}</p>
+                        )}
+                        {selectedOrder.returnRequest?.adminNote && (
+                          <p className="mt-2 text-[12px] text-gray-600"><span className="font-bold">Admin Update:</span> {selectedOrder.returnRequest.adminNote}</p>
+                        )}
+                        {selectedOrder.paymentStatus === 'refunded' && (
+                          <p className="mt-2 text-[12px] text-gray-600">
+                            <span className="font-bold text-[#E84949]">Refunded Amount:</span> 
+                            <span className="font-bold text-[#E84949] ml-1">₹{selectedOrder.total.toFixed(2)}</span>
+                          </p>
+                        )}
+                        {!canRequestReturn(selectedOrder) && selectedOrder.returnRequest?.status === 'none' && selectedOrder.paymentStatus !== 'refunded' && (
+                          <p className="mt-2 text-[12px] text-gray-500">
+                            {selectedOrder.paymentStatus !== 'paid'
+                              ? 'Refund requests are available only for paid orders.'
+                              : 'No request submitted yet.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
                    {selectedOrder.statusHistory?.length > 0 && (
                      <div className="p-4 bg-white/60 rounded-2xl border border-black/[0.03]">
                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-4">Order Timeline</p>
@@ -616,6 +622,16 @@ export function AccountPage() {
                        <textarea
                          value={returnReason}
                          onChange={(event) => setReturnReason(event.target.value)}
+                         onFocus={(event) => {
+                           setTimeout(() => {
+                             event.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                           }, 150)
+                         }}
+                         onClick={(event) => {
+                           setTimeout(() => {
+                             event.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                           }, 150)
+                         }}
                          placeholder="Reason for return or refund request"
                          rows={3}
                          className="w-full px-4 py-3 rounded-2xl bg-white/70 border border-black/[0.03] text-[12px] text-gray-700 outline-none resize-none"

@@ -189,12 +189,15 @@ export const adminListUsers = asyncHandler(async (req, res) => {
   if (req.query.status) filter.status = req.query.status;
   if (req.query.role) filter.role = req.query.role;
   if (req.query.search) {
-    filter.$or = [
-      { firstName: new RegExp(req.query.search, 'i') },
-      { lastName: new RegExp(req.query.search, 'i') },
-      { email: new RegExp(req.query.search, 'i') },
-      { phone: new RegExp(req.query.search, 'i') },
-    ];
+    const cleanSearch = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (cleanSearch) {
+      filter.$or = [
+        { firstName: new RegExp(cleanSearch, 'i') },
+        { lastName: new RegExp(cleanSearch, 'i') },
+        { email: new RegExp(cleanSearch, 'i') },
+        { phone: new RegExp(cleanSearch, 'i') },
+      ];
+    }
   }
 
   const [users, total] = await Promise.all([

@@ -12,10 +12,13 @@ export const adminListCoupons = asyncHandler(async (req, res) => {
 
   if (req.query.status) filter.status = req.query.status;
   if (req.query.search) {
-    filter.$or = [
-      { code: new RegExp(req.query.search, 'i') },
-      { title: new RegExp(req.query.search, 'i') },
-    ];
+    const cleanSearch = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (cleanSearch) {
+      filter.$or = [
+        { code: new RegExp(cleanSearch, 'i') },
+        { title: new RegExp(cleanSearch, 'i') },
+      ];
+    }
   }
 
   const [coupons, total] = await Promise.all([

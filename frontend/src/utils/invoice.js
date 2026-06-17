@@ -60,6 +60,7 @@ export const printOrderInvoice = (order) => {
             <h3>Customer</h3>
             <p>${escapeHtml(order.customerName || '')}</p>
             <p class="muted">${escapeHtml(order.customerEmail || '')}</p>
+            <p class="muted">Phone: ${escapeHtml(order.shippingAddress?.phone || order.customerPhone || order.phone || '-')}</p>
           </div>
           <div class="card">
             <h3>Delivery</h3>
