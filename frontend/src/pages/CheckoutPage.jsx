@@ -22,7 +22,7 @@ const FloatingInput = ({ label, name, type = 'text', value, onChange, placeholde
   <div className="relative group w-full mb-4">
     <div className="relative">
       {prefix && (
-        <span className="absolute left-4 top-[22px] text-[14px] font-bold text-[#333] leading-none pointer-events-none select-none z-10">
+        <span className="absolute left-4 top-0 h-14 pt-4 pb-2 flex items-center text-[14px] font-bold text-[#333] pointer-events-none select-none z-10">
           {prefix}
         </span>
       )}
