@@ -10,9 +10,45 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const { cartItems, updateQuantity, removeFromCart, subtotal } = useCart();
   const { user } = useAuth();
   const [orderMessageOpen, setOrderMessageOpen] = useState(false);
+  const [orderMessage, setOrderMessage] = useState('');
   const navigate = useNavigate();
 
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(999);
+
+  // Load from local storage draft when user or drawer open state changes
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const key = `TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`;
+        const draft = localStorage.getItem(key);
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          setOrderMessage(parsed?.checkoutNotes?.orderMessage || '');
+        } else {
+          setOrderMessage('');
+        }
+      } catch {
+        setOrderMessage('');
+      }
+    }
+  }, [isOpen, user]);
+
+  const handleOrderMessageChange = (val) => {
+    setOrderMessage(val);
+    try {
+      const key = `TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`;
+      const current = JSON.parse(localStorage.getItem(key) || '{}');
+      localStorage.setItem(key, JSON.stringify({
+        ...current,
+        checkoutNotes: {
+          ...(current.checkoutNotes || {}),
+          orderMessage: val
+        }
+      }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     getStorefrontSettings()
@@ -56,6 +92,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleLinkClick = (path) => {
+    if (path === '/checkout') {
+      sessionStorage.removeItem('TOYOVOINDIA_buyNowItem');
+    }
     onClose();
     navigate(path);
   };
@@ -175,18 +214,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                       {orderMessageOpen && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                           <textarea 
-                            value={localStorage.getItem(`TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`) ? (JSON.parse(localStorage.getItem(`TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`)).checkoutNotes?.orderMessage || '') : ''}
-                            onChange={(e) => {
-                               const key = `TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`;
-                               const current = JSON.parse(localStorage.getItem(key) || '{}');
-                               localStorage.setItem(key, JSON.stringify({
-                                 ...current,
-                                 checkoutNotes: {
-                                   ...(current.checkoutNotes || {}),
-                                   orderMessage: e.target.value
-                                 }
-                               }));
-                            }}
+                            value={orderMessage}
+                            onChange={(e) => handleOrderMessageChange(e.target.value)}
                             className="w-full h-28 p-4 mb-5 bg-[#F9EAD3] border border-black/10 rounded-[7px] text-[13px] outline-none font-roboto italic"
                             placeholder="Add a message for your order..."
                           />

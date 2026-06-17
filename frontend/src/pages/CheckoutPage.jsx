@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, ChevronRight, ShoppingCart, Check, ChevronDown, ChevronUp, Tag, AlertCircle } from 'lucide-react'
@@ -152,7 +152,25 @@ const CouponSection = ({
 )
 
 export function CheckoutPage() {
-  const { cartItems, subtotal, clearCart } = useCart()
+  const { cartItems: originalCartItems, subtotal: originalSubtotal, clearCart } = useCart()
+  const [buyNowItem] = useState(() => {
+    try {
+      const item = sessionStorage.getItem('TOYOVOINDIA_buyNowItem')
+      return item ? JSON.parse(item) : null
+    } catch {
+      return null
+    }
+  })
+  const cartItems = useMemo(() => {
+    return buyNowItem ? [buyNowItem] : originalCartItems
+  }, [buyNowItem, originalCartItems])
+
+  const subtotal = useMemo(() => {
+    return buyNowItem
+      ? Number(buyNowItem.price || 0) * Number(buyNowItem.qty || 1)
+      : originalSubtotal
+  }, [buyNowItem, originalSubtotal])
+
   const { addPaymentLog } = usePayment()
   const { user, addresses, authLoading } = useAuth()
   const navigate = useNavigate()
@@ -464,10 +482,14 @@ export function CheckoutPage() {
         if (!isMounted) return
         setCouponState(result)
         setIsDiscountApplied(true)
-      } catch {
+      } catch (error) {
         if (!isMounted) return
         setCouponState(null)
         setIsDiscountApplied(false)
+        const msg = error.message && error.message !== 'Request failed'
+          ? error.message
+          : 'Invalid or unrecognized coupon code. Please check and try again.'
+        setCouponError(msg)
       } finally {
         if (isMounted) setCouponHydrated(true)
       }
@@ -601,9 +623,13 @@ export function CheckoutPage() {
               email: order.customerEmail,
             }))
 
-            localStorage.removeItem(checkoutDraftKey)
-            localStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY)
-            clearCart()
+            if (buyNowItem) {
+              sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
+            } else {
+              localStorage.removeItem(checkoutDraftKey)
+              localStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY)
+              clearCart()
+            }
             navigate('/order-success', { state: { order } })
           } catch (error) {
             const validationMessage = error.details?.map((issue) => `${issue.path}: ${issue.message}`).join(', ')

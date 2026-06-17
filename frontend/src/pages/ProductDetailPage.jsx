@@ -36,10 +36,11 @@ const FAQItem = ({ question, answer, isOpen, onToggle }) => (
 export function ProductDetailPage() {
   const { title } = useParams()
   const navigate = useNavigate()
-  const { addToCart, wishlist, toggleWishlist, compare, toggleCompare } = useCart()
+  const { addToCart, wishlist, toggleWishlist, compare, toggleCompare, cartItems } = useCart()
   const { success, error: showError } = useToast()
   const { user } = useAuth()
   
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false)
   const [selectedImg, setSelectedImg] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState('description')
@@ -139,15 +140,46 @@ export function ProductDetailPage() {
   const isWishlisted = wishlist.some(item => item.id === product.id)
 
   const handleAddToCart = () => {
-    addToCart(product, quantity)
-    success(`${product.title || product.name} added to cart!`)
-    navigate('/cart')
+    const stockAvailable = typeof product.stock === 'number' ? product.stock : 9999
+    if (stockAvailable <= 0) {
+      showError('This product is out of stock.')
+      return
+    }
+    if (quantity > stockAvailable) {
+      showError(`Cannot add more than ${stockAvailable} units to cart.`)
+      return
+    }
+    const existing = cartItems?.find(item => item.id === product.id)
+    const currentQty = existing ? existing.qty : 0
+    if (currentQty + quantity > stockAvailable) {
+      showError(`You already have ${currentQty} units in your cart. Cannot add ${quantity} more (Stock limit: ${stockAvailable}).`)
+      return
+    }
+
+    const added = addToCart(product, quantity)
+    if (added) {
+      success(`${product.title || product.name} added to cart!`)
+      navigate('/cart')
+    }
   }
 
   const handleBuyNow = () => {
-    addToCart(product, quantity)
-    success(`Proceeding to checkout with ${product.title || product.name}...`)
-    navigate('/checkout')
+    const stockAvailable = typeof product.stock === 'number' ? product.stock : 9999
+    if (stockAvailable <= 0) {
+      showError('This product is out of stock.')
+      return
+    }
+    if (quantity > stockAvailable) {
+      showError(`Cannot buy more than ${stockAvailable} units.`)
+      return
+    }
+    if (cartItems && cartItems.length > 0) {
+      setShowBuyNowModal(true)
+    } else {
+      sessionStorage.setItem('TOYOVOINDIA_buyNowItem', JSON.stringify({ ...product, qty: quantity }))
+      success(`Proceeding to checkout with ${product.title || product.name}...`)
+      navigate('/checkout')
+    }
   }
 
   const handleShare = async () => {
@@ -291,12 +323,29 @@ export function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center h-10 bg-[#FDF4E6] border border-[#333]/20 rounded-full px-2">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 text-[#666] hover:text-[#E84949]"><Minus size={14} /></button>
-                  <span className="w-6 text-center font-bold text-[13px] text-[#333]">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="w-8 text-[#666] hover:text-[#E84949]"><Plus size={14} /></button>
-                </div>
-                <button onClick={handleAddToCart} className="h-10 px-6 sm:px-10 bg-[#E84949] text-white text-[12px] font-bold rounded-full hover:scale-105 transition-all tracking-widest uppercase">ADD TO CART</button>
+                {product.stock <= 0 ? (
+                  <button disabled className="h-10 px-6 bg-gray-400 text-white text-[12px] font-bold rounded-full cursor-not-allowed uppercase tracking-widest">OUT OF STOCK</button>
+                ) : (
+                  <>
+                    <div className="flex items-center h-10 bg-[#FDF4E6] border border-[#333]/20 rounded-full px-2">
+                      <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 text-[#666] hover:text-[#E84949]"><Minus size={14} /></button>
+                      <span className="w-6 text-center font-bold text-[13px] text-[#333]">{quantity}</span>
+                      <button 
+                        onClick={() => {
+                          if (quantity + 1 <= (product.stock ?? 9999)) {
+                            setQuantity(quantity + 1)
+                          } else {
+                            showError(`Only ${product.stock} units left in stock.`)
+                          }
+                        }} 
+                        className="w-8 text-[#666] hover:text-[#E84949]"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    <button onClick={handleAddToCart} className="h-10 px-6 sm:px-10 bg-[#E84949] text-white text-[12px] font-bold rounded-full hover:scale-105 transition-all tracking-widest uppercase">ADD TO CART</button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
@@ -402,9 +451,13 @@ export function ProductDetailPage() {
             <div className="md:col-span-5 flex flex-col gap-2">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <p className="text-[10px] md:text-[11px] font-black tracking-[0.2em] text-[#666] uppercase">Home Furniture</p>
+                  <p className="text-[10px] md:text-[11px] font-black tracking-[0.2em] text-[#666] uppercase">{product.category || 'Toys'}</p>
                   <span className="w-1 h-1 rounded-full bg-gray-300" />
-                  <p className="text-[10px] md:text-[11px] font-black tracking-[0.2em] text-[#E84949] uppercase">In Stock</p>
+                  <p className={`text-[10px] md:text-[11px] font-black tracking-[0.2em] uppercase ${
+                    (product.stock ?? 1) <= 0 ? 'text-red-600' : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? 'text-yellow-600' : 'text-[#E84949]'
+                  }`}>
+                    {(product.stock ?? 1) <= 0 ? 'Out of Stock' : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? 'Low Stock' : 'In Stock'}
+                  </p>
                 </div>
                 
                 <h1 className="font-grandstander font-black text-[#333] text-[28px] md:text-[36px] xl:text-[42px] leading-tight tracking-tight">{product.title || product.name}</h1>
@@ -567,35 +620,69 @@ export function ProductDetailPage() {
 
 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-[12px] text-green-600 font-bold uppercase tracking-widest">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span>Only 20 left in stock!</span>
+                  <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest">
+                    {(product.stock ?? 1) <= 0 ? (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span>Out of stock!</span>
+                      </div>
+                    ) : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? (
+                      <div className="flex items-center gap-2 text-yellow-600">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                        <span>Only {product.stock} left in stock!</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span>{product.stock} units left in stock!</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-4 pt-4">
-                  <div className="flex flex-col gap-2">
-                    <p className="text-[13px] text-[#333] font-medium">Quantity</p>
-                    <div className="flex flex-row gap-4">
-                      <div className="h-12 w-32 bg-[#FDF4E6] border border-[#222] rounded flex items-center justify-between px-4 shadow-sm shrink-0">
-                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-[#666] hover:text-[#E84949] transition-colors"><Minus size={14} /></button>
-                        <span className="font-bold text-[14px] text-[#333]">{quantity}</span>
-                        <button onClick={() => setQuantity(quantity + 1)} className="text-[#666] hover:text-[#E84949] transition-colors"><Plus size={14} /></button>
+                  {(product.stock ?? 1) <= 0 ? (
+                    <button
+                      disabled
+                      className="w-full h-12 bg-gray-400 text-white rounded font-bold text-[12px] tracking-widest uppercase cursor-not-allowed"
+                    >
+                      OUT OF STOCK
+                    </button>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[13px] text-[#333] font-medium">Quantity</p>
+                      <div className="flex flex-row gap-4">
+                        <div className="h-12 w-32 bg-[#FDF4E6] border border-[#222] rounded flex items-center justify-between px-4 shadow-sm shrink-0">
+                          <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-[#666] hover:text-[#E84949] transition-colors"><Minus size={14} /></button>
+                          <span className="font-bold text-[14px] text-[#333]">{quantity}</span>
+                          <button 
+                            onClick={() => {
+                              if (quantity + 1 <= (product.stock ?? 9999)) {
+                                setQuantity(quantity + 1)
+                              } else {
+                                showError(`Only ${product.stock} units left in stock.`)
+                              }
+                            }} 
+                            className="text-[#666] hover:text-[#E84949] transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={handleAddToCart}
+                          className="flex-1 h-12 bg-[#E84949] text-white rounded font-bold text-[12px] tracking-widest uppercase hover:opacity-90 transition-all shadow-md"
+                        >
+                          ADD TO CART
+                        </button>
                       </div>
                       <button
-                        onClick={handleAddToCart}
-                        className="flex-1 h-12 bg-[#E84949] text-white rounded font-bold text-[12px] tracking-widest uppercase hover:opacity-90 transition-all shadow-md"
+                        onClick={handleBuyNow}
+                        className="w-full h-12 mt-2 bg-[#333] text-white rounded font-bold text-[12px] tracking-widest uppercase hover:bg-black transition-all"
                       >
-                        ADD TO CART
+                        Buy It Now
                       </button>
                     </div>
-                  </div>
-                  <button
-                    onClick={handleBuyNow}
-                    className="w-full h-12 bg-[#333] text-white rounded font-bold text-[12px] tracking-widest uppercase hover:bg-black transition-all"
-                  >
-                    BUY IT NOW
-                  </button>
+                  )}
                 </div>
 
                 <div className="pt-4 space-y-3 font-roboto text-[14px] text-[#333]">
@@ -817,6 +904,60 @@ export function ProductDetailPage() {
               <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
                 <Link to="/about" className="px-6 py-3 bg-[#333] text-white rounded-xl text-[12px] font-bold uppercase tracking-widest text-center hover:bg-[#E84949] transition-all">Learn More</Link>
                 <Link to="/contact" className="px-6 py-3 bg-white border border-[#333]/20 text-[#333] rounded-xl text-[12px] font-bold uppercase tracking-widest text-center hover:border-[#E84949] hover:text-[#E84949] transition-all">Contact Us</Link>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Buy It Now Merge Confirmation Modal */}
+      <AnimatePresence>
+        {showBuyNowModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#FDF4E6] border-2 border-black/10 rounded-[32px] p-6 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold font-grandstander text-[#333]">Merge Cart Items?</h3>
+                <button
+                  onClick={() => setShowBuyNowModal(false)}
+                  className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-[#E84949] hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-[14px] text-gray-600 font-roboto leading-relaxed">
+                You already have items in your shopping cart. Would you like to merge them with this checkout, or buy only this toy?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    const added = addToCart(product, quantity)
+                    if (added) {
+                      sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
+                      setShowBuyNowModal(false)
+                      success(`Merged with cart and proceeding to checkout...`)
+                      navigate('/checkout')
+                    }
+                  }}
+                  className="w-full h-12 bg-[#E84949] hover:bg-[#d03d3d] text-white rounded-xl font-bold text-[12px] tracking-widest uppercase transition-colors shadow-md"
+                >
+                  Yes, Merge Cart
+                </button>
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('TOYOVOINDIA_buyNowItem', JSON.stringify({ ...product, qty: quantity }))
+                    setShowBuyNowModal(false)
+                    success(`Proceeding with only this toy...`)
+                    navigate('/checkout')
+                  }}
+                  className="w-full h-12 bg-[#333] hover:bg-black text-white rounded-xl font-bold text-[12px] tracking-widest uppercase transition-colors"
+                >
+                  No, Checkout Only This Toy
+                </button>
               </div>
             </motion.div>
           </div>

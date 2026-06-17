@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 
 const QuickViewModal = ({ p, isOpen, onClose }) => {
   const { addToCart } = useCart()
+  const { success, error: showError } = useToast()
   const [qty, setQty] = useState(1)
 
   // Scroll lock implementation - Refined to prevent initial mount scroll jump
@@ -104,10 +105,27 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
                 <div className="flex items-center justify-between h-14 md:h-20 bg-white border-[1.5px] border-dashed border-black/10 rounded-2xl px-6 sm:w-36 shrink-0">
                   <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-8 flex justify-center text-[#666] hover:text-[#E84949] transition-colors"><Minus size={18} /></button>
                   <span className="w-10 text-center font-bold text-2xl font-grandstander">{qty}</span>
-                  <button onClick={() => setQty(qty + 1)} className="w-8 flex justify-center text-[#666] hover:text-[#E84949] transition-colors"><Plus size={18} /></button>
+                  <button 
+                    onClick={() => {
+                      if (qty + 1 <= (p.stock ?? 9999)) {
+                        setQty(qty + 1)
+                      } else {
+                        showError(`Only ${p.stock} units left in stock.`)
+                      }
+                    }} 
+                    className="w-8 flex justify-center text-[#666] hover:text-[#E84949] transition-colors"
+                  >
+                    <Plus size={18} />
+                  </button>
                 </div>
                 <button 
-                  onClick={() => { addToCart(p, qty); onClose(); }}
+                  onClick={() => {
+                    const added = addToCart(p, qty);
+                    if (added) {
+                      success(`${p.name} added to cart!`);
+                      onClose();
+                    }
+                  }}
                   className="flex-1 h-14 md:h-20 bg-[#E84949] text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[13px] md:text-[14px] shadow-xl shadow-[#E84949]/20 hover:bg-[#333] transition-all active:scale-95 flex items-center justify-center gap-3 px-8 py-4 md:py-6"
                 >
                   <ShoppingBag size={22}/> Add to Cart
@@ -144,8 +162,10 @@ export function ProductCard({ p, i, isGridOne = false }) {
   const isCompared = compare?.find(item => item.id === p.id)
 
   const handleAddToCart = () => {
-    addToCart(p)
-    success(`${p.name} added to cart!`)
+    const added = addToCart(p)
+    if (added) {
+      success(`${p.name} added to cart!`)
+    }
   }
 
   const handleWishlist = () => {

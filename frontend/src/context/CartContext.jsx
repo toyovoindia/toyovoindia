@@ -50,6 +50,7 @@ const mergeUniqueById = (...groups) => {
 
 export function CartProvider({ children }) {
   const { user } = useAuth()
+  const { error: showToastError } = useToast()
   const [cartItems, setCartItems] = useState([])
   const [wishlist, setWishlist] = useState([])
   const [compare, setCompare] = useState([])
@@ -167,19 +168,46 @@ export function CartProvider({ children }) {
 
   const addToCart = (product, quantity = 1) => {
     const normalizedProduct = normalizeProductRef(product)
-    if (!normalizedProduct) return
+    if (!normalizedProduct) return false
+
+    const stockAvailable = typeof product.stock === 'number' ? product.stock : (typeof normalizedProduct.stock === 'number' ? normalizedProduct.stock : 9999)
+
+    if (stockAvailable <= 0) {
+      showToastError(`"${normalizedProduct.name}" is out of stock!`)
+      return false
+    }
+
+    const existing = cartItems.find((item) => item.id === normalizedProduct.id)
+    const currentQty = existing ? existing.qty : 0
+    const targetQty = currentQty + quantity
+
+    if (targetQty > stockAvailable) {
+      const remainingAllowed = stockAvailable - currentQty
+      if (remainingAllowed <= 0) {
+        showToastError(`Cannot add more. You already have the maximum available stock (${stockAvailable} units) in your cart.`)
+        return false
+      }
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item.id === normalizedProduct.id
+            ? { ...item, qty: stockAvailable }
+            : item
+        )
+      )
+      showToastError(`Only ${stockAvailable} units left in stock. Added remaining ${remainingAllowed} units to cart.`)
+      return true
+    }
 
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === normalizedProduct.id)
-      if (existing) {
-        return prev.map((item) => (
-          item.id === normalizedProduct.id
-            ? { ...item, qty: item.qty + quantity }
-            : item
-        ))
+      const exists = prev.find((item) => item.id === normalizedProduct.id)
+      if (exists) {
+        return prev.map((item) =>
+          item.id === normalizedProduct.id ? { ...item, qty: targetQty } : item
+        )
       }
-      return [...prev, { ...normalizedProduct, qty: Math.max(1, Number(quantity || 1)) }]
+      return [...prev, { ...normalizedProduct, qty: quantity }]
     })
+    return true
   }
 
   const removeFromCart = (id) => {
@@ -187,21 +215,32 @@ export function CartProvider({ children }) {
   }
 
   const updateQuantity = (id, delta) => {
+    let allowed = true
+    let limitValue = 0
     setCartItems((prev) =>
       prev
         .map((item) => {
           if (item.id === id) {
-            const nextQty = item.qty + delta;
+            const nextQty = item.qty + delta
             if (nextQty < 1) {
-              return null;
+              return null
             }
-            return { ...item, qty: nextQty };
+            const stockAvailable = typeof item.stock === 'number' ? item.stock : 9999
+            if (nextQty > stockAvailable) {
+              allowed = false
+              limitValue = stockAvailable
+              return { ...item, qty: stockAvailable }
+            }
+            return { ...item, qty: nextQty }
           }
-          return item;
+          return item
         })
         .filter(Boolean)
-    );
-  };
+    )
+    if (!allowed) {
+      showToastError(`Only ${limitValue} units left in stock.`)
+    }
+  }
 
   const clearCart = () => setCartItems([])
 
@@ -217,8 +256,6 @@ export function CartProvider({ children }) {
       return [...prev, normalizedProduct]
     })
   }
-
-  const { error: showToastError } = useToast()
   
   const toggleCompare = (product) => {
     const normalizedProduct = normalizeProductRef(product)

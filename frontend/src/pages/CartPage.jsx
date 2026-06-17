@@ -103,14 +103,10 @@ export function CartPage() {
     }
   }
 
-  // Order message: optional but can't submit empty
+  // Order message: optional
   const handleSubmitOrderMessage = () => {
-    if (!orderMessage.trim()) {
-      setNotesErrors(prev => ({ ...prev, orderMessage: 'Order message cannot be empty. Please type a message or leave it as is.' }))
-      return
-    }
     setNotesErrors(prev => ({ ...prev, orderMessage: undefined }))
-    success('Order message saved for checkout.')
+    success(orderMessage.trim() ? 'Order message saved for checkout.' : 'Order message cleared.')
   }
 
   // Gift wrap: checkbox must be checked, and gift message is required when it is
@@ -293,7 +289,7 @@ export function CartPage() {
               </div>
 
               <div className="flex flex-col gap-3 w-full sm:w-[400px]">
-                 <button onClick={() => navigate(user ? '/checkout' : '/login?next=%2Fcheckout')} className="w-full h-14 bg-[#E84949] text-white rounded-xl font-bold uppercase tracking-widest text-[12px] flex items-center justify-center hover:scale-[1.01] transition-all shadow-xl shadow-[#E84949]/20">
+                 <button onClick={() => { sessionStorage.removeItem('TOYOVOINDIA_buyNowItem'); navigate(user ? '/checkout' : '/login?next=%2Fcheckout'); }} className="w-full h-14 bg-[#E84949] text-white rounded-xl font-bold uppercase tracking-widest text-[12px] flex items-center justify-center hover:scale-[1.01] transition-all shadow-xl shadow-[#E84949]/20">
                    {user ? 'Check Out' : 'Login to Checkout'}
                  </button>
                  <Link to="/" className="w-full h-14 bg-[#333] text-white rounded-xl font-bold uppercase tracking-widest text-[12px] flex items-center justify-center hover:scale-[1.01] transition-all shadow-lg">Continue Shopping</Link>
