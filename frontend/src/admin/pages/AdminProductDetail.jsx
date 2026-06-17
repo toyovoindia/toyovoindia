@@ -21,6 +21,7 @@ import {
   createAdminProduct, 
   updateAdminProduct, 
   deleteAdminProduct,
+  permanentlyDeleteAdminProduct,
   getAdminCategories,
   uploadAdminMedia
 } from '../../services/adminCatalogApi'
@@ -64,6 +65,7 @@ export function AdminProductDetail() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [product, setProduct] = useState(emptyProduct)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [showConfirmPermanentDelete, setShowConfirmPermanentDelete] = useState(false)
   const [newColor, setNewColor] = useState('')
   const [newSize, setNewSize] = useState('')
   const [formErrors, setFormErrors] = useState({})
@@ -198,7 +200,17 @@ export function AdminProductDetail() {
       success('Toy archived and hidden from shop.')
       navigate('/admin/products')
     } catch (err) {
-      error(err.message || 'Failed to delete toy')
+      error(err.message || 'Failed to archive toy')
+    }
+  }
+
+  const confirmPermanentDelete = async () => {
+    try {
+      await permanentlyDeleteAdminProduct(id)
+      success('Toy permanently deleted from inventory.')
+      navigate('/admin/products')
+    } catch (err) {
+      error(err.message || 'Failed to permanently delete toy')
     }
   }
 
@@ -280,13 +292,22 @@ export function AdminProductDetail() {
           
           <div className="flex items-center gap-3">
             {!isNew && (
-              <button 
-                onClick={() => setShowConfirmDelete(true)}
-                className="h-12 px-6 rounded-2xl bg-white text-red-500 font-bold flex items-center gap-2 hover:bg-red-50 transition-colors shadow-sm border border-red-100"
-              >
-                <Trash2 size={18} />
-                <span className="hidden sm:inline">Archive</span>
-              </button>
+              <>
+                <button 
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="h-12 px-6 rounded-2xl bg-white text-[#F1641E] font-bold flex items-center gap-2 hover:bg-[#F1641E]/5 transition-colors shadow-sm border border-[#F1641E]/20"
+                >
+                  <Trash2 size={18} />
+                  <span className="hidden sm:inline">Archive</span>
+                </button>
+                <button 
+                  onClick={() => setShowConfirmPermanentDelete(true)}
+                  className="h-12 px-6 rounded-2xl bg-white text-red-500 font-bold flex items-center gap-2 hover:bg-red-50 transition-colors shadow-sm border border-red-100"
+                >
+                  <Trash2 size={18} />
+                  <span className="hidden sm:inline">Delete Permanently</span>
+                </button>
+              </>
             )}
             {isEditing ? (
               <button 
@@ -295,7 +316,7 @@ export function AdminProductDetail() {
                 className="h-12 px-8 rounded-2xl bg-[#6651A4] text-white font-black flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-[#6651A4]/20 disabled:opacity-60"
               >
                 <Save size={18} />
-                <span>{isSaving ? 'Launching...' : isNew ? 'Launch Toy' : 'Commit Changes'}</span>
+                <span>{isSaving ? 'Saving...' : isNew ? 'Launch Toy' : 'Save Changes'}</span>
               </button>
             ) : (
               <button 
@@ -303,7 +324,7 @@ export function AdminProductDetail() {
                 className="h-12 px-8 rounded-2xl bg-[#6651A4] text-white font-black flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-[#6651A4]/20"
               >
                 <Settings size={18} />
-                <span>Enter Edit Mode</span>
+                <span>Edit Toy</span>
               </button>
             )}
           </div>
@@ -689,6 +710,14 @@ export function AdminProductDetail() {
         title="Archive Toy?"
         message={`Are you sure you want to archive "${product.name}"? This will hide it from the storefront.`}
         confirmText="Archive"
+      />
+      <ConfirmationModal 
+        isOpen={showConfirmPermanentDelete}
+        onClose={() => setShowConfirmPermanentDelete(false)}
+        onConfirm={confirmPermanentDelete}
+        title="Permanently Delete Toy?"
+        message={`Are you sure you want to permanently delete "${product.name}"? This action is irreversible and will delete the product and its reviews completely.`}
+        confirmText="Delete Permanently"
       />
     </div>
   )

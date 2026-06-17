@@ -12,6 +12,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [categories, setCategories] = useState([])
   const [meta, setMeta] = useState({ totalPages: 1, total: 0 })
   const [error, setError] = useState('')
@@ -50,6 +51,7 @@ export function AdminProducts() {
           limit: itemsPerPage,
           search: search.trim(),
           category: categoryFilter,
+          status: statusFilter,
         })
         if (!isMounted) return
         setProducts(payload.products)
@@ -68,11 +70,11 @@ export function AdminProducts() {
       isMounted = false
       clearTimeout(timer)
     }
-  }, [search, categoryFilter, currentPage])
+  }, [search, categoryFilter, statusFilter, currentPage])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, categoryFilter])
+  }, [search, categoryFilter, statusFilter])
 
   const totalPages = meta.totalPages || 1
   const currentProducts = products
@@ -139,6 +141,21 @@ export function AdminProducts() {
               {categories.map(category => (
                 <option key={category.id} value={category.slug}>{category.name}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="relative shrink-0 min-w-[140px]">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <select 
+              value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full h-11 pl-9 pr-6 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#F1641E]/30 text-[10px] font-bold text-gray-600 uppercase tracking-widest appearance-none cursor-pointer transition-all"
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="archived">Archived</option>
+              <option value="low-stock">Low Stock</option>
+              <option value="out-of-stock">Out of Stock</option>
             </select>
           </div>
         </div>

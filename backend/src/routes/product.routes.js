@@ -2,6 +2,7 @@ import express from 'express';
 import {
   adminCreateProduct,
   adminDeleteProduct,
+  adminPermanentlyDeleteProduct,
   adminGetProduct,
   adminListProducts,
   adminUpdateProduct,
@@ -43,6 +44,7 @@ adminRouter.post('/', validate(createProductSchema), adminCreateProduct);
 adminRouter.get('/:id', validate(productIdParamSchema), adminGetProduct);
 adminRouter.patch('/:id', validate(updateProductSchema), adminUpdateProduct);
 adminRouter.delete('/:id', validate(productIdParamSchema), adminDeleteProduct);
+adminRouter.delete('/:id/permanent', validate(productIdParamSchema), adminPermanentlyDeleteProduct);
 adminRouter.patch('/:id/status', validate(productStatusSchema), adminUpdateProductStatus);
 adminRouter.patch('/:id/stock', validate(productStockSchema), adminUpdateProductStock);
 

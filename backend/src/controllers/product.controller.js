@@ -227,7 +227,19 @@ export const adminListProducts = asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit || 20), 10000);
   const skip = (page - 1) * limit;
   const filter = await buildProductFilter(req.query, false);
-  if (req.query.status) filter.status = req.query.status;
+  if (req.query.status) {
+    if (req.query.status === 'low-stock') {
+      filter.stock = { $gt: 0, $lte: 10 };
+      filter.status = 'active';
+    } else if (req.query.status === 'out-of-stock') {
+      filter.stock = { $lte: 0 };
+      filter.status = 'active';
+    } else if (req.query.status === 'inactive') {
+      filter.status = { $in: ['inactive', 'draft'] };
+    } else {
+      filter.status = req.query.status;
+    }
+  }
 
   const [products, total] = await Promise.all([
     Product.find(filter)
@@ -279,6 +291,13 @@ export const adminDeleteProduct = asyncHandler(async (req, res, next) => {
   if (!product) return next(new AppError('Product not found', 404));
 
   return successResponse(res, 200, 'Product archived successfully', product);
+});
+
+export const adminPermanentlyDeleteProduct = asyncHandler(async (req, res, next) => {
+  const product = await Product.findByIdAndDelete(req.params.id);
+  if (!product) return next(new AppError('Product not found', 404));
+
+  return successResponse(res, 200, 'Product permanently deleted successfully');
 });
 
 export const adminUpdateProductStatus = asyncHandler(async (req, res, next) => {

@@ -87,6 +87,13 @@ export const deleteAdminProduct = async (id) => {
   return normalizeProduct(payload.data)
 }
 
+export const permanentlyDeleteAdminProduct = async (id) => {
+  const payload = await apiRequest(`/admin/products/${id}/permanent`, {
+    method: 'DELETE',
+  })
+  return payload
+}
+
 export const uploadAdminMedia = async (file, folder = 'products') => {
   const formData = new FormData()
   formData.append('file', file)

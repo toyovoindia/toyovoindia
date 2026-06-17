@@ -75,14 +75,14 @@ export const updatePurchasePopupSettings = asyncHandler(async (req, res) => {
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
   const [totalProducts, totalUsers, totalOrders, productsData] = await Promise.all([
-    Product.countDocuments(),
+    Product.countDocuments({ status: { $ne: 'archived' } }),
     User.countDocuments(),
     Order.countDocuments(),
-    Product.find().select('category categoryName name title sku stock lowStockThreshold').populate('category', 'name').lean()
+    Product.find({ status: { $ne: 'archived' } }).select('category categoryName name title sku stock status lowStockThreshold').populate('category', 'name').lean()
   ]);
 
   const lowStockProducts = productsData
-    .filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || 5))
+    .filter(p => p.status === 'active' && Number(p.stock || 0) <= Number(p.lowStockThreshold || 5))
     .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
 
   const categoryCountMap = new Map();
