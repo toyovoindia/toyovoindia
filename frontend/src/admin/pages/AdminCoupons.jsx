@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar, Plus, Search, TicketPercent, ToggleLeft, ToggleRight, X, Edit2 } from 'lucide-react'
 import { createAdminCoupon, getAdminCoupons, updateAdminCouponStatus, deleteAdminCoupon, updateAdminCoupon } from '../../services/couponApi'
 import { getAdminCategories } from '../../services/adminCatalogApi'
@@ -33,6 +33,7 @@ export function AdminCoupons() {
   const [categories, setCategories] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, title: '', error: '' })
+  const formRef = useRef(null)
 
   // Custom Inline State
   const [formErrors, setFormErrors] = useState({})
@@ -123,7 +124,12 @@ export function AdminCoupons() {
     })
     setEditingCouponId(coupon.id)
     setShowForm(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll the form into view after React renders it
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   const handleSubmit = async (event) => {
@@ -207,7 +213,7 @@ export function AdminCoupons() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-[32px] p-6 md:p-8 border border-black/[0.03] shadow-sm space-y-5">
+        <form ref={formRef} onSubmit={handleSubmit} className="bg-white rounded-[32px] p-6 md:p-8 border border-black/[0.03] shadow-sm space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="flex flex-col space-y-1">
               <input value={formData.code} onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })} placeholder="Coupon Code" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" required />
