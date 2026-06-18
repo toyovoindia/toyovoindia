@@ -46,7 +46,7 @@ export function MobileBottomBar() {
     { icon: <Heart size={20} />, path: '/wishlist', label: 'Wishlist' },
     { icon: <Home size={20} />, path: '/', label: 'Home' },
     { icon: <User size={20} />, path: '/account', label: 'Account' },
-    { icon: <Layers size={20} />, path: '/collections/educational-toy', label: 'Explore' },
+    { icon: <Layers size={20} />, path: '/compare', label: 'Compare' },
   ]
 
   return (
