@@ -35,9 +35,9 @@ function AdminContentSkeleton() {
 
 export function AdminLayout() {
   const { logout } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1280)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1280)
   const location = useLocation()
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
@@ -70,7 +70,7 @@ export function AdminLayout() {
   // Handle window resize for responsiveness
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 1024
+      const mobile = window.innerWidth < 1280
       setIsMobile(mobile)
       if (!mobile) {
         setMobileMenuOpen(false)
@@ -114,7 +114,7 @@ export function AdminLayout() {
         {(mobileMenuOpen || (isMobile && sidebarOpen)) && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#222222]/60 z-[100] lg:hidden backdrop-blur-md"
+            className="fixed inset-0 bg-[#222222]/60 z-[100] xl:hidden backdrop-blur-md"
             onClick={() => {
               setMobileMenuOpen(false)
               setSidebarOpen(false)
@@ -132,7 +132,7 @@ export function AdminLayout() {
           display: (isMobile && !sidebarOpen) ? 'none' : 'flex'
         }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        className={`fixed lg:relative z-[101] h-screen bg-white border-r border-black/[0.05] flex flex-col shrink-0 shadow-2xl lg:shadow-none overflow-hidden`}
+        className={`fixed xl:relative z-[101] h-screen bg-white border-r border-black/[0.05] flex flex-col shrink-0 shadow-2xl xl:shadow-none overflow-hidden`}
       >
         <div className="h-20 flex items-center justify-between px-6 border-b border-black/[0.05] shrink-0">
           <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
@@ -141,7 +141,7 @@ export function AdminLayout() {
             </div>
             <span className="font-grandstander font-bold text-[22px] md:text-[26px] text-[#6651A4] tracking-tight -ml-1.5">Toyovo<span className="text-[#F1641E]">Admin</span></span>
           </div>
-          <button className="lg:hidden p-2.5 bg-gray-50 text-gray-400 hover:text-[#E8312A] rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+          <button className="xl:hidden p-2.5 bg-gray-50 text-gray-400 hover:text-[#E8312A] rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={20} />
           </button>
         </div>
@@ -221,13 +221,13 @@ export function AdminLayout() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2.5 bg-[#FAEAD3]/50 rounded-xl text-gray-600 hover:bg-[#FAEAD3] transition-colors"
+              className="xl:hidden p-2.5 bg-[#FAEAD3]/50 rounded-xl text-gray-600 hover:bg-[#FAEAD3] transition-colors"
             >
               <Menu size={20} />
             </button>
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="hidden lg:flex p-2.5 bg-[#FAEAD3]/50 rounded-xl text-gray-600 hover:bg-[#FAEAD3] transition-colors"
+              className="hidden xl:flex p-2.5 bg-[#FAEAD3]/50 rounded-xl text-gray-600 hover:bg-[#FAEAD3] transition-colors"
             >
               <Menu size={20} />
             </button>
