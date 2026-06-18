@@ -289,18 +289,18 @@ export function AdminCoupons() {
             </div>
              <div className="flex gap-2 min-w-[260px] xl:col-span-1">
                <input 
-                 type="date" 
-                 value={formData.expiryDate} 
-                 onChange={(event) => setFormData({ ...formData, expiryDate: event.target.value })} 
-                 className="flex-1 h-12 px-3 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
-                 title="Expiry Date"
-               />
-               <input 
                  type="time" 
                  value={formData.expiryTime} 
                  onChange={(event) => setFormData({ ...formData, expiryTime: event.target.value })} 
                  className="w-[100px] h-12 px-2 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
                  title="Expiry Time"
+               />
+               <input 
+                 type="date" 
+                 value={formData.expiryDate} 
+                 onChange={(event) => setFormData({ ...formData, expiryDate: event.target.value })} 
+                 className="flex-1 h-12 px-3 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
+                 title="Expiry Date"
                />
              </div>
            </div>

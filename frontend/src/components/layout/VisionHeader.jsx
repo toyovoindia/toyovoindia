@@ -733,7 +733,16 @@ export function VisionHeader() {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/40 z-[1000]" />
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setMobileOpen(false)} 
+              style={{
+                top: window.innerWidth >= 768 ? '108px' : '85px'
+              }}
+              className="fixed inset-x-0 bottom-0 bg-black/40 z-[1000]" 
+            />
             <motion.div 
               initial={{ x: '-100%' }} 
               animate={{ x: 0 }} 

@@ -21,6 +21,43 @@ const formatDateStamp = (dateString) => {
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
 }
 
+const isWithinDateRange = (dateString, range) => {
+  if (!range || range === 'all-time') return true
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return false
+
+  const now = new Date()
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  switch (range) {
+    case 'today': {
+      return date >= startOfDay
+    }
+    case 'this-week': {
+      const day = now.getDay()
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+      const startOfWeek = new Date(now.setDate(diff))
+      startOfWeek.setHours(0, 0, 0, 0)
+      return date >= startOfWeek
+    }
+    case 'this-month': {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      return date >= startOfMonth
+    }
+    case 'last-month': {
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+      return date >= startOfLastMonth && date <= endOfLastMonth
+    }
+    case 'ytd': {
+      const startOfYear = new Date(now.getFullYear(), 0, 1)
+      return date >= startOfYear
+    }
+    default:
+      return true
+  }
+}
+
 export function AdminReports() {
   const toast = useToast()
   const [reportType, setReportType] = useState('sales')
@@ -48,7 +85,7 @@ export function AdminReports() {
         )
       ]
 
-      const csvString = csvRows.join('\n')
+      const csvString = '\uFEFF' + csvRows.join('\n')
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -115,7 +152,9 @@ export function AdminReports() {
 
       if (reportType === 'sales') {
         const res = await getAdminOrders({ limit: 200 })
-        data = (res.orders || []).map(o => ({
+        const ordersList = res.orders || []
+        const filteredOrders = ordersList.filter(o => isWithinDateRange(o.createdAt, dateRange))
+        data = filteredOrders.map(o => ({
           OrderNumber: o.orderNumber,
           Customer: o.customerName,
           Email: o.customerEmail,
@@ -141,7 +180,9 @@ export function AdminReports() {
         fileName = 'Toy_Catalog_Report'
       } else if (reportType === 'users') {
         const res = await getAdminUsers({ limit: 200 })
-        data = (res.users || []).map(u => ({
+        const usersList = res.users || []
+        const filteredUsers = usersList.filter(u => isWithinDateRange(u.createdAt, dateRange))
+        data = filteredUsers.map(u => ({
           Name: u.name,
           Email: u.email,
           Role: u.role,

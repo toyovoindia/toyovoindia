@@ -119,11 +119,11 @@ export function PurchaseNotification() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] md:text-[14px] text-[#64748B] font-medium leading-none border-b border-dashed border-[#333]/10 pb-2 mb-2 flex items-center justify-between pr-2">
+                <div className="text-[11px] md:text-[13px] text-[#64748B] font-medium leading-normal border-b border-dashed border-[#333]/10 pb-2 mb-2 pr-2 break-words">
                   {currentPurchase.name} purchased from {currentPurchase.city}
                 </div>
 
-                <h4 className="text-[14px] md:text-[16px] font-grandstander font-bold text-[#333] truncate">
+                <h4 className="text-[13px] md:text-[15px] font-grandstander font-bold text-[#333] truncate">
                   {currentPurchase.product}
                 </h4>
 

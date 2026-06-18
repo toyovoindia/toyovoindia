@@ -125,12 +125,16 @@ export function ComparePage() {
 
           {/* Empty Slots */}
           {[...Array(Math.max(0, 4 - compare.length))].map((_, i) => (
-            <div key={`empty-${i}`} className="hidden lg:flex flex-col border border-dashed border-black/10 bg-[#FDF4E6]/30 rounded-lg items-center justify-center min-h-[500px]">
-               <div className="w-16 h-16 rounded-full border-2 border-dashed border-black/10 flex items-center justify-center text-black/10">
+            <Link 
+              key={`empty-${i}`} 
+              to="/all-categories" 
+              className="hidden lg:flex flex-col border border-dashed border-black/10 bg-[#FDF4E6]/30 rounded-lg items-center justify-center min-h-[500px] hover:bg-[#FDF4E6]/60 hover:border-[#F1641E]/40 hover:scale-[1.01] transition-all cursor-pointer group"
+            >
+               <div className="w-16 h-16 rounded-full border-2 border-dashed border-black/10 flex items-center justify-center text-black/10 group-hover:border-[#F1641E]/30 group-hover:text-[#F1641E]/40 transition-colors">
                   <Layers size={24} />
                </div>
-               <p className="text-[10px] font-bold uppercase tracking-widest text-black/20 mt-4 font-grandstander">Add Product to Compare</p>
-            </div>
+               <p className="text-[10px] font-bold uppercase tracking-widest text-black/20 mt-4 font-grandstander group-hover:text-[#F1641E]/50 transition-colors">Add Product to Compare</p>
+            </Link>
           ))}
         </div>
 
