@@ -234,7 +234,7 @@ function AppContent() {
     <>
       <ScrollToTop />
       <FirebaseTokenManager />
-      <div className="min-h-screen flex flex-col bg-[#FDF4E6] overflow-x-hidden relative">
+      <div className="min-h-screen flex flex-col bg-[#FDF4E6] relative" style={{ overflowX: 'clip' }}>
         {!hideLayouts && <VisionHeader />}
         <main className="flex-grow">
           <Routes>

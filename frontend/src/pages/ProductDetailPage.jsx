@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Star, Heart, Share2, Eye, ShoppingCart, Search, Repeat, Plus, Minus, CheckCircle, X, ChevronRight, Share, ZoomIn } from 'lucide-react'
 
 
@@ -32,6 +32,195 @@ const FAQItem = ({ question, answer, isOpen, onToggle }) => (
     </AnimatePresence>
   </div>
 )
+
+const ZoomOverlay = ({ src, onClose }) => {
+  const [scale, setScale] = useState(1)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const containerRef = useRef(null)
+  const imageRef = useRef(null)
+  
+  const stateRef = useRef({
+    initialDistance: 0,
+    initialScale: 1,
+    isPanning: false,
+    startPan: { x: 0, y: 0 },
+    lastTap: 0
+  })
+
+  useEffect(() => {
+    const preventDefault = (e) => {
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('touchmove', preventDefault, { passive: false })
+    return () => {
+      document.removeEventListener('touchmove', preventDefault)
+    }
+  }, [])
+
+  const handleWheel = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const zoomFactor = 0.15
+    const direction = e.deltaY < 0 ? 1 : -1
+    const newScale = Math.min(Math.max(1, scale + direction * zoomFactor), 4)
+    setScale(newScale)
+    if (newScale === 1) {
+      setPosition({ x: 0, y: 0 })
+    }
+  }
+
+  const handleDoubleTap = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (scale > 1) {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+    } else {
+      setScale(2.5)
+      setPosition({ x: 0, y: 0 })
+    }
+  }
+
+  const handleTouchStart = (e) => {
+    e.stopPropagation()
+    const now = Date.now()
+    if (now - stateRef.current.lastTap < 300) {
+      handleDoubleTap(e)
+      stateRef.current.lastTap = 0
+      return
+    }
+    stateRef.current.lastTap = now
+
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+      stateRef.current.initialDistance = dist
+      stateRef.current.initialScale = scale
+    } else if (e.touches.length === 1 && scale > 1) {
+      stateRef.current.isPanning = true
+      stateRef.current.startPan = {
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      }
+    }
+  }
+
+  const handleTouchMove = (e) => {
+    e.stopPropagation()
+    if (e.touches.length === 2 && stateRef.current.initialDistance > 0) {
+      e.preventDefault()
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+      const ratio = dist / stateRef.current.initialDistance
+      const newScale = Math.min(Math.max(1, stateRef.current.initialScale * ratio), 4)
+      setScale(newScale)
+      if (newScale === 1) {
+        setPosition({ x: 0, y: 0 })
+      }
+    } else if (e.touches.length === 1 && stateRef.current.isPanning && scale > 1) {
+      e.preventDefault()
+      const x = e.touches[0].clientX - stateRef.current.startPan.x
+      const y = e.touches[0].clientY - stateRef.current.startPan.y
+      const maxDeltaX = (scale - 1) * window.innerWidth / 2
+      const maxDeltaY = (scale - 1) * window.innerHeight / 2
+      setPosition({
+        x: Math.min(Math.max(x, -maxDeltaX), maxDeltaX),
+        y: Math.min(Math.max(y, -maxDeltaY), maxDeltaY)
+      })
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    e.stopPropagation()
+    stateRef.current.initialDistance = 0
+    stateRef.current.isPanning = false
+  }
+
+  const handleMouseDown = (e) => {
+    if (scale <= 1) return
+    e.preventDefault()
+    e.stopPropagation()
+    stateRef.current.isPanning = true
+    stateRef.current.startPan = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!stateRef.current.isPanning || scale <= 1) return
+    e.preventDefault()
+    e.stopPropagation()
+    const x = e.clientX - stateRef.current.startPan.x
+    const y = e.clientY - stateRef.current.startPan.y
+    const maxDeltaX = (scale - 1) * window.innerWidth / 2
+    const maxDeltaY = (scale - 1) * window.innerHeight / 2
+    setPosition({
+      x: Math.min(Math.max(x, -maxDeltaX), maxDeltaX),
+      y: Math.min(Math.max(y, -maxDeltaY), maxDeltaY)
+    })
+  }
+
+  const handleMouseUp = () => {
+    stateRef.current.isPanning = false
+  }
+
+  const handleReset = (e) => {
+    if (scale > 1) {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+    } else {
+      onClose()
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 touch-none select-none"
+      onClick={handleReset}
+      onWheel={handleWheel}
+    >
+      <button 
+        onClick={(e) => { e.stopPropagation(); onClose(); }} 
+        className="absolute top-6 left-6 text-white p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-[10000] shadow-lg pointer-events-auto"
+      >
+        <X size={24} />
+      </button>
+
+      <div 
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <img 
+          ref={imageRef}
+          src={src} 
+          alt="Zoomed" 
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transition: stateRef.current.isPanning ? 'none' : 'transform 0.15s ease-out',
+            touchAction: 'none'
+          }}
+          className="max-w-full max-h-[90vh] object-contain cursor-grab active:cursor-grabbing pointer-events-none"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    </motion.div>
+  )
+}
 
 export function ProductDetailPage() {
   const { title } = useParams()
@@ -311,21 +500,13 @@ export function ProductDetailPage() {
 
   return (
     <div className="bg-[#FDF4E6] pb-8 overflow-x-hidden">
-      {/* Full Screen Zoom Overlay */}
+      {/* Full Screen Zoom Overlay with Pinch/Wheel Zoom */}
       <AnimatePresence>
         {isZoomed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
-            onClick={() => setIsZoomed(false)}
-          >
-            <button onClick={() => setIsZoomed(false)} className="absolute top-6 left-6 text-white p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10 shadow-lg">
-              <X size={24} />
-            </button>
-            <img src={galleryImages[selectedImg]} alt="Zoomed" className="w-full h-auto max-h-[95vh] object-contain" />
-          </motion.div>
+          <ZoomOverlay
+            src={galleryImages[selectedImg]}
+            onClose={() => setIsZoomed(false)}
+          />
         )}
       </AnimatePresence>
 

@@ -46,6 +46,7 @@ export function VisionHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [isPastHero, setIsPastHero] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const [activeMobileSub, setActiveMobileSub] = useState(null)
   const [activeMobileSub2, setActiveMobileSub2] = useState(null)
   
@@ -180,8 +181,13 @@ export function VisionHeader() {
   }, [])
 
   useEffect(() => {
-    const handleScroll = () => setIsPastHero(window.scrollY > 100)
+    const handleScroll = () => {
+      setIsPastHero(window.scrollY > 100)
+      const threshold = window.innerWidth >= 768 ? 38 : 25
+      setIsScrolled(window.scrollY >= threshold)
+    }
     window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -189,15 +195,15 @@ export function VisionHeader() {
     const html = document.documentElement;
     const body = document.body;
     if (mobileOpen) {
-      html.style.overflow = 'hidden';
-      body.style.overflow = 'hidden';
+      html.style.overflowY = 'hidden';
+      body.style.overflowY = 'hidden';
     } else {
-      html.style.overflow = '';
-      body.style.overflow = '';
+      html.style.overflowY = '';
+      body.style.overflowY = '';
     }
     return () => {
-      html.style.overflow = '';
-      body.style.overflow = '';
+      html.style.overflowY = '';
+      body.style.overflowY = '';
     }
   }, [mobileOpen])
 
@@ -284,7 +290,7 @@ export function VisionHeader() {
   return (
     <div 
       id="vision-header-root"
-      className="sticky top-[-25px] md:top-[-38px] lg:top-[-38px] z-[1100]"
+      className={mobileOpen ? 'vision-header-fixed' : 'vision-header-sticky'}
     >
       <div style={{ backgroundColor: siteConfig?.announcementBg || '#6651A4', width: '100%' }} className="relative z-[1300] h-[25px] md:h-[38px] flex items-center">
         {/* Desktop Utility Bar (1024px+) */}
@@ -395,7 +401,7 @@ export function VisionHeader() {
         </div>
       </div>
 
-      <header style={{ backgroundColor: '#FDF3E7', borderBottom: '1px solid #ebebeb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1200 }}>
+      <header style={{ backgroundColor: '#FDF3E7', borderBottom: '1px solid #ebebeb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 1200 }}>
         <div className="hdr-inner flex items-center h-15 md:h-17.5 relative max-w-[1600px] mx-auto px-4 lg:px-8">
           {/* Mobile Burger: Left-aligned, hidden on 1024px+ */}
           <div className="lg:hidden flex-1 flex items-center">
@@ -625,14 +631,14 @@ export function VisionHeader() {
             </button>
 
             {/* Account Icon: Visible on Tablet and Desktop */}
-            <div className="relative flex items-center" onMouseEnter={() => setProfileDropdown(true)} onMouseLeave={() => setProfileDropdown(false)}>
+            <div className="flex items-center" onMouseEnter={() => setProfileDropdown(true)} onMouseLeave={() => setProfileDropdown(false)}>
                 <Link to={user ? "/account" : "/login"} className="p-2 text-[#333] hover:text-[#E84949] transition-colors flex items-center gap-2 group/user">
                     <User size={22} />
                     {user && <span className="hidden xl:block text-[11px] font-bold uppercase tracking-widest text-[#333] group-hover/user:text-[#E84949]">{user.firstName}</span>}
                 </Link>
                 <AnimatePresence>
                     {profileDropdown && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute top-full right-0 w-56 bg-[#FDF4E6] shadow-2xl rounded-b-3xl border-t-2 border-[#E84949] py-4 z-50 overflow-hidden">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute top-full right-4 lg:right-8 w-56 bg-[#FDF4E6] shadow-2xl rounded-b-3xl border-t-2 border-[#E84949] py-4 z-50 overflow-hidden">
                             {!user ? (
                                 <div className="px-4 space-y-3">
                                     <p className="text-[10px] font-bold text-[#666] tracking-widest uppercase mb-2">Welcome back!</p>
@@ -733,7 +739,11 @@ export function VisionHeader() {
               animate={{ x: 0 }} 
               exit={{ x: '-100%' }} 
               transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
-              className="fixed top-[calc(25px+60px)] md:top-[calc(25px+70px)] left-0 bottom-0 w-[85%] max-w-[320px] bg-[#FDF4E6] z-[1050] flex flex-col shadow-2xl border-t border-black/5"
+              style={{
+                top: window.innerWidth >= 768 ? '108px' : '85px',
+                height: window.innerWidth >= 768 ? 'calc(100vh - 108px)' : 'calc(100vh - 85px)'
+              }}
+              className="fixed left-0 w-[85%] max-w-[320px] bg-[#FDF4E6] z-[1050] flex flex-col shadow-2xl border-t border-black/5"
             >
               <div className="overflow-y-auto grow">
                 <div className="py-4">
