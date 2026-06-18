@@ -97,7 +97,7 @@ export function AdminLayout() {
     { path: '/admin/orders', label: 'Order Command', icon: <ShoppingCart size={20} /> },
     { path: '/admin/finance', label: 'Financial Hub', icon: <Wallet size={20} /> },
     { path: '/admin/content', label: 'Storefront', icon: <Megaphone size={20} /> },
-    { path: '/admin/public-activity', label: 'Live Popups', icon: <Activity size={20} /> },
+    // { path: '/admin/public-activity', label: 'Live Popups', icon: <Activity size={20} /> },
     { path: '/admin/reviews', label: 'Reviews', icon: <Star size={20} /> },
     { path: '/admin/messages', label: 'Messages', icon: <MessageSquare size={20} /> },
     { path: '/admin/subscribers', label: 'Newsletter', icon: <Megaphone size={20} /> },
