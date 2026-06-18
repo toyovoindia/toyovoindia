@@ -113,6 +113,9 @@ const mapOrderSummary = (order) => ({
     status: order.returnRequest?.status || 'none',
     statusLabel: RETURN_STATUS_LABELS[order.returnRequest?.status || 'none'],
   },
+  deliveryDate: getDeliveryDate(order.createdAt, order.shippingMethod, order.estimatedDeliveryDate),
+  estimatedDeliveryDate: order.estimatedDeliveryDate,
+  deliveryDelayReason: order.deliveryDelayReason || '',
 });
 
 const appendStatusHistory = (order, status, actorRole, note) => {
@@ -364,31 +367,36 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res, next) => {
     order.trackingNumber = req.body.trackingNumber || undefined;
   }
   if (req.body.estimatedDeliveryDate !== undefined) {
-    const createdAtStart = new Date(order.createdAt);
-    createdAtStart.setHours(0, 0, 0, 0);
-    const requestedDate = new Date(req.body.estimatedDeliveryDate);
-    requestedDate.setHours(0, 0, 0, 0);
+    if (!req.body.estimatedDeliveryDate) {
+      order.estimatedDeliveryDate = undefined;
+      order.deliveryDelayReason = '';
+    } else {
+      const createdAtStart = new Date(order.createdAt);
+      createdAtStart.setHours(0, 0, 0, 0);
+      const requestedDate = new Date(req.body.estimatedDeliveryDate);
+      requestedDate.setHours(0, 0, 0, 0);
 
-    if (Number.isNaN(requestedDate.getTime())) {
-      return next(new AppError('Estimated delivery date is invalid', 400));
+      if (Number.isNaN(requestedDate.getTime())) {
+        return next(new AppError('Estimated delivery date is invalid', 400));
+      }
+
+      if (requestedDate < createdAtStart) {
+        return next(new AppError('Estimated delivery date cannot be earlier than the order date', 400));
+      }
+
+      const currentDate = order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate) : null;
+      if (currentDate) {
+        currentDate.setHours(0, 0, 0, 0);
+      }
+
+      const isDateChanging = currentDate && currentDate.getTime() !== requestedDate.getTime();
+      if (isDateChanging && !req.body.deliveryDelayReason?.trim()) {
+        return next(new AppError('A reason is required when updating the delivery date', 400));
+      }
+
+      order.estimatedDeliveryDate = requestedDate;
+      order.deliveryDelayReason = req.body.deliveryDelayReason?.trim() || '';
     }
-
-    if (requestedDate < createdAtStart) {
-      return next(new AppError('Estimated delivery date cannot be earlier than the order date', 400));
-    }
-
-    const currentDate = order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate) : null;
-    if (currentDate) {
-      currentDate.setHours(0, 0, 0, 0);
-    }
-
-    const isDateChanging = !currentDate || currentDate.getTime() !== requestedDate.getTime();
-    if (isDateChanging && !req.body.deliveryDelayReason?.trim()) {
-      return next(new AppError('A reason is required when updating the delivery date', 400));
-    }
-
-    order.estimatedDeliveryDate = requestedDate;
-    order.deliveryDelayReason = req.body.deliveryDelayReason?.trim() || '';
   } else if (req.body.deliveryDelayReason !== undefined) {
     order.deliveryDelayReason = req.body.deliveryDelayReason?.trim() || '';
   }
@@ -470,12 +478,17 @@ export const adminUpdateOrderReturnRequest = asyncHandler(async (req, res, next)
   }
 
   const nextStatus = req.body.status;
+  const previousReturnStatus = order.returnRequest.status;
   order.returnRequest.status = nextStatus;
   order.returnRequest.adminNote = req.body.adminNote?.trim() || '';
   order.returnRequest.reviewedAt = new Date();
 
-  if (nextStatus === 'refunded') {
+  if (nextStatus === 'refunded' && previousReturnStatus !== 'refunded') {
     order.paymentStatus = 'refunded';
+    await revertFulfilledOrderSideEffects({
+      items: order.items,
+      couponData: order.coupon,
+    });
   }
 
   const displayStatus = nextStatus === 'requested' ? 'Pending Return' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;

@@ -197,6 +197,16 @@ export const adminListUsers = asyncHandler(async (req, res) => {
         { email: new RegExp(cleanSearch, 'i') },
         { phone: new RegExp(cleanSearch, 'i') },
       ];
+      
+      const parts = cleanSearch.split(/\s+/).filter(Boolean);
+      if (parts.length > 1) {
+        filter.$or.push({
+          $and: [
+            { firstName: new RegExp(parts[0], 'i') },
+            { lastName: new RegExp(parts[1], 'i') }
+          ]
+        });
+      }
     }
   }
 

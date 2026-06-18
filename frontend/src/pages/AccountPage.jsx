@@ -8,10 +8,10 @@ import {
   User, Package, MapPin, LogOut, ChevronRight, Wallet, History, CreditCard, 
   Plus, ArrowUpRight, ArrowDownLeft, Check, Smartphone, Landmark, Truck, 
   AlertCircle, X, Search, Lock, Loader2, ShieldCheck, Home, Edit2, Save, 
-  Trash2, HelpCircle, Shield, FileText, ChevronLeft, Star, ShoppingBag, Gift, Heart, Menu, RefreshCw, Box, ExternalLink, Building, Map, ChevronDown
+  Trash2, HelpCircle, Shield, FileText, ChevronLeft, Star, ShoppingBag, Gift, Heart, Menu, RefreshCw, Box, ExternalLink, Building, Map, ChevronDown, RotateCcw
 } from 'lucide-react'
 import { indianStates, commonCities, addressTypes } from '../utils/indiaData'
-import { cancelMyOrder, getMyOrders, requestMyOrderReturn } from '../services/orderApi'
+import { cancelMyOrder, getMyOrders, requestMyOrderReturn, createOrder } from '../services/orderApi'
 import { useToast } from '../context/ToastContext'
 import { printOrderInvoice } from '../utils/invoice'
 import { updateMyProfile } from '../services/userProfileApi'
@@ -249,7 +249,7 @@ const TAB_ID_TO_SLUG = {
 export function AccountPage() {
   const { user, authLoading, logout, updateUser, addresses, addAddress, deleteAddress, updateAddress, setAsDefaultAddress, verifyOtp, resendOtp } = useAuth()
   const { paymentHistory, savedMethods, addSavedMethod, deleteSavedMethod } = usePayment()
-  const { wishlist } = useCart()
+  const { wishlist, addToCart } = useCart()
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -388,6 +388,41 @@ export function AccountPage() {
     }
   }
 
+  // Bug 136: Reorder — add all delivered-order items to cart and go to cart
+  const handleReorder = (order) => {
+    if (!order?.items?.length) return
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reorder Items',
+      message: `Add all ${order.items.length} item(s) from Order #${order.orderNumber} to your cart?`,
+      action: async () => {
+        setConfirmModal({ isOpen: false, action: null, message: '', title: '' })
+        try {
+          let addedCount = 0
+          for (const item of order.items) {
+            const cartProduct = {
+              id: item.id || item.product,
+              slug: item.productSlug || item.slug || item.id || item.product,
+              title: item.title || item.name || '',
+              name: item.title || item.name || '',
+              price: item.price,
+              img: item.img || '',
+              stock: 9999, // default to unlimited/large stock for reorder check
+            }
+            const successAdd = addToCart(cartProduct, item.qty || 1)
+            if (successAdd) addedCount++
+          }
+          if (addedCount > 0) {
+            success(`Added ${addedCount} item(s) to cart. Redirecting...`)
+            navigate('/cart')
+          }
+        } catch (err) {
+          showError('Could not add items to cart')
+        }
+      }
+    })
+  }
+
   // Corporate Info based on Image
   const corporateInfo = {
     name: "TOYOVO INDIA (OPC) PRIVATE LIMITED",
@@ -423,8 +458,8 @@ export function AccountPage() {
     if (!user) return
 
     let isMounted = true
-    const loadOrders = async () => {
-      setOrdersLoading(true)
+    const loadOrders = async (showLoading = true) => {
+      if (showLoading) setOrdersLoading(true)
       try {
         const { orders: data } = await getMyOrders({ limit: 50 })
         if (isMounted) {
@@ -443,9 +478,14 @@ export function AccountPage() {
       }
     }
 
-    loadOrders()
+    loadOrders(true)
+
+    // Periodically sync orders every 10 seconds to reflect status updates (like Delivered) immediately
+    const interval = setInterval(() => loadOrders(false), 10000)
+
     return () => {
       isMounted = false
+      clearInterval(interval)
     }
   }, [user, orderId])
 
@@ -536,7 +576,22 @@ export function AccountPage() {
                       {selectedOrder.items.map((item, i) => (
                         <div key={i} className="flex gap-3 sm:gap-4 p-3 bg-white/50 rounded-2xl border border-black/[0.03]">
                            <img src={item.img} className="w-14 h-14 rounded-xl object-cover shadow-sm shrink-0" />
-                           <div className="min-w-0"><h4 className="text-[12px] font-bold line-clamp-2 break-words">{item.title}</h4><p className="text-[10px] text-gray-400 mt-1">₹{item.price.toFixed(2)} · Qty {item.qty}</p></div>
+                           <div className="min-w-0 flex-1 flex flex-col justify-between">
+                             <div>
+                               <h4 className="text-[12px] font-bold line-clamp-2 break-words">{item.title}</h4>
+                               <p className="text-[10px] text-gray-400 mt-1 font-semibold">₹{item.price.toFixed(2)} · Qty {item.qty}</p>
+                             </div>
+                             {selectedOrder.status === 'delivered' && (
+                               <Link
+                                 to={`/product/${item.productSlug || item.id}?tab=reviews`}
+                                 onClick={() => setSelectedOrder(null)}
+                                 className="mt-2 w-max inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 text-yellow-600 border border-yellow-200 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-[#6651A4] hover:text-white hover:border-[#6651A4] transition-all duration-300"
+                               >
+                                 <Star size={10} className="fill-yellow-400 text-yellow-400 mr-1" />
+                                 Rate &amp; Review
+                               </Link>
+                             )}
+                           </div>
                         </div>
                       ))}
                    </div>
@@ -611,6 +666,14 @@ export function AccountPage() {
                        Cancel Order
                      </button>
                    )}
+                   {(selectedOrder.status === 'delivered' || selectedOrder.status === 'cancelled') && (
+                      <button
+                        onClick={() => handleReorder(selectedOrder)}
+                        className="w-full h-12 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-[0.18em] text-[10px] hover:bg-[#333] transition-all flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw size={14} /> Reorder Items
+                      </button>
+                    )}
                    <button
                      onClick={() => printOrderInvoice(selectedOrder)}
                      className="w-full h-12 bg-[#333] text-white rounded-2xl font-bold uppercase tracking-[0.18em] text-[10px] hover:bg-[#6651A4] transition-all"

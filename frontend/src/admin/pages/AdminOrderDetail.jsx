@@ -168,8 +168,18 @@ export function AdminOrderDetail() {
                 {order.statusLabel}
               </span>
             </h1>
-            <p className="text-gray-500 font-medium text-[12px] md:text-sm flex items-center gap-2 mt-1">
+            <p className="text-gray-500 font-medium text-[12px] md:text-sm flex flex-wrap items-center gap-2 mt-1">
               <Calendar size={14} /> Placed on {order.date}
+              {(order.estimatedDeliveryDate || order.deliveryDate) && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-[#F1641E] font-bold">
+                    ETA: {order.estimatedDeliveryDate 
+                      ? new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN', { dateStyle: 'medium' }) 
+                      : order.deliveryDate}
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -222,7 +232,11 @@ export function AdminOrderDetail() {
               </div>
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Expected Delivery</span>
-                <span className="font-bold text-gray-800">{order.deliveryDate || '-'}</span>
+                <span className="font-bold text-gray-800">
+                  {order.estimatedDeliveryDate 
+                    ? new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN', { dateStyle: 'medium' }) 
+                    : order.deliveryDate || '-'}
+                </span>
               </div>
               {order.discount > 0 && (
                 <div className="flex justify-between text-sm text-[#E84949]">

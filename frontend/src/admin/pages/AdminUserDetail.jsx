@@ -189,7 +189,6 @@ export function AdminUserDetail() {
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim()
   const savedAddresses = user.addresses || []
   const recentOrders = user.recentOrders || []
-  const paymentHistory = user.paymentHistory || []
 
   return (
     <div className="shell space-y-6 pb-10">
@@ -436,28 +435,6 @@ export function AdminUserDetail() {
                         <p className="text-[12px] font-bold text-gray-700">{order.orderNumber}</p>
                         <p className="text-[11px] text-gray-500">Rs {Number(order.total || 0).toFixed(2)}</p>
                         <p className="text-[10px] text-gray-400 uppercase">{order.status}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white rounded-[32px] p-8 shadow-sm border border-black/[0.03] md:col-span-2">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-grandstander font-bold text-gray-800">Funds History</h3>
-                <RefreshCcw size={18} className="text-gray-300" />
-              </div>
-              <div className="p-6 rounded-2xl border border-dashed border-black/[0.05] bg-[#FDF4E6]/30 text-center">
-                {paymentHistory.length === 0 ? (
-                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">No payment history</p>
-                ) : (
-                  <div className="space-y-3 text-left">
-                    {paymentHistory.slice(0, 5).map((entry) => (
-                      <div key={entry.id} className="rounded-xl bg-white/70 p-3">
-                        <p className="text-[12px] font-bold text-gray-700">{entry.method}</p>
-                        <p className="text-[11px] text-gray-500">Rs {Number(entry.amount || 0).toFixed(2)}</p>
-                        <p className="text-[10px] text-gray-400 uppercase">{entry.date}</p>
                       </div>
                     ))}
                   </div>

@@ -14,7 +14,12 @@ router.get('/admin', asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit || 30);
   const unreadOnly = req.query.unreadOnly === 'true';
 
-  const { items, total, unread } = await getAdminNotifications({ page, limit, unreadOnly });
+  const { items, total, unread } = await getAdminNotifications({ 
+    adminUserId: req.user._id, 
+    page, 
+    limit, 
+    unreadOnly 
+  });
 
   return successResponse(res, 200, 'Admin notifications fetched', items, {
     page, limit, total,
@@ -25,13 +30,13 @@ router.get('/admin', asyncHandler(async (req, res) => {
 
 // GET /api/notifications/admin/unread-count — badge count
 router.get('/admin/unread-count', asyncHandler(async (req, res) => {
-  const { unread } = await getAdminNotifications({ limit: 1 });
+  const { unread } = await getAdminNotifications({ adminUserId: req.user._id, limit: 1 });
   return successResponse(res, 200, 'Unread count', { unread });
 }));
 
 // PATCH /api/notifications/admin/mark-read — mark all or selected as read
 router.patch('/admin/mark-read', asyncHandler(async (req, res) => {
-  await markAdminNotificationsRead(req.body.ids);
+  await markAdminNotificationsRead(req.user._id, req.body.ids);
   return successResponse(res, 200, 'Notifications marked as read');
 }));
 

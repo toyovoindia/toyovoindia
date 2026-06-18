@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Search, Filter, MoreVertical, ShoppingBag, Eye, Calendar, MapPin, CreditCard, ChevronLeft, ChevronRight, Printer } from 'lucide-react'
+import { Search, Filter, MoreVertical, ShoppingBag, Eye, Calendar, MapPin, CreditCard, ChevronLeft, ChevronRight, Printer, XCircle } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { getAdminOrders, updateAdminOrderStatus } from '../../services/orderApi'
 import { printOrderInvoice } from '../../utils/invoice'
@@ -74,6 +74,17 @@ export function AdminOrders() {
   useEffect(() => {
     setCurrentPage(1)
   }, [search, statusFilter])
+
+  const handleCancelOrder = async (order) => {
+    try {
+      const updatedOrder = await updateAdminOrderStatus(order.id, { status: 'cancelled' })
+      setOrders((prev) => prev.map((item) => item.id === order.id ? { ...item, ...updatedOrder } : item))
+      success(`Order ${order.orderNumber} has been cancelled.`);
+      setMenuOpenOrderId(null);
+    } catch (err) {
+      showError(err.message || 'Failed to cancel order')
+    }
+  }
 
   const totalPages = meta.totalPages || 1
 
@@ -160,11 +171,14 @@ export function AdminOrders() {
                   <motion.tr 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
                     key={order.id} 
-                    onClick={() => navigate(`/admin/orders/${order.id}`)}
-                    className="border-b border-gray-50 last:border-0 hover:bg-[#FDF4E6]/50 transition-colors group cursor-pointer"
+                    className="border-b border-gray-50 last:border-0 hover:bg-[#FDF4E6]/50 transition-colors group"
                   >
                     <td className="py-4 px-6">
-                      <p className="text-[14px] font-bold text-[#6651A4] font-mono" title={order.orderNumber}>
+                      <p 
+                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                        className="text-[14px] font-bold text-[#6651A4] font-mono cursor-pointer hover:underline" 
+                        title={order.orderNumber}
+                      >
                         #{order.orderNumber ? order.orderNumber.replace(/-\d{8}-/, '-') : ''}
                       </p>
                       <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1 mt-1"><Calendar size={10}/> {order.date}</p>
@@ -188,6 +202,7 @@ export function AdminOrders() {
                       <select 
                         value={order.status}
                         onChange={async (e) => {
+                          e.stopPropagation();
                           const newStatus = e.target.value;
                           try {
                             const updatedOrder = await updateAdminOrderStatus(order.id, { status: newStatus })
@@ -246,12 +261,6 @@ export function AdminOrders() {
                             onClick={(event) => event.stopPropagation()}
                           >
                             <button
-                              onClick={() => navigate(`/admin/orders/${order.id}`)}
-                              className="w-full px-5 py-3 text-left text-[12px] font-bold text-gray-600 hover:bg-[#FDF4E6]/50 hover:text-[#6651A4] flex items-center gap-3 transition-colors"
-                            >
-                              <Eye size={14} className="text-[#6651A4]" /> View Details
-                            </button>
-                            <button
                               onClick={() => {
                                 setMenuOpenOrderId(null);
                                 printOrderInvoice(order);
@@ -260,6 +269,14 @@ export function AdminOrders() {
                             >
                               <Printer size={14} className="text-gray-500" /> Print Invoice
                             </button>
+                            {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                              <button
+                                onClick={() => handleCancelOrder(order)}
+                                className="w-full px-5 py-3 text-left text-[12px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                              >
+                                <XCircle size={14} /> Cancel Order
+                              </button>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -285,7 +302,7 @@ export function AdminOrders() {
                 <ChevronLeft size={16} />
               </button>
               <button 
-                disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage === (meta.totalPages || 1)} onClick={() => setCurrentPage(prev => prev + 1)}
                 className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-[#6651A4] hover:text-white hover:border-[#6651A4] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:hover:border-gray-200 transition-all"
               >
                 <ChevronRight size={16} />

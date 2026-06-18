@@ -9,7 +9,7 @@ export function ToastProvider({ children }) {
 
   const addToast = useCallback((message, type = 'success') => {
     const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
+    setToasts([{ id, message, type }])
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
     }, 4000)
@@ -29,7 +29,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none">
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[999999] flex flex-col items-center gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map(t => (
             <ToastItem key={t.id} toast={t} onRemove={() => removeToast(t.id)} />
@@ -54,11 +54,11 @@ function ToastItem({ toast, onRemove }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50, scale: 0.8 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
+      initial={{ opacity: 0, y: -50, scale: 0.8 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
       layout
-      className={`pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-[24px] shadow-2xl ${color} ${textColor} min-w-[320px] max-w-md border border-white/10`}
+      className={`pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-[24px] shadow-2xl relative ${color} ${textColor} min-w-[320px] max-w-md border border-white/10`}
     >
       <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
         {icon}

@@ -106,3 +106,16 @@ export const adminDeleteCoupon = asyncHandler(async (req, res, next) => {
   }
   return successResponse(res, 200, 'Coupon deleted successfully');
 });
+
+export const listPublicCoupons = asyncHandler(async (req, res) => {
+  const coupons = await Coupon.find({ 
+    status: 'active',
+    $or: [
+      { expiresAt: { $exists: false } },
+      { expiresAt: null },
+      { expiresAt: { $gt: new Date() } }
+    ]
+  }).select('code title type value minOrderValue maxDiscountAmount description expiresAt');
+  
+  return successResponse(res, 200, 'Active coupons fetched successfully', coupons.map(mapCouponForApi));
+});

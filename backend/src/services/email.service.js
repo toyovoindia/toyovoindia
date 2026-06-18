@@ -150,6 +150,15 @@ const buildOrderStatusUpdateHtml = (order, options = {}, isAdmin = false) => {
     ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-style: italic; color: #555;">"${options.note}"</div>`
     : '';
 
+  const secretCode = order.orderNumber ? order.orderNumber.split('-').pop() : '';
+  const secretCodeLine = (!isAdmin && order.status === 'shipped' && secretCode)
+    ? `<div style="margin: 20px 0; padding: 15px; background: #FFF4E6; border: 1px dashed #F1641E; border-radius: 8px; text-align: center;">
+         <p style="margin: 0 0 5px; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;"><strong>Delivery Verification Code</strong></p>
+         <span style="font-size: 24px; font-weight: bold; color: #F1641E; letter-spacing: 2px;">${secretCode}</span>
+         <p style="margin: 5px 0 0; font-size: 11px; color: #888;">Share this secret code only with the delivery agent to receive your package.</p>
+       </div>`
+    : '';
+
   const content = `
     <h2 style="color: ${statusColor}; margin-top: 0;">Order Status: ${order.status.toUpperCase()}</h2>
     <p>Hello ${isAdmin ? 'Admin' : order.customer.firstName},</p>
@@ -163,6 +172,8 @@ const buildOrderStatusUpdateHtml = (order, options = {}, isAdmin = false) => {
       ${reasonLine}
       ${noteLine}
     </div>
+
+    ${secretCodeLine}
 
     <p style="font-size: 13px; color: #777;">Order Total: ${currency(order.totalAmount)}</p>
     ${!isAdmin ? `<div style="text-align: center;"><a href="${env.CLIENT_URL}/account/orders/${order._id}" class="btn">View Order Details</a></div>` : ''}

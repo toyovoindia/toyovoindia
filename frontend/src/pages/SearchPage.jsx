@@ -51,7 +51,7 @@ export function SearchPage() {
   }
 
   return (
-    <div className="bg-[#FDF4E6] min-h-screen py-24 font-roboto">
+    <div className="bg-[#FDF4E6] min-h-[60vh] py-24 font-roboto">
       <div className="shell">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] mb-8 tracking-tighter">

@@ -6,6 +6,7 @@ import {
   adminUpdateCouponStatus,
   validateCoupon,
   adminDeleteCoupon,
+  listPublicCoupons,
 } from '../controllers/coupon.controller.js';
 import { protect, authorizeRoles } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
@@ -20,6 +21,7 @@ import {
 const router = express.Router();
 const adminRouter = express.Router();
 
+router.get('/', listPublicCoupons);
 router.post('/validate', validate(validateCouponSchema), validateCoupon);
 
 adminRouter.use(protect, authorizeRoles('admin', 'super_admin'));

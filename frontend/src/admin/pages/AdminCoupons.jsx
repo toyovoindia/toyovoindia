@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, Plus, Search, TicketPercent, ToggleLeft, ToggleRight, X } from 'lucide-react'
-import { createAdminCoupon, getAdminCoupons, updateAdminCouponStatus, deleteAdminCoupon } from '../../services/couponApi'
+import { Calendar, Plus, Search, TicketPercent, ToggleLeft, ToggleRight, X, Edit2 } from 'lucide-react'
+import { createAdminCoupon, getAdminCoupons, updateAdminCouponStatus, deleteAdminCoupon, updateAdminCoupon } from '../../services/couponApi'
 import { getAdminCategories } from '../../services/adminCatalogApi'
 
 const emptyForm = {
@@ -13,7 +13,8 @@ const emptyForm = {
   minOrderValue: '',
   maxDiscountAmount: '',
   applicableCategories: [],
-  expiresAt: '',
+  expiryDate: '',
+  expiryTime: '',
 }
 
 const formatCouponValue = (coupon) => {
@@ -38,6 +39,7 @@ export function AdminCoupons() {
   const [createSuccessMsg, setCreateSuccessMsg] = useState('')
   const [updateSuccessId, setUpdateSuccessId] = useState('') // key: coupon.id
   const [updateErrorId, setUpdateErrorId] = useState('')     // key: coupon.id
+  const [editingCouponId, setEditingCouponId] = useState(null)
 
   const loadCoupons = async () => {
     setLoading(true)
@@ -93,7 +95,35 @@ export function AdminCoupons() {
 
   const resetForm = () => {
     setFormData(emptyForm)
+    setEditingCouponId(null)
     setShowForm(false)
+  }
+
+  const startEdit = (coupon) => {
+    let expiryDate = ''
+    let expiryTime = ''
+    if (coupon.expiresAt) {
+      const expDate = new Date(coupon.expiresAt)
+      expiryDate = expDate.toLocaleDateString('en-CA') // YYYY-MM-DD
+      expiryTime = expDate.toLocaleTimeString('it-IT').slice(0, 5) // HH:MM
+    }
+
+    setFormData({
+      code: coupon.code || '',
+      title: coupon.title || '',
+      description: coupon.description || '',
+      type: coupon.type || 'percentage',
+      scope: coupon.scope === 'shipping' ? 'shipping' : (coupon.scope || 'storewide'),
+      value: coupon.value !== undefined ? String(coupon.value) : '',
+      minOrderValue: coupon.minOrderValue !== undefined ? String(coupon.minOrderValue) : '',
+      maxDiscountAmount: coupon.maxDiscountAmount !== undefined ? String(coupon.maxDiscountAmount) : '',
+      applicableCategories: coupon.applicableCategories ? coupon.applicableCategories.map(c => c.id || c) : [],
+      expiryDate,
+      expiryTime,
+    })
+    setEditingCouponId(coupon.id)
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmit = async (event) => {
@@ -130,7 +160,8 @@ export function AdminCoupons() {
 
     setIsSaving(true)
     try {
-      const created = await createAdminCoupon({
+      const expiresAt = formData.expiryDate ? new Date(`${formData.expiryDate}T${formData.expiryTime || '00:00'}`).toISOString() : null
+      const couponPayload = {
         code: formData.code.trim(),
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -138,16 +169,26 @@ export function AdminCoupons() {
         scope: formData.scope === 'shipping' ? 'shipping' : formData.scope,
         value: val,
         minOrderValue: minOrderVal,
-        ...(formData.maxDiscountAmount !== '' && { maxDiscountAmount: Number(formData.maxDiscountAmount) }),
-        ...(formData.scope === 'category' && { applicableCategories: formData.applicableCategories }),
-        ...(formData.expiresAt && { expiresAt: new Date(formData.expiresAt).toISOString() }),
-      })
-      setCoupons((prev) => [created, ...prev])
-      setCreateSuccessMsg('Coupon created successfully!')
-      setTimeout(() => setCreateSuccessMsg(''), 4000)
-      resetForm()
+        maxDiscountAmount: formData.maxDiscountAmount !== '' ? Number(formData.maxDiscountAmount) : null,
+        applicableCategories: formData.scope === 'category' ? formData.applicableCategories : [],
+        expiresAt,
+      }
+
+      if (editingCouponId) {
+        const updated = await updateAdminCoupon(editingCouponId, couponPayload)
+        setCoupons((prev) => prev.map((item) => item.id === editingCouponId ? updated : item))
+        setCreateSuccessMsg('Coupon updated successfully!')
+        setTimeout(() => setCreateSuccessMsg(''), 4000)
+        resetForm()
+      } else {
+        const created = await createAdminCoupon(couponPayload)
+        setCoupons((prev) => [created, ...prev])
+        setCreateSuccessMsg('Coupon created successfully!')
+        setTimeout(() => setCreateSuccessMsg(''), 4000)
+        resetForm()
+      }
     } catch (err) {
-      setFormErrors({ general: err.message || 'Coupon creation failed' })
+      setFormErrors({ general: err.message || 'Coupon saving failed' })
     } finally {
       setIsSaving(false)
     }
@@ -246,24 +287,39 @@ export function AdminCoupons() {
               />
               {formErrors.maxDiscountAmount && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.maxDiscountAmount}</span>}
             </div>
-            <input type="datetime-local" value={formData.expiresAt} onChange={(event) => setFormData({ ...formData, expiresAt: event.target.value })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" />
-          </div>
+             <div className="flex gap-2 min-w-[260px] xl:col-span-1">
+               <input 
+                 type="date" 
+                 value={formData.expiryDate} 
+                 onChange={(event) => setFormData({ ...formData, expiryDate: event.target.value })} 
+                 className="flex-1 h-12 px-3 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
+                 title="Expiry Date"
+               />
+               <input 
+                 type="time" 
+                 value={formData.expiryTime} 
+                 onChange={(event) => setFormData({ ...formData, expiryTime: event.target.value })} 
+                 className="w-[100px] h-12 px-2 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
+                 title="Expiry Time"
+               />
+             </div>
+           </div>
 
-          {formData.scope === 'category' && (
-            <select multiple value={formData.applicableCategories} onChange={(event) => setFormData({ ...formData, applicableCategories: Array.from(event.target.selectedOptions, (option) => option.value) })} className="w-full min-h-[140px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]">
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          )}
+           {formData.scope === 'category' && (
+             <select multiple value={formData.applicableCategories} onChange={(event) => setFormData({ ...formData, applicableCategories: Array.from(event.target.selectedOptions, (option) => option.value) })} className="w-full min-h-[140px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]">
+               {categories.map((category) => (
+                 <option key={category.id} value={category.id}>{category.name}</option>
+               ))}
+             </select>
+           )}
 
-          <div className="flex items-center justify-end gap-3">
-            {createSuccessMsg && <span className="text-green-600 text-[11px] font-bold">{createSuccessMsg}</span>}
-            {formErrors.general && <span className="text-red-500 text-[11px] font-bold">{formErrors.general}</span>}
-            <button disabled={isSaving} className="h-11 px-6 bg-[#6651A4] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] md:text-[11px] shadow-lg hover:bg-[#5a4892] transition-all disabled:opacity-60">
-              {isSaving ? 'Saving...' : 'Create Coupon'}
-            </button>
-          </div>
+           <div className="flex items-center justify-end gap-3">
+             {createSuccessMsg && <span className="text-green-600 text-[11px] font-bold">{createSuccessMsg}</span>}
+             {formErrors.general && <span className="text-red-500 text-[11px] font-bold">{formErrors.general}</span>}
+             <button disabled={isSaving} className="h-11 px-6 bg-[#6651A4] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] md:text-[11px] shadow-lg hover:bg-[#5a4892] transition-all disabled:opacity-60">
+               {isSaving ? 'Saving...' : editingCouponId ? 'Save Changes' : 'Create Coupon'}
+             </button>
+           </div>
         </form>
       )}
 
@@ -298,34 +354,43 @@ export function AdminCoupons() {
                     {updateErrorId === coupon.id && <span className="text-red-500 text-[10px] font-bold">Failed</span>}
                   </div>
                 </div>
-                <select 
-                  value={coupon.status}
-                  onChange={async (e) => {
-                    const val = e.target.value;
-                    if (val === 'delete') {
-                      setDeleteConfirm({ show: true, id: coupon.id, title: coupon.code });
-                    } else {
-                      try {
-                        const updated = await updateAdminCouponStatus(coupon.id, val);
-                        setCoupons((prev) => prev.map((item) => item.id === coupon.id ? updated : item));
-                        setUpdateSuccessId(coupon.id);
-                        setTimeout(() => setUpdateSuccessId(''), 3000);
-                      } catch (err) {
-                        setUpdateErrorId(coupon.id);
-                        setTimeout(() => setUpdateErrorId(''), 3000);
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => startEdit(coupon)}
+                    className="h-9 w-9 rounded-lg bg-gray-50 border border-gray-200 hover:border-[#6651A4] hover:text-[#6651A4] text-gray-500 flex items-center justify-center transition-all"
+                    title="Edit Coupon"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                  <select 
+                    value={coupon.status}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      if (val === 'delete') {
+                        setDeleteConfirm({ show: true, id: coupon.id, title: coupon.code });
+                      } else {
+                        try {
+                          const updated = await updateAdminCouponStatus(coupon.id, val);
+                          setCoupons((prev) => prev.map((item) => item.id === coupon.id ? updated : item));
+                          setUpdateSuccessId(coupon.id);
+                          setTimeout(() => setUpdateSuccessId(''), 3000);
+                        } catch (err) {
+                          setUpdateErrorId(coupon.id);
+                          setTimeout(() => setUpdateErrorId(''), 3000);
+                        }
                       }
-                    }
-                  }}
-                  className={`h-9 px-3 text-[11px] font-black rounded-lg border outline-none cursor-pointer transition-all ${
-                    coupon.status === 'active' 
-                      ? 'bg-green-50 border-green-200 text-green-700 focus:border-green-400' 
-                      : 'bg-gray-50 border-gray-200 text-gray-700 focus:border-gray-400'
-                  }`}
-                >
-                  <option value="active" className="text-green-700 font-bold bg-white">Active</option>
-                  <option value="paused" className="text-gray-700 font-bold bg-white">Inactive</option>
-                  <option value="delete" className="text-red-600 font-bold bg-white">🗑 Delete</option>
-                </select>
+                    }}
+                    className={`h-9 px-3 text-[11px] font-black rounded-lg border outline-none cursor-pointer transition-all ${
+                      coupon.status === 'active' 
+                        ? 'bg-green-50 border-green-200 text-green-700 focus:border-green-400' 
+                        : 'bg-gray-50 border-gray-200 text-gray-700 focus:border-gray-400'
+                    }`}
+                  >
+                    <option value="active" className="text-green-700 font-bold bg-white">Active</option>
+                    <option value="paused" className="text-gray-700 font-bold bg-white">Inactive</option>
+                    <option value="delete" className="text-red-600 font-bold bg-white">🗑 Delete</option>
+                  </select>
+                </div>
               </div>
               <div className="mt-6">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{coupon.type} Discount</p>

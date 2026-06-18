@@ -284,11 +284,11 @@ export function VisionHeader() {
   return (
     <div 
       id="vision-header-root"
-      className="relative z-[1100]"
+      className="sticky top-[-25px] md:top-[-38px] lg:top-[-38px] z-[1100]"
     >
-      <div style={{ backgroundColor: siteConfig?.announcementBg || '#6651A4', width: '100%', padding: '7px 0' }} className="relative z-[1300]">
+      <div style={{ backgroundColor: siteConfig?.announcementBg || '#6651A4', width: '100%' }} className="relative z-[1300] h-[25px] md:h-[38px] flex items-center">
         {/* Desktop Utility Bar (1024px+) */}
-        <div className="ann-desk hdr-inner" style={{ gridTemplateColumns: '1fr 1.5fr 1fr', alignItems: 'center' }}>
+        <div className="ann-desk hdr-inner w-full h-full" style={{ gridTemplateColumns: '1fr 1.5fr 1fr', alignItems: 'center' }}>
           <div className="flex items-center gap-4">
             {socialItems.map((item) => (
               <a 
@@ -334,7 +334,7 @@ export function VisionHeader() {
         </div>
 
         {/* Tablet Utility Bar (768px - 1023px) */}
-        <div className="ann-tab hdr-inner flex items-center justify-between">
+        <div className="ann-tab hdr-inner w-full h-full flex items-center justify-between">
            <div className="flex-1"></div>
            <div className="flex items-center gap-4">
               <button onClick={prev} className="text-[#FDF3E7]/60 hover:text-white transition-colors"><ChevronLeft size={14} /></button>
@@ -365,7 +365,7 @@ export function VisionHeader() {
         </div>
 
         {/* Mobile Utility Bar (0 - 767px) */}
-        <div style={{ backgroundColor: siteConfig?.announcementBg || '#6651A4' }} className="ann-mob hdr-inner flex items-center justify-center h-[25px]">
+        <div className="ann-mob hdr-inner w-full h-full flex items-center justify-center">
             <button onClick={prev} className="w-10 h-full flex items-center justify-start text-[#FDF3E7]/70 hover:text-white transition-colors shrink-0">
               <ChevronLeft size={14} />
             </button>

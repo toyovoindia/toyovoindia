@@ -5,7 +5,7 @@ import { Minus, Plus, X, ShoppingBag, ArrowRight, Trash2, Trash } from 'lucide-r
 
 import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
-import { validateCouponCode } from '../services/couponApi'
+import { validateCouponCode, getActiveCoupons } from '../services/couponApi'
 import { useAuth } from '../context/AuthContext'
 
 const CHECKOUT_COUPON_STORAGE_KEY = 'TOYOVOINDIA_checkout_coupon'
@@ -26,8 +26,11 @@ export function CartPage() {
   const [giftMessage, setGiftMessage] = useState('')
   const [notesErrors, setNotesErrors] = useState({})
 
+  const [activeCoupons, setActiveCoupons] = useState([])
+
   useEffect(() => {
     window.scrollTo(0, 0)
+    getActiveCoupons().then(setActiveCoupons).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -345,6 +348,27 @@ export function CartPage() {
                  <button onClick={applyCoupon} disabled={isApplyingCoupon || !couponCode.trim()} className={`h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] w-full sm:w-auto transition-all ${isApplyingCoupon || !couponCode.trim() ? 'bg-[#E84949]/30 text-white cursor-not-allowed' : 'bg-[#E84949] text-white hover:bg-[#333] shadow-lg active:scale-95'}`}>{isApplyingCoupon ? 'Applying...' : 'Submit'}</button>
               </div>
               {couponError && <p className="text-[12px] font-bold text-[#E84949]">{couponError}</p>}
+              {activeCoupons.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Available Coupons (Click to apply):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeCoupons.map((c) => (
+                      <button
+                        key={c.id || c.code}
+                        onClick={() => setCouponCode(c.code)}
+                        className={`px-3 py-1.5 rounded-full border text-[11px] font-black transition-all ${
+                          couponCode === c.code
+                            ? 'bg-[#E84949] border-[#E84949] text-white shadow-sm'
+                            : 'bg-white border-black/10 text-[#333] hover:border-[#E84949] hover:text-[#E84949]'
+                        }`}
+                        title={c.title}
+                      >
+                        {c.code}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
            </div>
         </div>
       </div>

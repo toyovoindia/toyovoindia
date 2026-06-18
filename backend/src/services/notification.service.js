@@ -133,25 +133,30 @@ export const notifyOrderPlaced = (order) => {
 
 export const notifyOrderStatusChanged = (order, previousStatus) => {
   if (!order.user) return;
+
+  // Bug 113: Derive secret/delivery-verification code from order number (last segment after '-')
+  const secretCode = order.orderNumber ? order.orderNumber.split('-').pop() : '';
+
   const messages = {
     processing: { title: '📦 Order Processing', body: `Your order #${order.orderNumber} is being processed.` },
-    shipped:    { title: '🚚 Order Shipped!', body: `#${order.orderNumber} is on the way${order.trackingNumber ? `. Tracking: ${order.trackingNumber}` : ''}` },
+    shipped:    {
+      title: '🚚 Order Shipped!',
+      body: `#${order.orderNumber} is on the way${order.trackingNumber ? `. Tracking: ${order.trackingNumber}` : ''}. Your delivery code: ${secretCode} — share only with your delivery agent.`
+    },
     delivered:  { title: '🎉 Order Delivered!', body: `#${order.orderNumber} has been delivered. Enjoy!` },
     cancelled:  { title: '❌ Order Cancelled', body: `Your order #${order.orderNumber} has been cancelled.` },
   };
   const msg = messages[order.status];
   if (!msg) return;
 
-  if (order.user) {
-    sendNotificationToUser(order.user, {
-      ...msg,
-      category: 'Order',
-      orderNumber: order.orderNumber,
-      adminActionUrl: `/admin/orders/${order._id}`,
-      userActionUrl: '/account',
-      data: { type: `order_${order.status}`, id: order._id.toString(), orderNumber: order.orderNumber, previousStatus },
-    }).catch(() => {});
-  }
+  sendNotificationToUser(order.user, {
+    ...msg,
+    category: 'Order',
+    orderNumber: order.orderNumber,
+    adminActionUrl: `/admin/orders/${order._id}`,
+    userActionUrl: '/account',
+    data: { type: `order_${order.status}`, id: order._id.toString(), orderNumber: order.orderNumber, previousStatus },
+  }).catch(() => {});
 
   // Also notify admins
   return notifyAdmins({
@@ -384,10 +389,13 @@ export const notifyAdmins = async (payload) => {
 };
 
 /**
- * Get all notifications for admin (across all users)
+ * Get all notifications for admin (filtered by their adminUserId)
  */
-export const getAdminNotifications = async ({ page = 1, limit = 30, unreadOnly = false } = {}) => {
-  const filter = unreadOnly ? { readByAdmin: false } : {};
+export const getAdminNotifications = async ({ adminUserId, page = 1, limit = 30, unreadOnly = false } = {}) => {
+  const filter = {};
+  if (adminUserId) filter.userId = adminUserId;
+  if (unreadOnly) filter.readByAdmin = false;
+
   const skip = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
@@ -399,13 +407,24 @@ export const getAdminNotifications = async ({ page = 1, limit = 30, unreadOnly =
     NotificationLog.countDocuments(filter),
   ]);
 
-  return { items, total, unread: await NotificationLog.countDocuments({ readByAdmin: false }) };
+  return { 
+    items, 
+    total, 
+    unread: await NotificationLog.countDocuments({ 
+      ...(adminUserId && { userId: adminUserId }), 
+      readByAdmin: false 
+    }) 
+  };
 };
 
-export const markAdminNotificationsRead = async (ids) => {
+export const markAdminNotificationsRead = async (adminUserId, ids) => {
+  const filter = {};
+  if (adminUserId) filter.userId = adminUserId;
+  
   if (ids?.length) {
-    await NotificationLog.updateMany({ _id: { $in: ids } }, { readByAdmin: true });
+    filter._id = { $in: ids };
   } else {
-    await NotificationLog.updateMany({ readByAdmin: false }, { readByAdmin: true });
+    filter.readByAdmin = false;
   }
+  await NotificationLog.updateMany(filter, { readByAdmin: true });
 };

@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +36,7 @@ const FAQItem = ({ question, answer, isOpen, onToggle }) => (
 export function ProductDetailPage() {
   const { title } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { addToCart, wishlist, toggleWishlist, compare, toggleCompare, cartItems } = useCart()
   const { success, error: showError } = useToast()
   const { user } = useAuth()
@@ -43,7 +44,17 @@ export function ProductDetailPage() {
   const [showBuyNowModal, setShowBuyNowModal] = useState(false)
   const [selectedImg, setSelectedImg] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  const [activeTab, setActiveTab] = useState('description')
+  
+  const queryParams = new URLSearchParams(location.search)
+  const [activeTab, setActiveTab] = useState(queryParams.get('tab') || 'description')
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get('tab')
+    if (tab) {
+      setActiveTab(tab)
+    }
+  }, [location.search])
+
   const [openFAQ, setOpenFAQ] = useState(null)
   const [showSticky, setShowSticky] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -87,6 +98,7 @@ export function ProductDetailPage() {
         const data = await getProductBySlug(title)
         if (!isMounted) return
         setProductState(data)
+        window.scrollTo(0, 0)
 
         const relatedPayload = await getProducts({
           category: data.category,
@@ -96,6 +108,9 @@ export function ProductDetailPage() {
         if (isMounted) {
           setRelatedProducts(relatedPayload.products.filter(item => item.id !== data.id))
         }
+        setTimeout(() => {
+          window.scrollTo(0, 0)
+        }, 50)
       } catch (err) {
         if (!isMounted) return
         setProductState(null)
@@ -147,17 +162,38 @@ export function ProductDetailPage() {
     oldPrice: 129.00,
     img: productImages[0] || 'https://images.unsplash.com/photo-1532330393533-443990a51d10?auto=format&fit=crop&q=80&w=800',
     sku: "Product-08",
-    category: "Toys"
+    category: "Toys",
+    stock: 15
   }
   const product = productState || fallbackProduct
+  const currentStock = typeof product.stock === 'number' ? product.stock : 15
   const galleryImages = productState?.images?.length
     ? productState.images.map(image => image.url).filter(Boolean)
     : [productState?.thumbnail?.url || product.img || productImages[0]]
 
+  const handleReviewsChange = (reviewsList) => {
+    if (!reviewsList) return
+    const approvedReviews = reviewsList.filter(r => r.status === 'approved')
+    const totalCount = approvedReviews.length
+    const avgRating = totalCount > 0 
+      ? (approvedReviews.reduce((acc, r) => acc + r.rating, 0) / totalCount).toFixed(1)
+      : 0
+
+    setProductState(prev => {
+      if (!prev) return prev
+      if (prev.reviewCount === totalCount && Number(prev.ratingAverage) === Number(avgRating)) return prev
+      return {
+        ...prev,
+        reviewCount: totalCount,
+        ratingAverage: Number(avgRating)
+      }
+    })
+  }
+
   const isWishlisted = wishlist.some(item => item.id === product.id)
 
   const handleAddToCart = () => {
-    const stockAvailable = typeof product.stock === 'number' ? product.stock : 9999
+    const stockAvailable = currentStock
     if (stockAvailable <= 0) {
       showError('This product is out of stock.')
       return
@@ -181,7 +217,7 @@ export function ProductDetailPage() {
   }
 
   const handleBuyNow = () => {
-    const stockAvailable = typeof product.stock === 'number' ? product.stock : 9999
+    const stockAvailable = currentStock
     if (stockAvailable <= 0) {
       showError('This product is out of stock.')
       return
@@ -282,7 +318,8 @@ export function ProductDetailPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setIsZoomed(false)}
           >
             <button onClick={() => setIsZoomed(false)} className="absolute top-6 left-6 text-white p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10 shadow-lg">
               <X size={24} />
@@ -340,7 +377,7 @@ export function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {product.stock <= 0 ? (
+                {currentStock <= 0 ? (
                   <button disabled className="h-10 px-6 bg-gray-400 text-white text-[12px] font-bold rounded-full cursor-not-allowed uppercase tracking-widest">OUT OF STOCK</button>
                 ) : (
                   <>
@@ -349,10 +386,10 @@ export function ProductDetailPage() {
                       <span className="w-6 text-center font-bold text-[13px] text-[#333]">{quantity}</span>
                       <button 
                         onClick={() => {
-                          if (quantity + 1 <= (product.stock ?? 9999)) {
+                          if (quantity + 1 <= currentStock) {
                             setQuantity(quantity + 1)
                           } else {
-                            showError(`Only ${product.stock} units left in stock.`)
+                            showError(`Only ${currentStock} units left in stock.`)
                           }
                         }} 
                         className="w-8 text-[#666] hover:text-[#E84949]"
@@ -385,10 +422,14 @@ export function ProductDetailPage() {
               <div className="hidden md:block absolute inset-0 overflow-y-auto [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full pr-3 pb-4">
                 <div className="grid grid-cols-2 gap-4">
                   {galleryImages.map((img, i) => (
-                    <div key={i} className="aspect-square rounded-2xl overflow-hidden bg-[#FDF4E6] relative group">
+                    <div 
+                      key={i} 
+                      onClick={() => { setSelectedImg(i); setIsZoomed(true); }}
+                      className="aspect-square rounded-2xl overflow-hidden bg-[#FDF4E6] relative group cursor-zoom-in"
+                    >
                       <img src={img} alt="" className="w-full h-full object-cover" />
                       <button 
-                        onClick={() => { setSelectedImg(i); setIsZoomed(true); }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedImg(i); setIsZoomed(true); }}
                         className="absolute top-4 left-4 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <ZoomIn size={14} className="text-[#333]" />
@@ -410,9 +451,13 @@ export function ProductDetailPage() {
                   style={{ scrollBehavior: 'smooth' }}
                 >
                   {galleryImages.map((img, i) => (
-                    <div key={i} className="w-full shrink-0 snap-center relative aspect-square rounded-2xl overflow-hidden bg-[#FDF4E6]">
+                    <div 
+                      key={i} 
+                      onClick={() => { setSelectedImg(i); setIsZoomed(true); }}
+                      className="w-full shrink-0 snap-center relative aspect-square rounded-2xl overflow-hidden bg-[#FDF4E6] cursor-zoom-in"
+                    >
                        <img src={img} alt="" className="w-full h-full object-cover" />
-                       <button onClick={() => setIsZoomed(true)} className="absolute top-4 left-4 w-8 h-8  rounded-full flex items-center justify-center shadow-sm">
+                       <button onClick={(e) => { e.stopPropagation(); setIsZoomed(true); }} className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center shadow-sm">
                           <ZoomIn size={14} className="text-[#333]" />
                        </button>
                     </div>
@@ -471,9 +516,13 @@ export function ProductDetailPage() {
                   <p className="text-[10px] md:text-[11px] font-black tracking-[0.2em] text-[#666] uppercase">{product.category || 'Toys'}</p>
                   <span className="w-1 h-1 rounded-full bg-gray-300" />
                   <p className={`text-[10px] md:text-[11px] font-black tracking-[0.2em] uppercase ${
-                    (product.stock ?? 1) <= 0 ? 'text-red-600' : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? 'text-yellow-600' : 'text-[#E84949]'
+                    currentStock <= 0 ? 'text-red-600' : currentStock <= (product.lowStockThreshold || 10) ? 'text-yellow-600' : 'text-green-600'
                   }`}>
-                    {(product.stock ?? 1) <= 0 ? 'Out of Stock' : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? 'Low Stock' : 'In Stock'}
+                    {currentStock <= 0 
+                      ? 'Out of Stock' 
+                      : currentStock <= (product.lowStockThreshold || 10) 
+                        ? `Low Stock (${currentStock} left)` 
+                        : `In Stock (${currentStock} available)`}
                   </p>
                 </div>
                 
@@ -638,27 +687,27 @@ export function ProductDetailPage() {
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest">
-                    {(product.stock ?? 1) <= 0 ? (
+                    {currentStock <= 0 ? (
                       <div className="flex items-center gap-2 text-red-600">
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                         <span>Out of stock!</span>
                       </div>
-                    ) : (product.stock ?? 99) <= (product.lowStockThreshold || 10) ? (
+                    ) : currentStock <= (product.lowStockThreshold || 10) ? (
                       <div className="flex items-center gap-2 text-yellow-600">
                         <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                        <span>Only {product.stock} left in stock!</span>
+                        <span>Only {currentStock} left in stock!</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-green-600">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span>{product.stock} units left in stock!</span>
+                        <span>{currentStock} units left in stock!</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-4 pt-4">
-                  {(product.stock ?? 1) <= 0 ? (
+                  {currentStock <= 0 ? (
                     <button
                       disabled
                       className="w-full h-12 bg-gray-400 text-white rounded font-bold text-[12px] tracking-widest uppercase cursor-not-allowed"
@@ -674,10 +723,10 @@ export function ProductDetailPage() {
                           <span className="font-bold text-[14px] text-[#333]">{quantity}</span>
                           <button 
                             onClick={() => {
-                              if (quantity + 1 <= (product.stock ?? 9999)) {
+                              if (quantity + 1 <= currentStock) {
                                 setQuantity(quantity + 1)
                               } else {
-                                showError(`Only ${product.stock} units left in stock.`)
+                                showError(`Only ${currentStock} units left in stock.`)
                               }
                             }} 
                             className="text-[#666] hover:text-[#E84949] transition-colors"
@@ -722,7 +771,7 @@ export function ProductDetailPage() {
       {/* Tabs Section */}
       <div id="tabs-section" className="py-12 md:py-16 shell">
         <div className="flex overflow-x-auto w-full border border-[#E5E5E5] rounded-t-lg bg-[#FDF4E6] [&::-webkit-scrollbar]:h-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-          {['Description', 'Additional', 'Reviews', 'Variant', 'Custom'].map((t) => (
+          {['Description', 'Specifications', 'Reviews', 'Additional'].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t.toLowerCase())}
@@ -733,9 +782,8 @@ export function ProductDetailPage() {
               }`}
             >
               {t === 'Description' ? 'Product Description' : 
-               t === 'Additional' ? 'Additional Information' : 
-               t === 'Reviews' ? 'Customer Reviews' :
-               t === 'Variant' ? 'Variant Information' : 'Custom Field'}
+               t === 'Specifications' ? 'Advanced Details' : 
+               t === 'Reviews' ? 'Customer Reviews' : 'Additional Information'}
             </button>
           ))}
         </div>
@@ -786,23 +834,29 @@ export function ProductDetailPage() {
                 </div>
               }
 
-              {activeTab === 'variant' &&
-                <div className="space-y-6">
-                  <span className='whitespace-pre-line'>
-                    <p>Variant details and specific configuration options for this item.</p>
-                    <p>Variant details and specific configuration options for this item.</p>
-                  </span>
+              {activeTab === 'specifications' && (
+                <div className="space-y-6 max-w-2xl">
+                  <h4 className="text-[18px] font-black text-[#333] uppercase tracking-tight mb-4">Product Specifications</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Brand', value: product.brand || 'TOYOVOINDIA' },
+                      { label: 'SKU', value: product.sku || (product._id || product.id || '').slice(-6).toUpperCase() },
+                      { label: 'Age Group', value: product.ageGroup || '3 Years +' },
+                      { label: 'Gender Focus', value: product.gender || 'Unisex' },
+                      { label: 'Material', value: product.material || 'Child-Safe Non-Toxic Material' },
+                      { label: 'Weight', value: product.weight ? `${product.weight}g` : 'Lightweight' },
+                      { label: 'Dimensions', value: product.dimensions?.length ? `${product.dimensions.length} x ${product.dimensions.width} x ${product.dimensions.height} ${product.dimensions.unit || 'cm'}` : 'Compact Play Size' }
+                    ].map((spec, i) => (
+                      <div key={i} className="flex justify-between py-3 px-4 bg-white rounded-xl border border-dashed border-[#FAEAD3] text-[13px]">
+                        <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">{spec.label}</span>
+                        <span className="font-bold text-gray-800">{spec.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              }
-              {activeTab === 'custom' &&
-                <div className="space-y-6">
-                  <span className='whitespace-pre-line'>
-                    <p>Custom Field Information</p>
-                  </span>
-                </div>
-              }
+              )}
               {activeTab === 'reviews' && productState?._id && (
-                <ReviewSection productId={productState._id} productName={product.title || product.name} />
+                <ReviewSection productId={productState._id} productName={product.title || product.name} onReviewsChange={handleReviewsChange} />
               )}
             </motion.div>
           </AnimatePresence>

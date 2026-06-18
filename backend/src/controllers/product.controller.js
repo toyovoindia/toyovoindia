@@ -193,8 +193,15 @@ export const getProductBrands = asyncHandler(async (req, res) => {
 });
 
 export const getProductBySlug = asyncHandler(async (req, res, next) => {
+  const query = { status: 'active' };
+  if (req.params.slug && req.params.slug.match(/^[0-9a-fA-F]{24}$/)) {
+    query.$or = [{ slug: req.params.slug }, { _id: req.params.slug }];
+  } else {
+    query.slug = req.params.slug;
+  }
+
   const product = await Product.findOneAndUpdate(
-    { slug: req.params.slug, status: 'active' },
+    query,
     { $inc: { views: 1 } },
     { new: true, runValidators: true }
   )

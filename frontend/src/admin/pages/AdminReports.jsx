@@ -8,6 +8,19 @@ import { useToast } from '../../context/ToastContext'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
+const formatDateStamp = (dateString) => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return 'N/A'
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
+}
+
 export function AdminReports() {
   const toast = useToast()
   const [reportType, setReportType] = useState('sales')
@@ -110,7 +123,7 @@ export function AdminReports() {
           Items: o.items?.length || 0,
           Status: o.status,
           Payment: o.paymentStatus,
-          Date: new Date(o.createdAt).toLocaleDateString()
+          Date: formatDateStamp(o.createdAt)
         }))
         fileName = 'Sales_Revenue_Report'
       } else if (reportType === 'inventory') {
@@ -133,7 +146,7 @@ export function AdminReports() {
           Email: u.email,
           Role: u.role,
           Status: u.isActive ? 'Active' : 'Inactive',
-          Joined: new Date(u.createdAt).toLocaleDateString()
+          Joined: formatDateStamp(u.createdAt)
         }))
         fileName = 'Explorer_Growth_Report'
       }

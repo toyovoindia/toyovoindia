@@ -51,3 +51,16 @@ export const deleteAdminCoupon = async (id) => {
   })
   return payload
 }
+
+export const updateAdminCoupon = async (id, data) => {
+  const payload = await apiRequest(`/admin/coupons/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+  return normalizeCoupon(payload.data)
+}
+
+export const getActiveCoupons = async () => {
+  const payload = await apiRequest('/coupons')
+  return (payload.data || []).map(normalizeCoupon)
+}

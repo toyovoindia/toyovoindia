@@ -5,7 +5,7 @@ import { ShoppingBag, ChevronRight, ShoppingCart, Check, ChevronDown, ChevronUp,
 import { useCart } from '../context/CartContext'
 import { usePayment } from '../context/PaymentContext'
 import { useAuth } from '../context/AuthContext'
-import { validateCouponCode } from '../services/couponApi'
+import { validateCouponCode, getActiveCoupons } from '../services/couponApi'
 import { createRazorpayPaymentOrder, verifyRazorpayPayment } from '../services/orderApi'
 import { getShippingMethods } from '../services/shippingApi'
 import { getStorefrontSettings } from '../services/siteApi'
@@ -124,7 +124,8 @@ const CouponSection = ({
   couponError, 
   isDiscountApplied, 
   couponState,
-  compact = false 
+  compact = false,
+  activeCoupons = []
 }) => (
   <div className={compact ? 'mt-5 pt-5 border-t border-gray-100' : 'mt-10'}>
     <div className="flex gap-3">
@@ -148,6 +149,29 @@ const CouponSection = ({
     </div>
     {couponError && <p className="mt-3 text-[11px] font-bold text-[#E84949] flex items-center gap-1"><AlertCircle size={12}/> {couponError}</p>}
     {isDiscountApplied && <p className="mt-3 text-[11px] font-bold text-green-600 flex items-center gap-1"><Check size={12}/> {couponState?.coupon?.code} applied successfully.</p>}
+
+    {activeCoupons.length > 0 && (
+      <div className="mt-3">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Available Coupons (Click to apply):</p>
+        <div className="flex flex-wrap gap-1.5">
+          {activeCoupons.map((c) => (
+            <button
+              key={c.id || c.code}
+              type="button"
+              onClick={() => setDiscountCode(c.code)}
+              className={`px-2.5 py-1 rounded-full border text-[10px] font-black transition-all ${
+                discountCode === c.code
+                  ? 'bg-[#E84949] border-[#E84949] text-white shadow-sm'
+                  : 'bg-white border-gray-200 text-[#333] hover:border-[#E84949] hover:text-[#E84949]'
+              }`}
+              title={c.title}
+            >
+              {c.code}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
   </div>
 )
 
@@ -189,6 +213,7 @@ export function CheckoutPage() {
   const [checkoutNotes, setCheckoutNotes] = useState({ orderMessage: '', giftWrap: false, giftMessage: '' })
   const [isHydrated, setIsHydrated] = useState(false)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(999)
+  const [activeCoupons, setActiveCoupons] = useState([])
 
   useEffect(() => {
     getStorefrontSettings()
@@ -197,6 +222,10 @@ export function CheckoutPage() {
           setFreeShippingThreshold(data.freeShippingThreshold)
         }
       })
+      .catch(console.error)
+    
+    getActiveCoupons()
+      .then(setActiveCoupons)
       .catch(console.error)
   }, [])
   // Ref to skip the coupon-reset effect on the very first render
@@ -897,6 +926,7 @@ export function CheckoutPage() {
                                   isDiscountApplied={isDiscountApplied}
                                   couponState={couponState}
                                   compact
+                                  activeCoupons={activeCoupons}
                                />
 
                                <div className="pt-6 border-t border-gray-200 space-y-3 text-[14px]">
@@ -956,6 +986,7 @@ export function CheckoutPage() {
             couponError={couponError}
             isDiscountApplied={isDiscountApplied}
             couponState={couponState}
+            activeCoupons={activeCoupons}
           />
 
           <div className="mt-10 pt-10 border-t border-gray-200 space-y-4 text-[14px]">
