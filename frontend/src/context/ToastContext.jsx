@@ -42,46 +42,141 @@ export function ToastProvider({ children }) {
 
 export const useToast = () => useContext(ToastContext)
 
-function ToastItem({ toast, onRemove }) {
-  const configs = {
-    success: { icon: <CheckCircle2 size={18} />, color: 'bg-[#6651A4]', textColor: 'text-white' },
-    error: { icon: <AlertCircle size={18} />, color: 'bg-[#E8312A]', textColor: 'text-white' },
-    info: { icon: <Info size={18} />, color: 'bg-[#F1641E]', textColor: 'text-white' },
-    warning: { icon: <Bell size={18} />, color: 'bg-yellow-500', textColor: 'text-white' }
+// Smart title detection based on message context
+const getSmartTitle = (message, type) => {
+  const msg = message.toLowerCase()
+
+  if (type === 'error') {
+    if (msg.includes('report')) return 'Report Failed'
+    if (msg.includes('login') || msg.includes('password') || msg.includes('credentials')) return 'Login Failed'
+    if (msg.includes('coupon') || msg.includes('code')) return 'Coupon Invalid'
+    if (msg.includes('order')) return 'Order Error'
+    if (msg.includes('upload') || msg.includes('image')) return 'Upload Failed'
+    return 'Something Went Wrong'
   }
 
-  const { icon, color, textColor } = configs[toast.type]
+  if (type === 'warning') {
+    if (msg.includes('stock') || msg.includes('inventory')) return 'Low Stock'
+    return 'Attention Needed'
+  }
+
+  if (type === 'info') return 'Info'
+
+  // Success type — context-aware titles
+  if (msg.includes('added to cart')) return 'Added to Cart'
+  if (msg.includes('removed from cart')) return 'Cart Updated'
+  if (msg.includes('added to wishlist')) return 'Added to Wishlist'
+  if (msg.includes('removed from wishlist')) return 'Wishlist Updated'
+  if (msg.includes('added to comparison') || msg.includes('added to compare')) return 'Added to Compare'
+  if (msg.includes('removed from comparison') || msg.includes('removed from compare')) return 'Compare Updated'
+  if (msg.includes('comparison cleared')) return 'Compare Cleared'
+  if (msg.includes('coupon') || msg.includes('applied successfully')) return 'Coupon Applied'
+  if (msg.includes('checkout') || msg.includes('proceeding')) return 'Checkout'
+  if (msg.includes('order') && msg.includes('cancel')) return 'Order Cancelled'
+  if (msg.includes('return request')) return 'Return Requested'
+  if (msg.includes('order')) return 'Order Updated'
+  if (msg.includes('review submitted') || msg.includes('review updated')) return 'Review Saved'
+  if (msg.includes('review deleted')) return 'Review Removed'
+  if (msg.includes('review')) return 'Review Updated'
+  if (msg.includes('subscrib') || msg.includes('discount code')) return 'Subscribed!'
+  if (msg.includes('profile') && msg.includes('updated')) return 'Profile Updated'
+  if (msg.includes('verified') || msg.includes('verification')) return 'Verified'
+  if (msg.includes('otp') && msg.includes('sent')) return 'OTP Sent'
+  if (msg.includes('copied')) return 'Copied!'
+  if (msg.includes('gift wrap')) return 'Gift Wrap Saved'
+  if (msg.includes('order message')) return 'Note Saved'
+  if (msg.includes('report') || msg.includes('downloaded')) return 'Report Ready'
+  if (msg.includes('archived')) return 'Archived'
+  if (msg.includes('deleted') || msg.includes('permanently')) return 'Deleted'
+  if (msg.includes('launched') || msg.includes('created')) return 'Created!'
+  if (msg.includes('updated') || msg.includes('saved')) return 'Saved!'
+  if (msg.includes('uploaded') || msg.includes('snapshot')) return 'Uploaded!'
+  if (msg.includes('removed') || msg.includes('cleared')) return 'Removed'
+  if (msg.includes('logged out') || msg.includes('logout')) return 'Logged Out'
+  if (msg.includes('synchronized') || msg.includes('ledger')) return 'Synced'
+  return 'Success'
+}
+
+function ToastItem({ toast, onRemove }) {
+  const smartTitle = getSmartTitle(toast.message, toast.type)
+
+  const premiumConfigs = {
+    success: {
+      title: smartTitle,
+      icon: <CheckCircle2 size={15} strokeWidth={2.5} />,
+      borderColor: 'border-[#10B981]/25',
+      glowColor: 'bg-[#10B981]',
+      iconBg: 'bg-[#10B981]/10 text-[#10B981]',
+      progressBg: 'bg-[#10B981]/30'
+    },
+    error: {
+      title: smartTitle,
+      icon: <AlertCircle size={15} strokeWidth={2.5} />,
+      borderColor: 'border-[#F43F5E]/25',
+      glowColor: 'bg-[#F43F5E]',
+      iconBg: 'bg-[#F43F5E]/10 text-[#F43F5E]',
+      progressBg: 'bg-[#F43F5E]/30'
+    },
+    info: {
+      title: smartTitle,
+      icon: <Info size={15} strokeWidth={2.5} />,
+      borderColor: 'border-[#3B82F6]/25',
+      glowColor: 'bg-[#3B82F6]',
+      iconBg: 'bg-[#3B82F6]/10 text-[#3B82F6]',
+      progressBg: 'bg-[#3B82F6]/30'
+    },
+    warning: {
+      title: smartTitle,
+      icon: <Bell size={15} strokeWidth={2.5} />,
+      borderColor: 'border-[#F59E0B]/25',
+      glowColor: 'bg-[#F59E0B]',
+      iconBg: 'bg-[#F59E0B]/10 text-[#F59E0B]',
+      progressBg: 'bg-[#F59E0B]/30'
+    }
+  }
+
+  const currentConfig = premiumConfigs[toast.type] || premiumConfigs.success
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -50, scale: 0.8 }}
+      initial={{ opacity: 0, y: -20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
       layout
-      className={`pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-[24px] shadow-2xl relative ${color} ${textColor} min-w-[320px] max-w-md border border-white/10`}
+      className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#FFFBF6]/95 backdrop-blur-md border ${currentConfig.borderColor} shadow-[0_8px_30px_rgba(0,0,0,0.08)] min-w-[290px] max-w-sm relative overflow-hidden`}
     >
-      <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-        {icon}
+      {/* Glow indicator */}
+      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 ${currentConfig.glowColor} rounded-r-full`} />
+      
+      {/* Icon */}
+      <div className={`flex-shrink-0 w-8 h-8 ${currentConfig.iconBg} rounded-full flex items-center justify-center ml-1`}>
+        {currentConfig.icon}
       </div>
-      <div className="flex-1">
-        <p className="text-[13px] font-bold uppercase tracking-widest leading-tight">
-          {toast.type === 'success' ? 'Great!' : toast.type === 'error' ? 'Oops!' : 'Heads Up'}
+      
+      {/* Text Area */}
+      <div className="flex-1 min-w-0 pr-1 pl-1">
+        <p className="text-[12px] font-bold text-gray-800 tracking-tight leading-none">
+          {currentConfig.title}
         </p>
-        <p className="text-[14px] font-medium mt-1 opacity-90">{toast.message}</p>
+        <p className="text-[11px] text-gray-500 font-medium mt-1 truncate leading-snug">
+          {toast.message}
+        </p>
       </div>
+      
+      {/* Close Button */}
       <button 
         onClick={onRemove}
-        className="p-1 hover:bg-black/10 rounded-lg transition-colors opacity-60 hover:opacity-100"
+        className="p-1 hover:bg-black/5 rounded-lg transition-colors text-gray-400 hover:text-gray-600 flex-shrink-0"
       >
-        <X size={16} />
+        <X size={14} />
       </button>
-      
+
       {/* Progress Bar */}
       <motion.div 
         initial={{ width: '100%' }}
         animate={{ width: 0 }}
         transition={{ duration: 4, ease: 'linear' }}
-        className="absolute bottom-0 left-0 h-1 bg-white/30 rounded-b-full"
+        className={`absolute bottom-0 left-0 h-[2px] ${currentConfig.progressBg} rounded-b-full`}
       />
     </motion.div>
   )
