@@ -11,6 +11,7 @@ import { ShippingPolicy } from './pages/ShippingPolicy'
 import { TermsConditions } from './pages/TermsConditions'
 import { PrivacyPolicy } from './pages/PrivacyPolicy'
 import { FAQPage } from './pages/FAQPage'
+import { CancellationPolicy } from './pages/CancellationPolicy'
 import { WishlistPage } from './pages/WishlistPage'
 import { SearchPage } from './pages/SearchPage'
 import { CollectionPage } from './pages/CollectionPage'
@@ -249,6 +250,7 @@ function AppContent() {
             <Route path="/pages/terms-conditions" element={<TermsConditions />} />
             <Route path="/pages/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/pages/faq" element={<FAQPage />} />
+            <Route path="/pages/cancellation-policy" element={<CancellationPolicy />} />
             
             {/* Utility Pages */}
             <Route path="/wishlist" element={<WishlistPage />} />

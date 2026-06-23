@@ -163,6 +163,7 @@ export function Footer() {
               <ul className="flex flex-col gap-3">
                 {[
                   { name: 'Return & exchange', href: '/pages/return-exchange' },
+                  { name: 'Cancellation policy', href: '/pages/cancellation-policy' },
                   { name: 'Shipping policy', href: '/pages/shipping-policy' },
                   { name: 'Terms & condition', href: '/pages/terms-conditions' },
                   { name: 'Wishlist', href: '/wishlist' }

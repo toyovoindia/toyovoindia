@@ -4,7 +4,7 @@ import {
   FileText, Save, ChevronRight, 
   ShieldCheck, Truck, RotateCcw, Gavel, 
   Clock, AlertCircle, Search, Edit3,
-  Info, HelpCircle
+  Info, HelpCircle, XCircle
 } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { getAdminPages, updateAdminPage } from '../../services/pageApi'
@@ -16,6 +16,7 @@ const PAGE_METADATA = {
   'terms-conditions': { icon: Gavel, color: 'text-purple-500', bg: 'bg-purple-50' },
   'shipping-policy': { icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50' },
   'return-policy': { icon: RotateCcw, color: 'text-red-500', bg: 'bg-red-50' },
+  'cancellation-policy': { icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50' },
   'about-us': { icon: Info, color: 'text-green-500', bg: 'bg-green-50' },
   'faq': { icon: HelpCircle, color: 'text-teal-500', bg: 'bg-teal-50' },
 }
