@@ -37,6 +37,7 @@ const env = {
   PORT: process.env.PORT || 5000,
   MONGO_URI: process.env.MONGO_URI,
   CLIENT_URL: normalize(primaryClientUrl),
+  SERVER_URL: process.env.SERVER_URL ? normalize(process.env.SERVER_URL) : (isProduction ? normalize(primaryClientUrl) : `http://localhost:${process.env.PORT || 5000}`),
   ALLOWED_ORIGINS: [
     ...new Set([
       normalize(primaryClientUrl),
@@ -59,9 +60,10 @@ const env = {
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   COOKIE_SECURE: process.env.COOKIE_SECURE === 'true',
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
-  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+  PAYU_KEY: process.env.PAYU_KEY,
+  PAYU_SALT: process.env.PAYU_SALT,
+  PAYU_MID: process.env.PAYU_MID,
+  PAYU_BASE_URL: process.env.PAYU_BASE_URL || 'https://secure.payu.in',
   SMTP_HOST: process.env.SMTP_HOST,
   SMTP_PORT: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
   SMTP_USER: process.env.SMTP_USER || process.env.EMAIL_USER,

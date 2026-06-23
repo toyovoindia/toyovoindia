@@ -26,7 +26,7 @@ const paymentMethodMap = {
   upi: 'UPI',
   netbanking: 'Net Banking',
   cod: 'Cash on Delivery',
-  razorpay: 'Razorpay',
+  payu: 'PayU',
 }
 
 export const normalizeOrder = (order) => ({
@@ -80,20 +80,12 @@ export const createOrder = async (data) => {
   return normalizeOrder(payload.data)
 }
 
-export const createRazorpayPaymentOrder = async (data) => {
-  const payload = await apiRequest('/payments/razorpay/order', {
+export const createPayuPaymentOrder = async (data) => {
+  const payload = await apiRequest('/payments/payu/order', {
     method: 'POST',
     body: JSON.stringify(data),
   })
   return payload.data
-}
-
-export const verifyRazorpayPayment = async (data) => {
-  const payload = await apiRequest('/payments/razorpay/verify', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-  return normalizeOrder(payload.data)
 }
 
 export const getOrderSummary = async (orderNumber, email) => {

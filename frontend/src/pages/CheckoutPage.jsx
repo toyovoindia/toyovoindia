@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext'
 import { usePayment } from '../context/PaymentContext'
 import { useAuth } from '../context/AuthContext'
 import { validateCouponCode, getActiveCoupons } from '../services/couponApi'
-import { createRazorpayPaymentOrder, verifyRazorpayPayment } from '../services/orderApi'
+import { createPayuPaymentOrder } from '../services/orderApi'
 import { getShippingMethods } from '../services/shippingApi'
 import { getStorefrontSettings } from '../services/siteApi'
 
@@ -69,18 +69,34 @@ const FloatingSelect = ({ label, name, value, onChange, options, error }) => (
   </div>
 )
 
-const loadRazorpayScript = () => new Promise((resolve) => {
-  if (window.Razorpay) {
-    resolve(true)
-    return
-  }
+// Function to dynamically build and submit PayU form
+const submitPayuForm = (payuData) => {
+  const form = document.createElement('form');
+  form.setAttribute('method', 'POST');
+  form.setAttribute('action', `${payuData.payuBaseUrl}/_payment`);
 
-  const script = document.createElement('script')
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-  script.onload = () => resolve(true)
-  script.onerror = () => resolve(false)
-  document.body.appendChild(script)
-})
+  const addField = (name, value) => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'hidden');
+    input.setAttribute('name', name);
+    input.setAttribute('value', value);
+    form.appendChild(input);
+  };
+
+  addField('key', payuData.key);
+  addField('txnid', payuData.txnid);
+  addField('amount', payuData.amount);
+  addField('productinfo', payuData.productinfo);
+  addField('firstname', payuData.firstname);
+  addField('email', payuData.email);
+  addField('phone', payuData.phone);
+  addField('surl', payuData.surl);
+  addField('furl', payuData.furl);
+  addField('hash', payuData.hash);
+
+  document.body.appendChild(form);
+  form.submit();
+}
 
 const isMongoObjectId = (value) => {
   if (!value || typeof value !== 'string') return false;
@@ -582,14 +598,14 @@ export function CheckoutPage() {
       quantity: Math.max(1, parseInt(item.qty || item.quantity || 1, 10)),
     })),
     shippingMethod,
-    paymentMethod: 'razorpay',
+    paymentMethod: 'payu',
     couponCode: couponState?.coupon?.code || '',
     notes: [checkoutNotes.orderMessage, checkoutNotes.giftWrap ? `Gift wrap requested.${checkoutNotes.giftMessage ? ` Gift message: ${checkoutNotes.giftMessage}` : ''}` : '']
       .filter(Boolean)
       .join(' | '),
   }
 
-  const getPaymentMethodLabel = () => 'Razorpay'
+  const getPaymentMethodLabel = () => 'PayU'
 
   const startPayment = async () => {
     if (!validateForm()) {
@@ -600,88 +616,25 @@ export function CheckoutPage() {
     setIsLaunchingPayment(true)
     setFormErrors({})
     try {
-      const scriptLoaded = await loadRazorpayScript()
-    
+      // Create the pending order on backend and get PayU hash and data
+      const payuOrderData = await createPayuPaymentOrder(checkoutData)
+      
+      // Save order metadata to sessionStorage so we can show it on success/failure redirects
+      sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
+        orderNumber: payuOrderData.orderNumber,
+        email: checkoutData.customer.email,
+      }))
 
-      if (!scriptLoaded || !window.Razorpay) {
-        throw new Error('Razorpay checkout could not be loaded. Check your internet connection and try again.')
+      if (buyNowItem) {
+        sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
+      } else {
+        localStorage.removeItem(checkoutDraftKey)
+        localStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY)
+        clearCart()
       }
 
-      const razorpayOrder = await createRazorpayPaymentOrder(checkoutData)
-
-
-      const options = {
-        key: razorpayOrder.keyId,
-        amount: razorpayOrder.amountInPaise,
-        currency: razorpayOrder.currency,
-        name: 'TOYOVOINDIA',
-        description: 'Toyovo India Checkout',
-        order_id: razorpayOrder.razorpayOrderId,
-
-        prefill: {
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          email: formData.email,
-          contact: '+91' + cleanPhoneForForm(formData.phone),
-        },
-        notes: {
-          shipping_method: shippingMethod,
-          preferred_method: 'razorpay',
-        },
-        theme: {
-          color: '#6651A4',
-        },
-        handler: async (response) => {
-          setIsProcessing(true)
-          try {
-            const order = await verifyRazorpayPayment({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              checkoutData,
-              paymentMethodLabel: getPaymentMethodLabel(),
-            })
-
-            addPaymentLog({
-              type: 'Debit',
-              amount: order.total,
-              method: getPaymentMethodLabel(),
-            })
-
-            sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
-              orderNumber: order.orderNumber,
-              email: order.customerEmail,
-            }))
-
-            if (buyNowItem) {
-              sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
-            } else {
-              localStorage.removeItem(checkoutDraftKey)
-              localStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY)
-              clearCart()
-            }
-            navigate('/order-success', { state: { order } })
-          } catch (error) {
-            const validationMessage = error.details?.map((issue) => `${issue.path}: ${issue.message}`).join(', ')
-            setFormErrors({ general: validationMessage || error.message || 'Payment verification failed' })
-          } finally {
-            setIsProcessing(false)
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setIsProcessing(false)
-          },
-        },
-      }
-
-      const razorpay = new window.Razorpay(options)
-      razorpay.on('payment.failed', (response) => {
-        setIsLaunchingPayment(false)
-        setIsProcessing(false)
-        setFormErrors({ general: response.error?.description || 'Payment failed' })
-      })
-      setIsLaunchingPayment(false)
-      razorpay.open()
+      // Submit form to redirect to PayU securely
+      submitPayuForm(payuOrderData)
     } catch (error) {
       setIsLaunchingPayment(false)
       setIsProcessing(false)
@@ -724,7 +677,7 @@ export function CheckoutPage() {
               <div className="w-20 h-20 border-8 border-gray-100 border-t-[#6651A4] rounded-full animate-spin" />
            </div>
            <h2 className="text-2xl font-grandstander font-bold text-[#333] mb-3">Opening Secure Payment...</h2>
-           <p className="text-gray-500 max-w-sm font-medium">We are connecting with Razorpay. Please wait a moment.</p>
+           <p className="text-gray-500 max-w-sm font-medium">We are connecting with PayU securely. Please wait a moment.</p>
         </div>
       )}
       

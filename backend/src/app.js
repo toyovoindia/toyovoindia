@@ -21,8 +21,8 @@ app.use(requestId);
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like direct browser visits or mobile apps)
-    if (!origin) {
+    // Allow requests with no origin or 'null' origin (like direct browser visits, mobile apps, or PayU form POST redirects)
+    if (!origin || origin === 'null') {
       return callback(null, true);
     }
     
@@ -47,14 +47,7 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json({
-  limit: '50mb',
-  verify: (req, res, buffer) => {
-    if (req.originalUrl?.includes('/api/payments/razorpay/webhook')) {
-      req.rawBody = buffer.toString();
-    }
-  },
-}));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 

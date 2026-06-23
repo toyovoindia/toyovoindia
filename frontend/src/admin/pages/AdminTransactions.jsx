@@ -124,7 +124,7 @@ export function AdminTransactions() {
         <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-1">
           {[
             { id: 'cat', icon: <Tag size={14} />, value: categoryFilter, setter: setCategoryFilter, options: ['All', 'Order Payment', 'Refund'] },
-            { id: 'meth', icon: <CreditCard size={14} />, value: methodFilter, setter: setMethodFilter, options: ['All', 'UPI', 'Card', 'Net Banking', 'Razorpay'] },
+            { id: 'meth', icon: <CreditCard size={14} />, value: methodFilter, setter: setMethodFilter, options: ['All', 'UPI', 'Card', 'Net Banking', 'PayU'] },
             { id: 'stat', icon: <Activity size={14} />, value: statusFilter, setter: setStatusFilter, options: ['All', 'Paid', 'Refunded', 'Pending', 'Failed'] },
             { id: 'type', icon: <ArrowUpDown size={14} />, value: typeFilter, setter: setTypeFilter, options: ['All', 'Credit', 'Debit'] }
           ].map((f) => (

@@ -4,32 +4,28 @@ import AppError from '../utils/AppError.js';
 import { successResponse } from '../utils/apiResponse.js';
 import { buildOrderDraftFromCheckout, applyFulfilledOrderSideEffects } from '../services/order.service.js';
 import { sendOrderConfirmationEmail } from '../services/email.service.js';
-import { getRazorpayClient, verifyRazorpayPaymentSignature, verifyRazorpayWebhookSignature } from '../utils/razorpay.js';
+import { generateTxnId, generatePayuHash, verifyPayuHash } from '../utils/payu.js';
 import { notifyPaymentSuccess, notifyPaymentFailed, notifyRefundProcessed } from '../services/notification.service.js';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
 
-const toPaise = (value) => Math.round(Number(value) * 100);
-
-export const createRazorpayOrder = asyncHandler(async (req, res) => {
+export const createPayuOrder = asyncHandler(async (req, res) => {
   const draft = await buildOrderDraftFromCheckout(req.body);
-  const razorpay = getRazorpayClient();
-  logger.info('Razorpay order creation requested', {
-    email: req.body?.customer?.email,
-    shippingMethod: req.body?.shippingMethod,
-    itemCount: req.body?.items?.length || 0,
-    totalAmount: draft.totalAmount,
-  });
+  const txnid = generateTxnId();
 
-  const razorpayOrder = await razorpay.orders.create({
-    amount: toPaise(draft.totalAmount),
-    currency: 'INR',
-    receipt: `toyovo_${Date.now()}`,
-    notes: {
-      email: req.body.customer.email,
-      shippingMethod: req.body.shippingMethod,
-      paymentSource: 'toyovo_web_checkout',
-    },
+  // PayU requires productinfo, firstname, email, phone
+  const productinfo = 'Toyovo_Order';
+  const firstname = req.body.customer.firstName || 'Customer';
+  const phone = req.body.customer.phone || '9999999999';
+  const email = req.body.customer.email || 'dummy@toyovo.com';
+
+  const { hash, formattedAmount, safeEmail } = generatePayuHash({
+    txnid,
+    amount: draft.totalAmount,
+    productinfo,
+    firstname,
+    email,
+    phone
   });
 
   // Pre-create pending order in MongoDB
@@ -37,13 +33,13 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     user: req.user?._id || null,
     customer: {
       ...req.body.customer,
-      email: req.body.customer.email.toLowerCase(),
+      email: email.toLowerCase(),
     },
     shippingAddress: req.body.shippingAddress,
     items: draft.items,
     status: 'pending',
     paymentStatus: 'pending',
-    paymentMethod: 'razorpay',
+    paymentMethod: 'payu',
     shippingMethod: req.body.shippingMethod,
     subtotal: draft.subtotal,
     shippingAmount: draft.shippingAmount,
@@ -52,84 +48,81 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     coupon: draft.couponData,
     notes: req.body.notes || undefined,
     paymentGateway: {
-      provider: 'razorpay',
-      razorpayOrderId: razorpayOrder.id,
+      provider: 'payu',
+      payuTxnId: txnid,
+      payuHash: hash,
     },
   });
 
-  logger.info('Pending order pre-created in MongoDB', {
+  logger.info('Pending PayU order pre-created in MongoDB', {
     orderNumber: order.orderNumber,
-    razorpayOrderId: razorpayOrder.id,
+    payuTxnId: txnid,
   });
 
-  return successResponse(res, 201, 'Razorpay order created successfully', {
-    razorpayOrderId: razorpayOrder.id,
-    amount: draft.totalAmount,
-    amountInPaise: razorpayOrder.amount,
-    currency: razorpayOrder.currency,
-    keyId: env.RAZORPAY_KEY_ID,
-    breakdown: {
-      subtotal: draft.subtotal,
-      shipping: draft.shippingAmount,
-      discount: draft.discountAmount,
-      total: draft.totalAmount,
-    },
+  // Return data needed for the frontend to construct the PayU form
+  return successResponse(res, 201, 'PayU order initiated successfully', {
+    key: env.PAYU_KEY,
+    txnid,
+    amount: formattedAmount,
+    productinfo,
+    firstname,
+    email: safeEmail,
+    phone,
+    surl: `${env.SERVER_URL}/api/payments/payu/success`,
+    furl: `${env.SERVER_URL}/api/payments/payu/failure`,
+    hash,
+    payuBaseUrl: env.PAYU_BASE_URL,
+    orderNumber: order.orderNumber,
   });
 });
 
-export const verifyRazorpayPayment = asyncHandler(async (req, res, next) => {
-  logger.info('Razorpay payment verification requested', {
-    razorpayOrderId: req.body.razorpayOrderId,
-    razorpayPaymentId: req.body.razorpayPaymentId,
-    email: req.body?.checkoutData?.customer?.email,
-  });
-  const isValidSignature = verifyRazorpayPaymentSignature({
-    orderId: req.body.razorpayOrderId,
-    paymentId: req.body.razorpayPaymentId,
-    signature: req.body.razorpaySignature,
-  });
-
-  if (!isValidSignature) {
-    logger.warn('Razorpay payment verification failed: signature mismatch', {
-      razorpayOrderId: req.body.razorpayOrderId,
-      razorpayPaymentId: req.body.razorpayPaymentId,
-    });
-    return next(new AppError('Payment verification failed. Signature mismatch.', 400));
+export const handlePayuSuccess = asyncHandler(async (req, res, next) => {
+  logger.info('PayU success callback received', req.body);
+  
+  const isValid = verifyPayuHash(req.body);
+  
+  if (!isValid) {
+    logger.error('PayU hash verification failed in success callback', { txnid: req.body.txnid });
+    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=HashMismatch`);
   }
 
-  // Find the pending order by razorpayOrderId
-  const order = await Order.findOne({ 'paymentGateway.razorpayOrderId': req.body.razorpayOrderId });
+  if (req.body.status !== 'success') {
+    logger.error('PayU status is not success in success callback', { status: req.body.status });
+    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=PaymentFailed`);
+  }
+
+  const order = await Order.findOne({ 'paymentGateway.payuTxnId': req.body.txnid });
+  
   if (!order) {
-    logger.warn('Associated pending order not found for verification', {
-      razorpayOrderId: req.body.razorpayOrderId,
-    });
-    return next(new AppError('Associated order not found', 404));
+    logger.error('Associated pending order not found for PayU success verification', { txnid: req.body.txnid });
+    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=OrderNotFound`);
   }
 
   if (order.paymentStatus === 'paid') {
-    return successResponse(res, 200, 'Payment already verified', order);
+    // Already processed (could happen with webhook duplicate)
+    return res.redirect(`${env.CLIENT_URL}/checkout/success?orderNumber=${order.orderNumber}`);
   }
 
-  const draft = await buildOrderDraftFromCheckout(req.body.checkoutData);
-  logger.info('Razorpay payment verification draft prepared', {
-    razorpayOrderId: req.body.razorpayOrderId,
-    razorpayPaymentId: req.body.razorpayPaymentId,
-    totalAmount: draft.totalAmount,
-    itemCount: draft.items.length,
-  });
+  // Build draft to get resolved items for side effects
+  const checkoutData = {
+    customer: order.customer,
+    shippingAddress: order.shippingAddress,
+    items: order.items.map(item => ({ productId: item.product, quantity: item.quantity })),
+    shippingMethod: order.shippingMethod,
+    couponCode: order.coupon?.code || ''
+  };
+  const draft = await buildOrderDraftFromCheckout(checkoutData);
 
-  // Update order status to paid & processing
+  // Update order
   order.status = 'processing';
   order.paymentStatus = 'paid';
-  order.paymentGateway.razorpayPaymentId = req.body.razorpayPaymentId;
-  order.paymentGateway.razorpaySignature = req.body.razorpaySignature;
-  order.paymentGateway.paymentMethodLabel = req.body.paymentMethodLabel || undefined;
+  order.paymentGateway.payuMihpayid = req.body.mihpayid;
+  order.paymentGateway.rawResponse = req.body;
   order.paymentGateway.verifiedAt = new Date();
 
-  // Add timeline entry
   order.statusHistory.push({
     status: 'processing',
-    note: 'Payment verified and order confirmed.',
+    note: 'Payment verified via PayU callback.',
     actorRole: 'system',
     createdAt: new Date(),
   });
@@ -141,127 +134,40 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res, next) => {
 
   await order.save();
 
-  Promise.resolve(sendOrderConfirmationEmail(order)).catch((error) => {
-    logger.warn(`Order confirmation email failed for ${order.orderNumber}: ${error.message}`);
-  });
-
-  // Push notification
   Promise.resolve(notifyPaymentSuccess(order)).catch(() => {});
 
-  logger.info('Razorpay payment verification success', {
-    orderNumber: order.orderNumber,
-    razorpayOrderId: req.body.razorpayOrderId,
-    razorpayPaymentId: req.body.razorpayPaymentId,
-  });
+  logger.info('PayU payment success verification completed', { orderNumber: order.orderNumber, txnid: req.body.txnid });
 
-  return successResponse(res, 201, 'Payment verified and order placed successfully', order);
+  return res.redirect(`${env.CLIENT_URL}/checkout/success?orderNumber=${order.orderNumber}`);
 });
 
-export const handleRazorpayWebhook = asyncHandler(async (req, res, next) => {
-  const signature = req.headers['x-razorpay-signature'];
-  const payload = req.rawBody;
-
-  if (!signature || !payload) {
-    return next(new AppError('Invalid Razorpay webhook request', 400));
-  }
-
-  const isValid = verifyRazorpayWebhookSignature({
-    payload,
-    signature,
-  });
-
+export const handlePayuFailure = asyncHandler(async (req, res, next) => {
+  logger.info('PayU failure callback received', req.body);
+  
+  // Even in failure, we can optionally verify the hash to ensure it's from PayU
+  const isValid = verifyPayuHash(req.body);
   if (!isValid) {
-    return next(new AppError('Invalid Razorpay webhook signature', 400));
+    logger.warn('Invalid hash on PayU failure callback', { txnid: req.body.txnid });
   }
 
-  const event = req.body.event;
-  const paymentEntity = req.body.payload?.payment?.entity;
-  const refundEntity = req.body.payload?.refund?.entity;
+  const order = await Order.findOne({ 'paymentGateway.payuTxnId': req.body.txnid });
+  
+  if (order && order.paymentStatus !== 'paid') {
+    order.paymentStatus = 'failed';
+    order.status = 'cancelled';
+    order.paymentGateway.payuMihpayid = req.body.mihpayid;
+    order.paymentGateway.rawResponse = req.body;
 
-  if (paymentEntity?.id) {
-    // Try finding by paymentId first, otherwise fallback to pre-created order via order_id
-    let order = await Order.findOne({ 'paymentGateway.razorpayPaymentId': paymentEntity.id });
-    if (!order && paymentEntity.order_id) {
-      order = await Order.findOne({ 'paymentGateway.razorpayOrderId': paymentEntity.order_id });
-    }
+    order.statusHistory.push({
+      status: 'cancelled',
+      note: 'Payment failed on PayU gateway.',
+      actorRole: 'system',
+      createdAt: new Date(),
+    });
 
-    if (order) {
-      order.paymentGateway = {
-        ...order.paymentGateway,
-        lastWebhookEvent: event,
-        lastWebhookAt: new Date(),
-      };
-
-      if (event === 'payment.captured' && order.paymentStatus !== 'paid') {
-        order.paymentStatus = 'paid';
-        order.status = 'processing';
-        order.paymentGateway.razorpayPaymentId = paymentEntity.id;
-        order.paymentGateway.verifiedAt = new Date();
-
-        order.statusHistory.push({
-          status: 'processing',
-          note: 'Payment captured via Webhook fallback.',
-          actorRole: 'system',
-          createdAt: new Date(),
-        });
-
-        // Apply side effects
-        const checkoutData = {
-          customer: order.customer,
-          shippingAddress: order.shippingAddress,
-          items: order.items.map(item => ({
-            productId: item.product,
-            quantity: item.quantity
-          })),
-          shippingMethod: order.shippingMethod,
-          couponCode: order.coupon?.code || ''
-        };
-
-        const draft = await buildOrderDraftFromCheckout(checkoutData);
-        await applyFulfilledOrderSideEffects({
-          resolvedItems: draft.resolvedItems,
-          couponData: draft.couponData,
-        });
-
-        Promise.resolve(sendOrderConfirmationEmail(order)).catch((error) => {
-          logger.warn(`Order confirmation email failed for ${order.orderNumber}: ${error.message}`);
-        });
-
-        Promise.resolve(notifyPaymentSuccess(order)).catch(() => {});
-      }
-
-      if (event === 'payment.failed' && order.paymentStatus !== 'paid') {
-        order.paymentStatus = 'failed';
-        order.status = 'cancelled';
-        order.paymentGateway.razorpayPaymentId = paymentEntity.id;
-
-        order.statusHistory.push({
-          status: 'cancelled',
-          note: 'Payment failed on gateway.',
-          actorRole: 'system',
-          createdAt: new Date(),
-        });
-
-        Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
-      }
-
-      await order.save();
-    }
+    await order.save();
+    Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
   }
 
-  if (refundEntity?.payment_id) {
-    const order = await Order.findOne({ 'paymentGateway.razorpayPaymentId': refundEntity.payment_id });
-    if (order) {
-      order.paymentStatus = 'refunded';
-      order.paymentGateway = {
-        ...order.paymentGateway,
-        lastWebhookEvent: event,
-        lastWebhookAt: new Date(),
-      };
-      await order.save();
-      Promise.resolve(notifyRefundProcessed(order)).catch(() => {});
-    }
-  }
-
-  return successResponse(res, 200, 'Webhook received successfully', { received: true });
+  return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=${req.body.error_Message || 'PaymentFailed'}`);
 });

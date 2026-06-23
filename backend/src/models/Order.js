@@ -195,7 +195,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['card', 'upi', 'netbanking', 'cod', 'razorpay'],
+    enum: ['card', 'upi', 'netbanking', 'cod', 'payu'],
     default: 'card',
   },
   shippingMethod: {
@@ -251,23 +251,26 @@ const orderSchema = new mongoose.Schema({
   paymentGateway: {
     provider: {
       type: String,
-      enum: ['razorpay'],
+      enum: ['payu'],
     },
-    razorpayOrderId: {
+    payuTxnId: {
       type: String,
       trim: true,
       index: true,
       sparse: true,
     },
-    razorpayPaymentId: {
+    payuMihpayid: {
       type: String,
       trim: true,
       index: true,
       sparse: true,
     },
-    razorpaySignature: {
+    payuHash: {
       type: String,
       trim: true,
+    },
+    rawResponse: {
+      type: mongoose.Schema.Types.Mixed,
     },
     paymentMethodLabel: {
       type: String,
