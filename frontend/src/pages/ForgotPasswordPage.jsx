@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { apiRequest } from '../services/api'
@@ -49,6 +49,17 @@ export function ForgotPasswordPage() {
 
 
   const [resendLoading, setResendLoading] = useState(false)
+  const [resendTimer, setResendTimer] = useState(59)
+
+  useEffect(() => {
+    let interval;
+    if (step === 2 && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [step, resendTimer])
 
   const handleResendOtp = async () => {
     setResendLoading(true)
@@ -60,6 +71,7 @@ export function ForgotPasswordPage() {
         body: JSON.stringify({ phone: phone.trim() }) 
       })
       setSuccessMessage(res.message || 'OTP resent successfully')
+      setResendTimer(59)
     } catch (err) {
       setFieldErrors({ otp: err.message || 'Failed to send OTP' })
     } finally {
@@ -239,11 +251,11 @@ export function ForgotPasswordPage() {
                     <div className="text-right">
                       <button 
                         type="button"
-                        disabled={resendLoading}
+                        disabled={resendLoading || resendTimer > 0}
                         onClick={handleResendOtp}
-                        className="text-xs font-bold text-[#E84949] underline hover:no-underline hover:text-[#333] transition-colors disabled:opacity-50"
+                        className="text-xs font-bold text-[#E84949] underline hover:no-underline hover:text-[#333] transition-colors disabled:opacity-50 disabled:no-underline"
                       >
-                        {resendLoading ? 'Resending OTP...' : 'Resend OTP'}
+                        {resendLoading ? 'Resending OTP...' : resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
                       </button>
                     </div>
 

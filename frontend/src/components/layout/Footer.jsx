@@ -198,12 +198,12 @@ export function Footer() {
                   <Headset size={32} strokeWidth={1} className="text-white shrink-0 mt-1" />
                   <div className="flex flex-col gap-1">
                     <span className="text-[13px] text-white/90">Hotline free 24/7:</span>
-                    <span className="font-bold text-[18px] leading-none">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</span>
+                    <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || '7901931534'}`} className="font-bold text-[18px] leading-none hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</a>
                   </div>
                 </div>
                 <div className="mt-2">
                   <span className="font-bold uppercase text-[13px]">ADDRESS: </span>
-                  <span className="text-white/90 text-[14px]">{siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab'}</span>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab')}`} target="_blank" rel="noopener noreferrer" className="text-white/90 text-[14px] hover:text-white hover:underline transition-colors">{siteConfig?.contactAddress || 'Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab'}</a>
                 </div>
                 <div>
                   <span className="font-bold uppercase text-[13px]">EMAIL: </span>

@@ -126,8 +126,8 @@ export function CategorySection() {
 
       <div className="mt-12 bg-[#F47522] py-4 md:py-5 overflow-hidden flex items-center border-y border-white/5 shadow-inner">
         <motion.div 
-          animate={{ x: ["-50%", 0] }}
-          transition={{ repeat: Infinity, duration: 50, ease: 'linear' }}
+          animate={{ x: [0, "-50%"] }}
+          transition={{ repeat: Infinity, duration: 80, ease: 'linear' }}
           className="flex whitespace-nowrap w-max"
         >
           {/* We repeat the exact same set of items many times to ensure a perfect 50% translation loop */}

@@ -314,9 +314,9 @@ const orderSchema = new mongoose.Schema({
 
 orderSchema.pre('validate', function() {
   if (!this.orderNumber) {
-    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const suffix = Math.random().toString().slice(2, 8);
-    this.orderNumber = `TYV-${stamp}-${suffix}`;
+    const timePart = Date.now().toString().slice(-4);
+    const randomPart = Math.random().toString().slice(2, 6);
+    this.orderNumber = `TYV-${timePart}${randomPart}`;
   }
 
   if (!this.statusHistory.length) {

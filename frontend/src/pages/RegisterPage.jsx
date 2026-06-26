@@ -25,6 +25,17 @@ export function RegisterPage() {
   const location = useLocation()
   const [resendLoading, setResendLoading] = useState(false)
   const [resendMessage, setResendMessage] = useState('')
+  const [resendTimer, setResendTimer] = useState(59)
+
+  useEffect(() => {
+    let interval;
+    if (pendingVerification && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [pendingVerification, resendTimer])
   const [agreePolicies, setAgreePolicies] = useState(false)
 
   useEffect(() => {
@@ -137,6 +148,7 @@ export function RegisterPage() {
     const res = await resendOtp(pendingVerification.phone, pendingVerification.purpose)
     if (res.success) {
       setResendMessage(res.message)
+      setResendTimer(59)
     } else {
       setError(res.message)
     }
@@ -203,11 +215,11 @@ export function RegisterPage() {
                 <div className="text-right">
                   <button 
                     type="button"
-                    disabled={resendLoading}
+                    disabled={resendLoading || resendTimer > 0}
                     onClick={handleResendOtp}
-                    className="text-xs font-bold text-[#E84949] underline hover:no-underline hover:text-[#333] transition-colors disabled:opacity-50"
+                    className="text-xs font-bold text-[#E84949] underline hover:no-underline hover:text-[#333] transition-colors disabled:opacity-50 disabled:no-underline"
                   >
-                    {resendLoading ? 'Resending OTP...' : 'Resend OTP'}
+                    {resendLoading ? 'Resending OTP...' : resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
                   </button>
                 </div>
                 <div className="space-y-3 pt-3">
@@ -344,13 +356,13 @@ export function RegisterPage() {
                   />
                   <label htmlFor="agreePolicies" className="text-[10px] sm:text-[11px] text-[#666] font-medium leading-tight cursor-pointer select-none text-left">
                     I agree to the{' '}
-                    <Link to="/pages/terms-conditions" target="_blank" className="text-[#E84949] font-bold underline hover:no-underline">
+                    <a href="/pages/terms-conditions" target="_blank" rel="noopener noreferrer" className="text-[#E84949] font-bold underline hover:no-underline">
                       Terms & Conditions
-                    </Link>{' '}
+                    </a>{' '}
                     and{' '}
-                    <Link to="/pages/privacy-policy" target="_blank" className="text-[#E84949] font-bold underline hover:no-underline">
+                    <a href="/pages/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[#E84949] font-bold underline hover:no-underline">
                       Privacy Policy
-                    </Link>
+                    </a>
                     .
                   </label>
                 </div>

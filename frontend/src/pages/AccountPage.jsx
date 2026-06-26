@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePayment } from '../context/PaymentContext'
@@ -277,12 +277,38 @@ export function AccountPage() {
   const [siteConfig, setSiteConfig] = useState(null)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
 
+  const [ledgerFilter, setLedgerFilter] = useState('All')
+  const [ledgerPage, setLedgerPage] = useState(1)
+  const itemsPerPage = 5
+
+  const filteredLedger = useMemo(() => {
+    return paymentHistory.filter(txn => {
+      if (ledgerFilter === 'Payments') return txn.type !== 'Refund';
+      if (ledgerFilter === 'Refunds') return txn.type === 'Refund';
+      return true;
+    });
+  }, [paymentHistory, ledgerFilter]);
+
+  const totalLedgerPages = Math.ceil(filteredLedger.length / itemsPerPage) || 1;
+  const currentLedgerPageItems = filteredLedger.slice((ledgerPage - 1) * itemsPerPage, ledgerPage * itemsPerPage);
+
   // Phone Verification States and Handlers
   const [verificationOtp, setVerificationOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [sendingOtp, setSendingOtp] = useState(false)
   const [verifyingOtp, setVerifyingOtp] = useState(false)
   const [verificationError, setVerificationError] = useState('')
+  const [resendTimer, setResendTimer] = useState(0)
+
+  useEffect(() => {
+    let interval;
+    if (otpSent && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [otpSent, resendTimer])
 
   const handleSendVerificationOtp = async () => {
     setSendingOtp(true)
@@ -291,6 +317,7 @@ export function AccountPage() {
       const res = await resendOtp(user.phone, 'register')
       if (res.success) {
         setOtpSent(true)
+        setResendTimer(59)
         success('Verification OTP has been sent to your mobile number.')
       } else {
         setVerificationError(res.message)
@@ -841,69 +868,6 @@ export function AccountPage() {
                        </div>
                     </div>
 
-                    {/* ── PUSH NOTIFICATION TEST PANEL ── */}
-                    <div className="p-6 md:p-8 bg-white rounded-3xl border border-dashed border-[#6651A4]/20 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#6651A4]/10 rounded-xl flex items-center justify-center">
-                          <span className="text-xl">🔔</span>
-                        </div>
-                        <div>
-                          <h4 className="text-[13px] font-bold text-gray-700 uppercase tracking-widest">Push Notification Test</h4>
-                          <p className="text-[10px] text-gray-400 font-medium mt-0.5">Dev tool — test FCM token & foreground notification</p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          id="btn-test-fcm-token"
-                          onClick={async () => {
-                            try {
-                              console.log('[FCM] Requesting permission & token...');
-                              const token = await requestForToken();
-                              if (token) {
-                                console.log('[FCM] ✅ Token generated:', token);
-                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'web';
-                                await saveFcmToken(token, isMobile);
-                                console.log(`[FCM] ✅ Token saved to DB via API as ${isMobile}`);
-                                success(`FCM token saved as ${isMobile}! Check console for details.`);
-                              } else {
-                                console.warn('[FCM] ⚠️ No token — check browser permission');
-                                showError('No token generated. Allow notification permission first.');
-                              }
-                            } catch (err) {
-                              console.error('[FCM] ❌ Error:', err);
-                              showError('Error: ' + err.message);
-                            }
-                          }}
-                          className="flex-1 h-12 bg-[#6651A4] text-white text-[11px] font-bold uppercase tracking-widest rounded-2xl hover:bg-[#5541a0] active:scale-95 transition-all shadow-md shadow-[#6651A4]/20"
-                        >
-                          📱 Get & Save FCM Token
-                        </button>
-
-                        <button
-                          id="btn-test-foreground-notif"
-                          onClick={async () => {
-                            try {
-                              console.log('[FCM] Triggering backend test notification...');
-                              await apiRequest('/users/me/test-notification', { method: 'POST' });
-                              success('Real push notification triggered! You should receive it via FCM shortly.');
-                            } catch (err) {
-                              console.error('[FCM] Test failed:', err);
-                              showError('Failed to trigger push: ' + err.message);
-                            }
-                          }}
-                          className="flex-1 h-12 bg-[#E84949] text-white text-[11px] font-bold uppercase tracking-widest rounded-2xl hover:bg-[#d43d3d] active:scale-95 transition-all shadow-md shadow-[#E84949]/20"
-                        >
-                          🔔 Fire Test Notification
-                        </button>
-                      </div>
-
-                      <p className="text-[9px] text-gray-400 font-medium leading-relaxed">
-                        <span className="font-bold text-[#6651A4]">Step 1:</span> Click "Get & Save FCM Token" — allow browser permission, check console + DB.<br/>
-                        <span className="font-bold text-[#E84949]">Step 2:</span> Click "Fire Test Notification" to verify foreground display.
-                      </p>
-                    </div>
-                    {/* ── END TEST PANEL ── */}
 
                  </motion.div>
                )}
@@ -1053,14 +1017,25 @@ export function AccountPage() {
 
                         <div className="flex items-center justify-between px-6">
                            <h4 className="text-[13px] font-bold uppercase tracking-[0.3em] text-gray-400 font-grandstander">Ledger Records</h4>
-                           <button onClick={() => { setIsProcessing(true); setTimeout(() => { setIsProcessing(false); success('Ledger synchronized.'); }, 1000); }} className="p-2 bg-white rounded-xl text-gray-400 hover:text-[#6651A4] shadow-sm transition-all"><RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''}/></button>
+                           {/* <div className="flex items-center gap-2">
+                             <select 
+                               className="bg-[#FDF4E6]/50 border border-[#6651A4]/30 rounded-lg text-[10px] font-bold uppercase tracking-widest text-gray-600 px-2 py-1 outline-none cursor-pointer"
+                               value={ledgerFilter} 
+                               onChange={(e) => { setLedgerFilter(e.target.value); setLedgerPage(1); }}
+                             >
+                               <option value="All">All</option>
+                               <option value="Payments">Payments</option>
+                               <option value="Refunds">Refunds</option>
+                             </select>
+                             <button onClick={() => { setIsProcessing(true); setTimeout(() => { setIsProcessing(false); success('Ledger synchronized.'); }, 1000); }} className="p-2 bg-white rounded-xl text-gray-400 hover:text-[#6651A4] shadow-sm transition-all"><RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''}/></button>
+                           </div> */}
                         </div>
                        <div className="bg-[#FAEAD3]/30 rounded-[40px] border border-white/20 overflow-hidden">
-                          {paymentHistory.length === 0 ? (
+                          {currentLedgerPageItems.length === 0 ? (
                             <div className="py-24 text-center">
                                <p className="text-gray-300 font-bold uppercase tracking-widest text-[10px]">No transaction trail found</p>
                             </div>
-                          ) : paymentHistory.map((txn, idx) => (
+                          ) : currentLedgerPageItems.map((txn, idx) => (
                              <div key={txn.id} className={`p-6 flex items-center justify-between hover:bg-white/40 transition-all border-b border-white/20 last:border-0 ${idx % 2 === 0 ? 'bg-white/10' : ''}`}>
                                 <div className="flex items-center gap-6">
                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${txn.type==='Refund'?'bg-emerald-400':'bg-[#333]'}`}>{txn.type==='Refund'?<ArrowDownLeft size={20}/>:<ArrowUpRight size={20}/>}</div>
@@ -1070,12 +1045,36 @@ export function AccountPage() {
                                    </div>
                                 </div>
                                 <div className="text-right">
-                                   <p className={`text-2xl font-bold font-grandstander ${txn.type==='Refund'?'text-emerald-500':'text-[#E84949]'}`}>{txn.type==='Refund'?'+':'-'}₹{txn.amount.toFixed(2)}</p>
-                                   <p className="text-[8px] font-bold text-gray-300 uppercase tracking-[0.2em] mt-1">Authorized</p>
+                                   <p className={`text-xl font-bold font-grandstander ${txn.type==='Refund'?'text-emerald-500':'text-[#E84949]'}`}>{txn.type==='Refund'?'+':'-'}₹{txn.amount.toFixed(2)}</p>
+                                   <p className="text-[8px] font-bold text-gray-300 uppercase tracking-[0.2em] mt-1">{txn.status || 'Authorized'}</p>
                                 </div>
                              </div>
                           ))}
                        </div>
+                       
+                       {totalLedgerPages > 1 && (
+                         <div className="flex items-center justify-between px-6 pt-2">
+                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                             Page {ledgerPage} of {totalLedgerPages}
+                           </p>
+                           <div className="flex gap-2">
+                             <button 
+                               disabled={ledgerPage === 1} 
+                               onClick={() => setLedgerPage(prev => prev - 1)}
+                               className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-[#6651A4] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                             >
+                               <ChevronLeft size={16} />
+                             </button>
+                             <button 
+                               disabled={ledgerPage === totalLedgerPages} 
+                               onClick={() => setLedgerPage(prev => prev + 1)}
+                               className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-[#6651A4] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                             >
+                               <ChevronRight size={16} />
+                             </button>
+                           </div>
+                         </div>
+                       )}
                  </motion.div>
                )}
 
@@ -1442,11 +1441,11 @@ export function AccountPage() {
                                                    <div className="text-right">
                                                       <button
                                                          type="button"
-                                                         disabled={sendingOtp}
+                                                         disabled={sendingOtp || resendTimer > 0}
                                                          onClick={handleSendVerificationOtp}
-                                                         className="text-[10px] font-bold text-gray-500 hover:text-[#6651A4] underline uppercase tracking-wider disabled:opacity-50"
+                                                         className="text-[10px] font-bold text-gray-500 hover:text-[#6651A4] underline uppercase tracking-wider disabled:opacity-50 disabled:no-underline"
                                                       >
-                                                         Resend OTP
+                                                         {sendingOtp ? 'Sending...' : resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
                                                       </button>
                                                    </div>
                                                 </div>

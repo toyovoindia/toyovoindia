@@ -23,7 +23,7 @@ export const printOrderInvoice = (order) => {
     </tr>
   `).join('')
 
-  invoiceWindow.document.write(`
+  const htmlContent = `
     <!doctype html>
     <html>
       <head>
@@ -87,15 +87,30 @@ export const printOrderInvoice = (order) => {
           <div><span>Discount</span><span>- ${currency(order.discount)}</span></div>
           <div class="total"><span>Grand Total</span><span>${currency(order.total)}</span></div>
         </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+          }
+        </script>
       </body>
     </html>
-  `)
+  `
 
-  invoiceWindow.document.close()
-  invoiceWindow.focus()
-  setTimeout(() => {
+  try {
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const invoiceWindow = window.open(url, '_blank', 'width=900,height=1000')
+    
     if (invoiceWindow) {
-      invoiceWindow.print()
+      invoiceWindow.focus()
+      // Clean up the URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
+    } else {
+      // Fallback if popup is blocked
+      window.location.href = url
     }
-  }, 500)
+  } catch (error) {
+    console.error('Failed to generate invoice:', error)
+    alert('Failed to generate invoice document.')
+  }
 }

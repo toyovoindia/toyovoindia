@@ -91,17 +91,17 @@ export function ContactPage() {
               <ContactInfoItem
                 icon={MapPin}
                 title="Address"
-                content={siteConfig?.contactAddress || "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab"}
+                content={<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteConfig?.contactAddress || "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab")}`} target="_blank" rel="noopener noreferrer" className="hover:text-[#E84949] hover:underline transition-colors">{siteConfig?.contactAddress || "Unit 703, 7th Floor, Block 1 Mayagarden, Zirakpur, Rajpura, Mohali- 140603, Punjab"}</a>}
               />
               <ContactInfoItem
                 icon={Phone}
                 title="Phone"
-                content={siteConfig?.contactPhone?.replace('+91', '').trim() || " 7901931534"}
+                content={<a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || '7901931534'}`} className="hover:text-[#E84949] hover:underline transition-colors">{siteConfig?.contactPhone?.replace('+91', '').trim() || '7901931534'}</a>}
               />
               <ContactInfoItem
                 icon={Mail}
                 title="Email"
-                content={siteConfig?.contactEmail || "toyovoindia@gmail.com"}
+                content={<a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="hover:text-[#E84949] hover:underline transition-colors">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a>}
               />
               <ContactInfoItem
                 icon={Clock}

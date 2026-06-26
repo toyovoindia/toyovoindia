@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Link, useNavigationType } from 'react-router-dom'
 import React, { useEffect, Suspense } from 'react'
 import { VisionHeader } from './components/layout/VisionHeader'
 import { Footer }       from './components/layout/Footer'
@@ -35,9 +35,12 @@ import { getStorefrontSettings } from './services/siteApi'
 // Helper component to scroll to top on route change
 function ScrollToTop() {
   const { pathname } = useLocation()
+  const navigationType = useNavigationType()
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+    if (navigationType !== 'POP') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [pathname, navigationType])
   return null
 }
 
