@@ -94,7 +94,7 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
     
     if (type === 'upiIds') {
       if (!formData.upiId) newErrors.upiId = 'UPI ID is required';
-      else if (!formData.upiId.includes('@')) newErrors.upiId = 'Please enter a valid UPI ID (e.g. user@upi)';
+      else if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(formData.upiId)) newErrors.upiId = 'Please enter a valid UPI ID (e.g. user@upi)';
     }
     
     if (type === 'cards') {
@@ -166,7 +166,7 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
                  </div>
                  <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">IFSC Code</label>
-                   <input type="text" placeholder="HDFC0001234" maxLength="11" value={formData.ifsc || ''} onChange={e=>setFormData({...formData, ifsc: e.target.value.toUpperCase()})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.ifsc ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold uppercase tracking-widest transition-colors`} />
+                   <input type="text" placeholder="HDFC0001234" maxLength="11" value={formData.ifsc || ''} onChange={e=>setFormData({...formData, ifsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.ifsc ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold uppercase tracking-widest transition-colors`} />
                    {errors.ifsc && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.ifsc}</p>}
                  </div>
                </>
@@ -175,7 +175,7 @@ const AddPaymentMethodModal = ({ isOpen, type, onComplete, onCancel }) => {
              {type === 'upiIds' && (
                <div className="space-y-1.5">
                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">UPI ID (VPA)</label>
-                 <input type="text" placeholder="username@upi" value={formData.upiId || ''} onChange={e=>setFormData({...formData, upiId: e.target.value})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.upiId ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold lowercase transition-colors`} />
+                 <input type="text" placeholder="username@upi" value={formData.upiId || ''} onChange={e=>setFormData({...formData, upiId: e.target.value.toLowerCase().replace(/[^a-z0-9.\-_@]/g, '')})} className={`w-full h-14 px-5 bg-[#FDF4E6] border-2 ${errors.upiId ? 'border-red-400' : 'border-transparent focus:border-[#E84949]'} rounded-2xl outline-none text-sm font-bold lowercase transition-colors`} />
                  {errors.upiId && <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1">{errors.upiId}</p>}
                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-1 flex items-center gap-1"><ShieldCheck size={10}/> Verified VPA only</p>
                </div>
@@ -258,7 +258,7 @@ export function AccountPage() {
   // Derive active tab from URL param; fallback to 'dashboard'
   const tabFromUrl = orderId ? 'orders' : (TAB_SLUG_MAP[tabParam] || 'dashboard')
   const [activeTab, setActiveTab] = useState(tabFromUrl)
-  const [viewMode, setViewMode] = useState('content')
+  const [viewMode, setViewMode] = useState(!tabParam && !orderId ? 'menu' : 'content')
   
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [profileForm, setProfileForm] = useState(user || {})
@@ -330,7 +330,7 @@ export function AccountPage() {
   useEffect(() => {
     const derived = orderId ? 'orders' : (TAB_SLUG_MAP[tabParam] || 'dashboard')
     setActiveTab(derived)
-    setViewMode('content')
+    setViewMode(!tabParam && !orderId ? 'menu' : 'content')
   }, [tabParam, orderId])
 
   useEffect(() => {
@@ -783,7 +783,17 @@ export function AccountPage() {
 
             <div className="mt-auto pt-10 pb-6">
                <button 
-                 onClick={logout}
+                 onClick={() => {
+                   setConfirmModal({
+                     isOpen: true,
+                     title: 'Confirm Logout',
+                     message: 'Are you sure you want to log out of your account?',
+                     action: () => {
+                       setConfirmModal({ isOpen: false, action: null, message: '', title: '' })
+                       logout()
+                     }
+                   })
+                 }}
                  className="w-full bg-white border border-[#E84949]/5 py-4 rounded-full flex items-center justify-center gap-3 group hover:shadow-xl hover:shadow-[#E84949]/5 transition-all active:scale-95 shadow-sm"
                >
                   <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-[#E84949] group-hover:text-white transition-all text-[#E84949]">
@@ -1017,13 +1027,23 @@ export function AccountPage() {
                             </div>
 
                             <div className="space-y-4">
-                               {section.items.map(item => (
+                               {section.items.map((item, index) => (
                                  <motion.div initial={{opacity:0, x:-10}} animate={{opacity:1, x:0}} key={item.id} className="p-4 bg-white/40 backdrop-blur-md border border-white/50 rounded-[24px] flex justify-between items-center group/item hover:bg-white/60 transition-all cursor-default">
                                     <div className="truncate pr-4">
                                        <p className="text-[12px] font-bold text-gray-700 truncate font-grandstander">{item.bankName || item.upiId || `Card • ${item.cardNo.slice(-4)}`}</p>
-                                       <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{item.accNo ? `A/C: ${item.accNo.slice(-4)}` : item.exp ? `Exp: ${item.exp}` : 'Primary VPA'}</p>
+                                       <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{item.accNo ? `A/C: ${item.accNo.slice(-4)}` : item.exp ? `Exp: ${item.exp}` : index === 0 ? 'Primary VPA' : 'UPI Address'}</p>
                                     </div>
-                                    <button onClick={() => deleteSavedMethod(section.id, item.id)} className="w-7 h-7 rounded-lg bg-red-50 text-[#E84949] flex items-center justify-center hover:bg-[#E84949] hover:text-white transition-all"><Trash2 size={12}/></button>
+                                    <button onClick={() => {
+                                      setConfirmModal({
+                                        isOpen: true,
+                                        title: 'Delete Payment Method',
+                                        message: 'Are you sure you want to delete this payment method?',
+                                        action: () => {
+                                          setConfirmModal({ isOpen: false, action: null, message: '', title: '' });
+                                          deleteSavedMethod(section.id, item.id);
+                                        }
+                                      });
+                                    }} className="w-7 h-7 rounded-lg bg-red-50 text-[#E84949] flex items-center justify-center hover:bg-[#E84949] hover:text-white transition-all"><Trash2 size={12}/></button>
                                  </motion.div>
                                ))}
                             </div>

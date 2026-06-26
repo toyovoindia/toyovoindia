@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Package, Truck, ShoppingBag, ArrowRight, ChevronRight, MapPin, ExternalLink, Calendar, Heart, Phone } from 'lucide-react'
 import { getOrderSummary } from '../services/orderApi'
+import { getStorefrontSettings } from '../services/siteApi'
 
 const TrackingStep = ({ icon: Icon, label, status, active }) => (
   <div className="flex flex-col items-center gap-2 relative z-10">
@@ -21,6 +22,7 @@ export function OrderSuccessPage() {
   const navigate = useNavigate()
   const [order, setOrder] = useState(location.state?.order || null)
   const [loading, setLoading] = useState(!location.state?.order)
+  const [settings, setSettings] = useState(null)
 
   const getExpectedArrivalDate = () => {
     if (order?.deliveryDate) return order.deliveryDate
@@ -145,6 +147,14 @@ export function OrderSuccessPage() {
     }
   }, [location.state, navigate])
 
+  useEffect(() => {
+    let isMounted = true
+    getStorefrontSettings().then(data => {
+      if (isMounted) setSettings(data)
+    }).catch(console.error)
+    return () => { isMounted = false }
+  }, [])
+
   if (loading) return null
   if (!order) return null
 
@@ -180,7 +190,9 @@ export function OrderSuccessPage() {
                    <div className="text-center md:text-left space-y-3">
                       <h1 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333] tracking-tight">Order Confirmed!</h1>
                       <p className="text-[14px] text-[#333]/60 font-medium leading-relaxed max-w-lg">
-                        Success! Your toy voyage has officially set sail. We've dispatched a confirmation to <span className="text-[#333] font-bold underline decoration-dotted decoration-[#E84949]">{order.customerEmail}</span> with your secret order code.
+                        Success! Your toy voyage has officially set sail. Your order is estimated to arrive by <span className="text-[#333] font-bold">{getExpectedArrivalDate()}</span>.
+                        <br />
+                        For any help, please reach out to our helpline: <a href={`tel:${settings?.contactInfo?.phone || '+91'}`} className="text-[#E84949] font-bold underline decoration-dotted">{settings?.contactInfo?.phone || 'Customer Support'}</a>.
                       </p>
                    </div>
                 </div>
