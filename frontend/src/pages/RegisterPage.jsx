@@ -7,12 +7,18 @@ import registerImage from '../assets/TOYOVOINIDIA_auth_banner.webp'
 import logo from '../assets/toyovo.webp'
 
 export function RegisterPage() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: ''
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('registerFormData')
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      password: ''
+    }
   })
   const [fieldErrors, setFieldErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -36,7 +42,17 @@ export function RegisterPage() {
     }
     return () => clearInterval(interval)
   }, [pendingVerification, resendTimer])
-  const [agreePolicies, setAgreePolicies] = useState(false)
+  const [agreePolicies, setAgreePolicies] = useState(() => {
+    return sessionStorage.getItem('registerAgreePolicies') === 'true'
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('registerFormData', JSON.stringify(formData))
+  }, [formData])
+
+  useEffect(() => {
+    sessionStorage.setItem('registerAgreePolicies', agreePolicies)
+  }, [agreePolicies])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -356,13 +372,13 @@ export function RegisterPage() {
                   />
                   <label htmlFor="agreePolicies" className="text-[10px] sm:text-[11px] text-[#666] font-medium leading-tight cursor-pointer select-none text-left">
                     I agree to the{' '}
-                    <a href="/pages/terms-conditions" target="_blank" rel="noopener noreferrer" className="text-[#E84949] font-bold underline hover:no-underline">
+                    <Link to="/pages/terms-conditions" className="text-[#E84949] font-bold underline hover:no-underline">
                       Terms & Conditions
-                    </a>{' '}
+                    </Link>{' '}
                     and{' '}
-                    <a href="/pages/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[#E84949] font-bold underline hover:no-underline">
+                    <Link to="/pages/privacy-policy" className="text-[#E84949] font-bold underline hover:no-underline">
                       Privacy Policy
-                    </a>
+                    </Link>
                     .
                   </label>
                 </div>
