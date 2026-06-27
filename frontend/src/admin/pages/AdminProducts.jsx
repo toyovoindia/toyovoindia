@@ -206,9 +206,7 @@ export function AdminProducts() {
                   <Tag size={10} /> {product.categoryName || product.category}
                 </div>
 
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-mono font-bold text-[#6651A4] shadow-sm">
-                  {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}
-                </div>
+
 
                 {/* Hover Actions */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
@@ -233,9 +231,14 @@ export function AdminProducts() {
                 </div>
               </div>
 
-              <div className="px-2">
+              <div className="px-2 mt-2">
                 <h3 className="text-[14px] font-bold text-gray-800 line-clamp-1 mb-1">{product.name}</h3>
-                <p className="text-2xl font-grandstander font-bold text-[#F1641E] mb-4">₹{Number(product.price || 0).toFixed(0)}</p>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-2xl font-grandstander font-bold text-[#F1641E]">₹{Number(product.price || 0).toFixed(0)}</p>
+                  <span className="text-[9px] font-mono font-bold text-[#6651A4] bg-[#6651A4]/10 px-2 py-1 rounded-md max-w-[40%] truncate">
+                    SKU: {product.sku || (product._id || product.id || '').slice(-6).toUpperCase()}
+                  </span>
+                </div>
                 
                 <div className="flex justify-between items-center border-t border-gray-100 pt-4">
                   <span className="text-[11px] font-bold text-gray-500">Stock: {product.stock}</span>
@@ -261,7 +264,19 @@ export function AdminProducts() {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Page {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Page</span>
+            <select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+              className="h-10 px-3 bg-white rounded-xl border border-gray-200 text-[11px] font-bold text-[#6651A4] outline-none focus:border-[#6651A4] transition-all cursor-pointer"
+            >
+              {[...Array(totalPages)].map((_, idx) => (
+                <option key={idx + 1} value={idx + 1}>{idx + 1}</option>
+              ))}
+            </select>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">of {totalPages}</span>
+          </div>
           <button 
             disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}
             className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-[#6651A4] hover:text-white hover:border-[#6651A4] disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-gray-500 disabled:hover:border-gray-200 transition-all shadow-sm"

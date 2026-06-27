@@ -360,10 +360,15 @@ export function AdminProductDetail() {
                 {isEditing && product.images.length < 8 && (
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#6651A4]/30 hover:text-[#6651A4] transition-all bg-gray-50/50"
+                    disabled={uploadingImage}
+                    className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#6651A4]/30 hover:text-[#6651A4] transition-all bg-gray-50/50 disabled:opacity-50"
                   >
-                    <Plus size={24} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Add Snapshot</span>
+                    {uploadingImage ? (
+                      <span className="w-6 h-6 border-2 border-gray-300 border-t-[#6651A4] rounded-full animate-spin mb-1"></span>
+                    ) : (
+                      <Plus size={24} />
+                    )}
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{uploadingImage ? 'Uploading...' : 'Add Snapshot'}</span>
                   </button>
                 )}
               </div>
@@ -371,14 +376,6 @@ export function AdminProductDetail() {
               {isEditing && (
                 <div className="space-y-3 pt-4 border-t border-gray-50">
                   <input type="file" ref={fileInputRef} onChange={handleImageFileSelect} className="hidden" accept="image/*" />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="w-full h-12 bg-[#6651A4] text-white rounded-2xl flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-60"
-                  >
-                    <Plus size={18} />
-                    <span>{uploadingImage ? 'Uploading...' : 'Upload Image'}</span>
-                  </button>
                   <input
                     value={imageUrl}
                     onChange={(event) => setImageUrl(event.target.value)}
@@ -387,7 +384,7 @@ export function AdminProductDetail() {
                   />
                   <button onClick={addImageUrl} className="w-full h-12 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-400 hover:bg-[#FDF4E6]/50 hover:border-[#6651A4]/30 transition-all gap-2">
                     <Plus size={18} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Add Snapshot</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Add Image from URL</span>
                   </button>
                 </div>
               )}
@@ -604,7 +601,7 @@ export function AdminProductDetail() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Available Colors</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
+                      <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
                         {(product.color || []).map(c => (
                           <span key={c} className="px-3 py-1.5 bg-[#6651A4]/10 text-[#6651A4] rounded-lg text-[11px] font-bold flex items-center gap-2">
                             {c} {isEditing && <X size={12} className="cursor-pointer" onClick={() => removeTag('color', c)}/>}
@@ -629,7 +626,7 @@ export function AdminProductDetail() {
                     </div>
                     <div className="space-y-3">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Available Sizes</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
+                      <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
                         {(product.size || []).map(s => (
                           <span key={s} className="px-3 py-1.5 bg-[#F1641E]/10 text-[#F1641E] rounded-lg text-[11px] font-bold flex items-center gap-2">
                             {s} {isEditing && <X size={12} className="cursor-pointer hover:text-red-500" onClick={() => removeTag('size', s)}/>}
