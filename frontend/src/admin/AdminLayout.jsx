@@ -9,6 +9,9 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getAdminUnreadCount, getAdminNotifications } from '../services/notificationAdminApi'
+import { requestFirebaseToken } from '../utils/firebase'
+import { saveFcmToken } from '../services/notificationApi'
+import { getMessaging, onMessage } from 'firebase/messaging'
 
 // --- Skeleton Component for Seamless Loading ---
 function AdminContentSkeleton() {
@@ -84,6 +87,40 @@ export function AdminLayout() {
     // Listen for custom event to update instantly
     const handleUpdate = () => fetchCount()
     window.addEventListener('adminNotificationsRead', handleUpdate)
+
+    // Set up FCM Push Notifications
+    const setupFCM = async () => {
+      try {
+        const token = await requestFirebaseToken()
+        if (token) await saveFcmToken(token, 'web')
+        
+        // Listen for foreground FCM messages
+        import('../utils/firebase').then(({ requestFirebaseToken }) => {
+          import('firebase/messaging').then(({ getMessaging, onMessage }) => {
+            const messaging = getMessaging();
+            if (messaging) {
+              onMessage(messaging, (payload) => {
+                const title = payload.notification?.title || payload.data?.title || 'Notification';
+                const body = payload.notification?.body || payload.data?.body || '';
+                if (title.toLowerCase().includes('order') || payload.data?.type?.includes('order')) {
+                  success(`${title}: ${body}`);
+                  try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+                    audio.play()
+                  } catch (e) {}
+                } else {
+                  info(`${title}: ${body}`);
+                }
+                fetchCount();
+              });
+            }
+          })
+        })
+      } catch (err) {
+        console.warn('FCM setup failed:', err)
+      }
+    }
+    setupFCM()
 
     return () => {
       clearInterval(interval)
