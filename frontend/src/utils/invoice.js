@@ -28,6 +28,10 @@ export const printOrderInvoice = (order) => {
       <head>
         <title>Invoice ${escapeHtml(order.orderNumber)}</title>
         <style>
+          @page { margin: 0; size: auto; }
+          @media print {
+            body { margin: 1.5cm; }
+          }
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 32px; color: #222; font-size: 14px; line-height: 1.5; }
           h1, h2, h3, h4, p { margin: 0; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #eee; padding-bottom: 24px; }
