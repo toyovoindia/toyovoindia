@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -277,6 +277,20 @@ export function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-5">
+            {/* TEST PUSH NOTIFICATION BUTTON */}
+            <button
+              onClick={() => {
+                success(`New Order: You received a new order from Test Customer!`)
+                try {
+                  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+                  audio.play()
+                } catch (e) {}
+              }}
+              className="text-[10px] font-bold uppercase tracking-widest bg-[#6651A4]/10 text-[#6651A4] px-3 py-1.5 rounded-lg hover:bg-[#6651A4]/20 transition-all border border-[#6651A4]/20"
+            >
+              Test Alert
+            </button>
+
             <button 
               onClick={() => navigate('/admin/notifications')}
               className="relative p-2.5 text-gray-400 hover:text-[#6651A4] transition-colors bg-[#FAEAD3]/30 hover:bg-[#FAEAD3] rounded-full"
