@@ -14,6 +14,25 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
 
   const scrollPosRef = useRef(0)
 
+  // Mobile Back Button Handler
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen) onClose();
+    };
+
+    if (isOpen) {
+      window.history.pushState({ modalOpen: true }, '');
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (isOpen && window.history.state && window.history.state.modalOpen) {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   // Scroll lock implementation
   useEffect(() => {
     if (isOpen) {

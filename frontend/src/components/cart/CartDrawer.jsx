@@ -15,6 +15,27 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(999);
 
+  // Mobile Back Button Handler
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      window.history.pushState({ drawerOpen: true }, '');
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (isOpen && window.history.state && window.history.state.drawerOpen) {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   // Load from local storage draft when user or drawer open state changes
   useEffect(() => {
     if (isOpen) {
