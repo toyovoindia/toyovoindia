@@ -15,20 +15,21 @@ export function ConfirmationModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm" 
           onClick={onClose} 
         />
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden p-8 text-center border border-white/20"
-        >
+        <div className="min-h-full flex items-center justify-center p-4 pointer-events-none">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden p-8 text-center border border-white/20 pointer-events-auto"
+          >
           <div className={`w-16 h-16 ${type === 'danger' ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-500'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {type === 'danger' ? <Trash2 size={28} /> : <AlertTriangle size={28} />}
           </div>
@@ -56,6 +57,7 @@ export function ConfirmationModal({
             </button>
           </div>
         </motion.div>
+        </div>
       </div>
     </AnimatePresence>
   )

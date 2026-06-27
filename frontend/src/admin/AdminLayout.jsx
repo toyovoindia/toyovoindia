@@ -233,14 +233,23 @@ export function AdminLayout() {
             </button>
             
             {/* Global Search - Hidden on small mobile */}
-            <div className="hidden sm:flex items-center bg-[#FDF4E6] rounded-full px-4 py-2.5 w-48 md:w-64 lg:w-96 border border-transparent focus-within:border-[#6651A4]/30 focus-within:bg-white transition-all shadow-sm">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const query = fd.get('search')?.trim();
+                if (query) navigate(`/admin/products?search=${encodeURIComponent(query)}`);
+              }}
+              className="hidden sm:flex items-center bg-[#FDF4E6] rounded-full px-4 py-2.5 w-48 md:w-64 lg:w-96 border border-transparent focus-within:border-[#6651A4]/30 focus-within:bg-white transition-all shadow-sm"
+            >
               <Search size={16} className="text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search anything..." 
+                name="search"
+                placeholder="Search products..." 
                 className="bg-transparent border-none outline-none ml-2 w-full text-[12px] font-medium text-gray-700 placeholder:text-gray-400"
               />
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center gap-2 md:gap-5">

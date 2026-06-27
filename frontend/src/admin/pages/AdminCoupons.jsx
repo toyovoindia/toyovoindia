@@ -10,11 +10,9 @@ const emptyForm = {
   type: 'percentage',
   scope: 'storewide',
   value: '',
-  minOrderValue: '',
-  maxDiscountAmount: '',
   applicableCategories: [],
-  expiryDate: '',
-  expiryTime: '',
+  startsAt: '',
+  expiresAt: '',
 }
 
 const formatCouponValue = (coupon) => {
@@ -101,13 +99,12 @@ export function AdminCoupons() {
   }
 
   const startEdit = (coupon) => {
-    let expiryDate = ''
-    let expiryTime = ''
-    if (coupon.expiresAt) {
-      const expDate = new Date(coupon.expiresAt)
-      expiryDate = expDate.toLocaleDateString('en-CA') // YYYY-MM-DD
-      expiryTime = expDate.toLocaleTimeString('it-IT').slice(0, 5) // HH:MM
-    }
+    const formatLocalDatetime = (isoString) => {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
 
     setFormData({
       code: coupon.code || '',
@@ -119,8 +116,8 @@ export function AdminCoupons() {
       minOrderValue: coupon.minOrderValue !== undefined ? String(coupon.minOrderValue) : '',
       maxDiscountAmount: coupon.maxDiscountAmount !== undefined ? String(coupon.maxDiscountAmount) : '',
       applicableCategories: coupon.applicableCategories ? coupon.applicableCategories.map(c => c.id || c) : [],
-      expiryDate,
-      expiryTime,
+      startsAt: formatLocalDatetime(coupon.startsAt),
+      expiresAt: formatLocalDatetime(coupon.expiresAt),
     })
     setEditingCouponId(coupon.id)
     setShowForm(true)
@@ -166,7 +163,8 @@ export function AdminCoupons() {
 
     setIsSaving(true)
     try {
-      const expiresAt = formData.expiryDate ? new Date(`${formData.expiryDate}T${formData.expiryTime || '00:00'}`).toISOString() : null
+      const startsAt = formData.startsAt ? new Date(formData.startsAt).toISOString() : null
+      const expiresAt = formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null
       const couponPayload = {
         code: formData.code.trim(),
         title: formData.title.trim(),
@@ -177,6 +175,7 @@ export function AdminCoupons() {
         minOrderValue: minOrderVal,
         maxDiscountAmount: formData.maxDiscountAmount !== '' ? Number(formData.maxDiscountAmount) : null,
         applicableCategories: formData.scope === 'category' ? formData.applicableCategories : [],
+        startsAt,
         expiresAt,
       }
 
@@ -216,29 +215,41 @@ export function AdminCoupons() {
         <form ref={formRef} onSubmit={handleSubmit} className="bg-white rounded-[32px] p-6 md:p-8 border border-black/[0.03] shadow-sm space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="flex flex-col space-y-1">
-              <input value={formData.code} onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })} placeholder="Coupon Code" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" required />
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Coupon Code</label>
+              <input value={formData.code} onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })} placeholder="e.g. SUMMER20" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" required />
               {formErrors.code && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.code}</span>}
             </div>
             <div className="flex flex-col space-y-1">
-              <input value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} placeholder="Coupon Title" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]" required />
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Campaign Title</label>
+              <input value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} placeholder="e.g. Summer Special Sale" className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]" required />
               {formErrors.title && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.title}</span>}
             </div>
-            <select value={formData.type} onChange={(event) => setFormData({ ...formData, type: event.target.value })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]">
-              <option value="percentage">Percentage</option>
-              <option value="fixed">Fixed</option>
-              <option value="shipping">Shipping</option>
-            </select>
-            <select value={formData.scope} onChange={(event) => setFormData({ ...formData, scope: event.target.value, applicableCategories: [] })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]">
-              <option value="storewide">Storewide</option>
-              <option value="category">Category</option>
-              <option value="shipping">Shipping</option>
-            </select>
+            <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Discount Type</label>
+              <select value={formData.type} onChange={(event) => setFormData({ ...formData, type: event.target.value })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]">
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (₹)</option>
+                <option value="shipping">Free Shipping</option>
+              </select>
+            </div>
+            <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Applicable Scope</label>
+              <select value={formData.scope} onChange={(event) => setFormData({ ...formData, scope: event.target.value, applicableCategories: [] })} className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]">
+                <option value="storewide">Entire Store</option>
+                <option value="category">Specific Categories</option>
+                <option value="shipping">Shipping Only</option>
+              </select>
+            </div>
           </div>
 
-          <textarea value={formData.description} onChange={(event) => setFormData({ ...formData, description: event.target.value })} placeholder="Optional internal description" className="w-full min-h-[110px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px] resize-none" />
+          <div className="flex flex-col space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Internal Description / Notes</label>
+            <textarea value={formData.description} onChange={(event) => setFormData({ ...formData, description: event.target.value })} placeholder="Write any internal notes or details about this coupon..." className="w-full min-h-[110px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px] resize-none" />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Discount Amount</label>
               <input 
                 type="number" 
                 min="0" 
@@ -251,13 +262,14 @@ export function AdminCoupons() {
                     setFormData({ ...formData, value: val })
                   }
                 }} 
-                placeholder={formData.type === 'percentage' ? 'Discount %' : 'Discount value'} 
+                placeholder={formData.type === 'percentage' ? 'e.g. 10 (%)' : 'e.g. 100 (₹)'} 
                 className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
                 required 
               />
               {formErrors.value && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.value}</span>}
             </div>
             <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Min Order Value (Optional)</label>
               <input 
                 type="number" 
                 min="0" 
@@ -270,12 +282,13 @@ export function AdminCoupons() {
                     setFormData({ ...formData, minOrderValue: val })
                   }
                 }} 
-                placeholder="Minimum order value" 
+                placeholder="e.g. 500" 
                 className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
               />
               {formErrors.minOrderValue && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.minOrderValue}</span>}
             </div>
             <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Max Cap (Optional)</label>
               <input 
                 type="number" 
                 min="0" 
@@ -288,35 +301,42 @@ export function AdminCoupons() {
                     setFormData({ ...formData, maxDiscountAmount: val })
                   }
                 }} 
-                placeholder="Max discount cap" 
+                placeholder="e.g. 1000" 
                 className="h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[13px]" 
               />
               {formErrors.maxDiscountAmount && <span className="text-red-500 text-[10px] font-bold px-1">{formErrors.maxDiscountAmount}</span>}
             </div>
-             <div className="flex gap-2 min-w-[260px] xl:col-span-1">
+            <div className="flex flex-col space-y-1 col-span-1 md:col-span-2 xl:col-span-1">
+               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Start Date & Time (Optional)</label>
                <input 
-                 type="time" 
-                 value={formData.expiryTime} 
-                 onChange={(event) => setFormData({ ...formData, expiryTime: event.target.value })} 
-                 className="w-[100px] h-12 px-2 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
-                 title="Expiry Time"
+                 type="datetime-local" 
+                 value={formData.startsAt} 
+                 onChange={(event) => setFormData({ ...formData, startsAt: event.target.value })} 
+                 className="w-full h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
+                 title="Start Date & Time"
                />
+            </div>
+            <div className="flex flex-col space-y-1 col-span-1 md:col-span-2 xl:col-span-1">
+               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Expiry Date & Time (Optional)</label>
                <input 
-                 type="date" 
-                 value={formData.expiryDate} 
-                 onChange={(event) => setFormData({ ...formData, expiryDate: event.target.value })} 
-                 className="flex-1 h-12 px-3 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
-                 title="Expiry Date"
+                 type="datetime-local" 
+                 value={formData.expiresAt} 
+                 onChange={(event) => setFormData({ ...formData, expiresAt: event.target.value })} 
+                 className="w-full h-12 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-bold text-[11px]" 
+                 title="Expiry Date & Time"
                />
-             </div>
-           </div>
+            </div>
+          </div>
 
            {formData.scope === 'category' && (
-             <select multiple value={formData.applicableCategories} onChange={(event) => setFormData({ ...formData, applicableCategories: Array.from(event.target.selectedOptions, (option) => option.value) })} className="w-full min-h-[140px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]">
-               {categories.map((category) => (
-                 <option key={category.id} value={category.id}>{category.name}</option>
-               ))}
-             </select>
+             <div className="flex flex-col space-y-1">
+               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Select Applicable Categories (Hold Ctrl/Cmd to select multiple)</label>
+               <select multiple value={formData.applicableCategories} onChange={(event) => setFormData({ ...formData, applicableCategories: Array.from(event.target.selectedOptions, (option) => option.value) })} className="w-full min-h-[140px] p-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 font-medium text-[13px]">
+                 {categories.map((category) => (
+                   <option key={category.id} value={category.id}>{category.name}</option>
+                 ))}
+               </select>
+             </div>
            )}
 
            <div className="flex items-center justify-end gap-3">

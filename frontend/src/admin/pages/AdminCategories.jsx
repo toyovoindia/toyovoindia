@@ -12,7 +12,6 @@ export function AdminCategories() {
   const [error, setError] = useState('')
   const [uploadingBannerFor, setUploadingBannerFor] = useState('')
   
-  // Create Modal State
   const [showAddModal, setShowAddModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -22,6 +21,7 @@ export function AdminCategories() {
     showInNavbar: false,
     showInAllCategories: true
   })
+  const [bannerFile, setBannerFile] = useState(null)
 
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState({ show: false, category: null })
@@ -137,8 +137,17 @@ export function AdminCategories() {
     setFormErrors({})
     setIsSubmitting(true)
     try {
-      const payload = { ...formData }
+      let payload = { ...formData }
       if (!payload.parentCategory) delete payload.parentCategory
+      
+      if (bannerFile) {
+        const uploaded = await uploadAdminMedia(bannerFile, 'categories')
+        payload.bannerImage = {
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          alt: payload.name,
+        }
+      }
       
       const newCat = await createAdminCategory(payload)
       setCategories(prev => [...prev, newCat])
@@ -151,6 +160,7 @@ export function AdminCategories() {
         showInNavbar: false,
         showInAllCategories: true
       })
+      setBannerFile(null)
       setFormErrors({})
     } catch (err) {
       showError(err.message || 'Failed to create category')
@@ -176,9 +186,10 @@ export function AdminCategories() {
 
       {/* Add Category Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setFormErrors({}) }} />
-          <div className="relative bg-[#FDF4E6] w-full max-w-xl rounded-[32px] shadow-2xl overflow-hidden border border-white/20">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setFormErrors({}) }} />
+          <div className="min-h-full flex items-center justify-center p-4 pointer-events-none">
+            <div className="relative bg-[#FDF4E6] w-full max-w-xl rounded-[32px] shadow-2xl overflow-hidden border border-white/20 pointer-events-auto my-8">
             <div className="p-6 md:p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-grandstander font-bold text-gray-800">Add Category</h2>
@@ -256,6 +267,22 @@ export function AdminCategories() {
                   </label>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Banner Image (Optional)</label>
+                  <div className="flex items-center gap-4">
+                    <label className="h-12 px-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-100 transition-colors">
+                      <span className="text-sm font-bold">{bannerFile ? 'Change Banner' : 'Upload Banner'}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={e => setBannerFile(e.target.files?.[0])}
+                      />
+                    </label>
+                    {bannerFile && <span className="text-xs font-medium text-[#6651A4] truncate">{bannerFile.name}</span>}
+                  </div>
+                </div>
+
                 <button 
                   disabled={isSubmitting}
                   className="w-full h-14 mt-4 bg-[#6651A4] text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-[#6651A4]/20 hover:bg-[#5a4892] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
@@ -266,7 +293,8 @@ export function AdminCategories() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Confirmation Modal */}
       <ConfirmationModal 

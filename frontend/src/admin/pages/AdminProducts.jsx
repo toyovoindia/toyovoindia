@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Search, Filter, PackageOpen, Plus, Tag, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
 import { deleteAdminProduct, getAdminCategories, getAdminProducts } from '../../services/adminCatalogApi'
@@ -8,9 +8,10 @@ import { ConfirmationModal } from '../components/ConfirmationModal'
 
 export function AdminProducts() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { success, error: showError } = useToast()
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get('search') || '')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [categories, setCategories] = useState([])
