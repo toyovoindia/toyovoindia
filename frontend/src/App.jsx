@@ -32,15 +32,60 @@ import { useAuth } from './context/AuthContext'
 import { FirebaseTokenManager } from './components/FirebaseTokenManager'
 import { getStorefrontSettings } from './services/siteApi'
 
-// Helper component to scroll to top on route change
-function ScrollToTop() {
-  const { pathname } = useLocation()
+// Advanced Scroll Restoration Manager for React Router
+function ScrollManager() {
+  const location = useLocation()
   const navigationType = useNavigationType()
+
+  // 1. Record scroll position as the user scrolls
   useEffect(() => {
-    if (navigationType !== 'POP') {
+    let timeoutId = null
+    const handleScroll = () => {
+      if (timeoutId) return
+      timeoutId = setTimeout(() => {
+        // Save the scroll position for the current location key
+        sessionStorage.setItem(`scroll-pos-${location.key}`, window.scrollY)
+        timeoutId = null
+      }, 150) // Throttle to avoid performance issues
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [location.key])
+
+  // 2. Apply scroll position on route change
+  useEffect(() => {
+    if (navigationType === 'POP') {
+      const savedPos = sessionStorage.getItem(`scroll-pos-${location.key}`)
+      if (savedPos !== null) {
+        const pos = parseInt(savedPos, 10)
+        
+        // Apply immediately
+        window.scrollTo(0, pos)
+        
+        // For React apps, data often loads async (e.g. products fetching).
+        // This interval keeps asserting the scroll position as the DOM expands
+        // over the next 1 second, ensuring it locks into place accurately.
+        let attempts = 0
+        const intervalId = setInterval(() => {
+          if (window.scrollY !== pos) {
+             window.scrollTo(0, pos)
+          }
+          attempts++
+          if (attempts > 10) clearInterval(intervalId)
+        }, 100)
+
+        return () => clearInterval(intervalId)
+      }
+    } else {
+      // PUSH or REPLACE: New navigation, always scroll to top smoothly
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [pathname, navigationType])
+  }, [location.pathname, location.key, navigationType])
+
   return null
 }
 
@@ -195,7 +240,7 @@ function AppContent() {
   if (isAdmin) {
     return (
       <>
-        <ScrollToTop />
+        <ScrollManager />
         <FirebaseTokenManager />
         <Suspense fallback={<AdminFallback />}>
           <AdminRouteGate>
@@ -236,7 +281,7 @@ function AppContent() {
 
   return (
     <>
-      <ScrollToTop />
+      <ScrollManager />
       <FirebaseTokenManager />
       <div className="min-h-screen flex flex-col bg-[#FDF4E6] relative" style={{ overflowX: 'clip' }}>
         {!hideLayouts && <VisionHeader />}
