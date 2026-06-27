@@ -9,6 +9,7 @@ export function AdminFinance() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [search, setSearch] = useState('')
+  const [ledgerStatus, setLedgerStatus] = useState('All')
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
 
@@ -51,6 +52,7 @@ export function AdminFinance() {
   const refundedAmount = refundedOrders.reduce((sum, order) => sum + order.total, 0)
   const processingOrders = orders.filter((order) => order.status === 'processing').length
   const ledgerRows = useMemo(() => orders.filter((order) => {
+    if (ledgerStatus !== 'All' && order.status !== ledgerStatus.toLowerCase()) return false;
     const query = search.trim().toLowerCase()
     if (!query) return true
     return [
@@ -60,7 +62,7 @@ export function AdminFinance() {
       order.paymentMethodLabel,
       order.paymentStatusLabel,
     ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query))
-  }), [orders, search])
+  }), [orders, search, ledgerStatus])
 
   const accountRows = useMemo(() => users.map((user) => {
     const userOrders = orders.filter((order) => order.user?._id === user.id || order.customerEmail === user.email)
@@ -185,13 +187,26 @@ export function AdminFinance() {
           {activeTab === 'ledger' && (
             <div className="bg-white rounded-[32px] border border-black/[0.03] shadow-sm overflow-hidden">
               <div className="p-6 border-b border-black/[0.03] flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative w-full md:w-96">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Search orders, customer, payment..." className="w-full h-11 pl-11 pr-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 text-[13px] font-medium" />
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                  <div className="relative w-full md:w-96">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Search orders, customer, payment..." className="w-full h-11 pl-11 pr-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 text-[13px] font-medium" />
+                  </div>
+                  <select 
+                    value={ledgerStatus} onChange={(e) => setLedgerStatus(e.target.value)}
+                    className="h-11 px-4 bg-[#FDF4E6]/50 rounded-xl outline-none border border-transparent focus:border-[#6651A4]/30 text-[11px] font-bold text-gray-600 uppercase tracking-widest cursor-pointer w-full md:w-auto"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
                 </div>
                 <button 
                   onClick={handleExportCSV}
-                  className="flex items-center justify-center gap-2 h-11 px-6 bg-[#6651A4] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-[#5a4892] transition-all shadow-md active:scale-95"
+                  className="flex items-center justify-center gap-2 h-11 px-6 bg-[#6651A4] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-[#5a4892] transition-all shadow-md active:scale-95 whitespace-nowrap"
                 >
                   <Download size={14} /> Export CSV
                 </button>
@@ -202,6 +217,7 @@ export function AdminFinance() {
                     <tr>
                       <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order</th>
                       <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
+                      <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email</th>
                       <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Method</th>
                       <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
                       <th className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Amount</th>
@@ -212,6 +228,7 @@ export function AdminFinance() {
                       <tr key={order.id} className="border-b border-gray-50 last:border-0">
                         <td className="py-4 px-6 text-[13px] font-bold text-[#6651A4] font-mono">#{order.orderNumber}</td>
                         <td className="py-4 px-6 text-[13px] font-bold text-gray-700">{order.customerName}</td>
+                        <td className="py-4 px-6 text-[13px] text-gray-500">{order.customerEmail}</td>
                         <td className="py-4 px-6 text-[12px] text-gray-500">{order.paymentMethodLabel}</td>
                         <td className="py-4 px-6 text-[12px] font-bold text-gray-700">{order.paymentStatusLabel}</td>
                         <td className="py-4 px-6 text-[14px] font-bold text-gray-800 text-right">₹{order.total.toFixed(2)}</td>

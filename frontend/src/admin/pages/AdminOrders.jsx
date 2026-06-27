@@ -177,9 +177,9 @@ export function AdminOrders() {
                       <p 
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                         className="text-[14px] font-bold text-[#6651A4] font-mono cursor-pointer hover:underline" 
-                        title={order.orderNumber}
+                        title={order.orderNumber || order.id}
                       >
-                        #{order.orderNumber ? order.orderNumber.replace(/-\d{8}-/, '-') : ''}
+                        #{ (order.orderNumber || order.id || '').toString().slice(-8).toUpperCase() }
                       </p>
                       <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1 mt-1"><Calendar size={10}/> {order.date}</p>
                       <p className="text-[10px] text-gray-400 font-medium mt-1">ETA: {order.deliveryDate || '-'}</p>
@@ -225,8 +225,6 @@ export function AdminOrders() {
                     <td 
                       className="py-4 px-6 text-right relative"
                       onClick={(e) => e.stopPropagation()}
-                      onMouseEnter={() => setMenuOpenOrderId(order.id)}
-                      onMouseLeave={() => setMenuOpenOrderId(null)}
                     >
                       <div className="flex justify-end gap-2">
                         <button 

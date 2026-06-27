@@ -107,6 +107,8 @@ const mapOrderSummary = (order) => ({
   paymentStatusLabel: PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus,
   paymentMethodLabel: order.paymentGateway?.paymentMethodLabel || PAYMENT_METHOD_LABELS[order.paymentMethod] || order.paymentMethod,
   customerName: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
+  customerEmail: order.customer.email,
+  user: order.user ? order.user.toString() : null,
   destination: `${order.shippingAddress.city === 'Other' ? order.shippingAddress.district : order.shippingAddress.city}, ${order.shippingAddress.state}`,
   createdAt: order.createdAt,
   returnRequest: {
@@ -479,8 +481,11 @@ export const adminUpdateOrderReturnRequest = asyncHandler(async (req, res, next)
 
   const nextStatus = req.body.status;
   const previousReturnStatus = order.returnRequest.status;
+  const previousAdminNote = order.returnRequest.adminNote || '';
+  const newAdminNote = req.body.adminNote?.trim() || '';
+
   order.returnRequest.status = nextStatus;
-  order.returnRequest.adminNote = req.body.adminNote?.trim() || '';
+  order.returnRequest.adminNote = newAdminNote;
   order.returnRequest.reviewedAt = new Date();
 
   if (nextStatus === 'refunded' && previousReturnStatus !== 'refunded') {
@@ -491,17 +496,19 @@ export const adminUpdateOrderReturnRequest = asyncHandler(async (req, res, next)
     });
   }
 
-  const displayStatus = nextStatus === 'requested' ? 'Pending Return' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;
-  const displayNote = nextStatus === 'requested' 
-    ? 'pending return order created' 
-    : `Return request marked ${nextStatus}${order.returnRequest.adminNote ? `: ${order.returnRequest.adminNote}` : ''}`;
+  if (previousReturnStatus !== nextStatus || previousAdminNote !== newAdminNote) {
+    const displayStatus = nextStatus === 'requested' ? 'Pending Return' : `Refund ${nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}`;
+    const displayNote = nextStatus === 'requested' 
+      ? 'pending return order created' 
+      : `Return request marked ${nextStatus}${newAdminNote ? `: ${newAdminNote}` : ''}`;
 
-  appendStatusHistory(
-    order,
-    displayStatus,
-    req.user.role,
-    displayNote
-  );
+    appendStatusHistory(
+      order,
+      displayStatus,
+      req.user.role,
+      displayNote
+    );
+  }
 
   await order.save();
 
