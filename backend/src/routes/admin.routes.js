@@ -9,8 +9,12 @@ import { adminShippingRoutes } from './shipping.routes.js';
 import { adminMessageRoutes } from './message.routes.js';
 import { adminMediaRoutes } from './media.routes.js';
 import { adminPageRoutes } from './pageContent.routes.js';
+import { globalAdminSearch } from '../controllers/adminSearch.controller.js';
+import { protect, authorizeRoles } from '../middlewares/auth.js';
 
 const router = express.Router();
+
+router.get('/search', protect, authorizeRoles('admin', 'super_admin'), globalAdminSearch);
 
 router.use('/users', adminUserRoutes);
 router.use('/coupons', adminCouponRoutes);

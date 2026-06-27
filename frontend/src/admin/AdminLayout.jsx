@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext'
 import { getAdminUnreadCount, getAdminNotifications } from '../services/notificationAdminApi'
 import { requestFirebaseToken } from '../utils/firebase'
 import { saveFcmToken } from '../services/notificationApi'
+import { apiRequest } from '../services/api'
 import { getMessaging, onMessage } from 'firebase/messaging'
 
 // --- Skeleton Component for Seamless Loading ---
@@ -48,6 +49,48 @@ export function AdminLayout() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
   const lastNotifIdRef = useRef(null)
+  const searchRef = useRef(null)
+
+  // Global Search State
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Debounced search effect
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const payload = await apiRequest(`/admin/search?q=${encodeURIComponent(searchQuery)}`)
+        setSearchResults(payload.data || [])
+      } catch (err) {
+        console.error('Search failed:', err)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 400) // 400ms debounce
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery])
+
+  // Handle click outside search to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Fetch unread count & check for new notifications
   useEffect(() => {
@@ -294,23 +337,83 @@ export function AdminLayout() {
             </button>
             
             {/* Global Search - Hidden on small mobile */}
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const fd = new FormData(e.target);
-                const query = fd.get('search')?.trim();
-                if (query) navigate(`/admin/products?search=${encodeURIComponent(query)}`);
-              }}
-              className="hidden sm:flex items-center bg-[#FDF4E6] rounded-full px-4 py-2.5 w-48 md:w-64 lg:w-96 border border-transparent focus-within:border-[#6651A4]/30 focus-within:bg-white transition-all shadow-sm"
-            >
-              <Search size={16} className="text-gray-400" />
-              <input 
-                type="text" 
-                name="search"
-                placeholder="Search products..." 
-                className="bg-transparent border-none outline-none ml-2 w-full text-[12px] font-medium text-gray-700 placeholder:text-gray-400"
-              />
-            </form>
+            <div className="hidden sm:flex relative z-[100]" ref={searchRef}>
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (searchQuery.trim()) navigate(`/admin/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                  setShowSuggestions(false);
+                }}
+                className="flex items-center bg-[#FDF4E6] rounded-full px-4 py-2.5 w-48 md:w-64 lg:w-96 border border-transparent focus-within:border-[#6651A4]/30 focus-within:bg-white transition-all shadow-sm relative"
+              >
+                <Search size={16} className="text-gray-400" />
+                <input 
+                  type="text" 
+                  name="search"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim()) setShowSuggestions(true);
+                  }}
+                  placeholder="Search orders, users, toys..." 
+                  className="bg-transparent border-none outline-none ml-2 w-full text-[12px] font-medium text-gray-700 placeholder:text-gray-400"
+                  autoComplete="off"
+                />
+                {isSearching && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#F1641E] border-t-transparent rounded-full animate-spin" />
+                )}
+              </form>
+
+              {/* Suggestions Dropdown */}
+              <AnimatePresence>
+                {showSuggestions && searchQuery.trim() && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[24px] shadow-2xl border border-black/[0.05] overflow-hidden max-h-[400px] flex flex-col"
+                  >
+                    {searchResults.length > 0 ? (
+                      <div className="overflow-y-auto custom-scrollbar p-2">
+                        {searchResults.map((res, idx) => (
+                          <div 
+                            key={`${res.type}-${res.id}-${idx}`}
+                            onClick={() => {
+                              navigate(res.url);
+                              setShowSuggestions(false);
+                              setSearchQuery('');
+                            }}
+                            className="flex items-center gap-4 p-3 hover:bg-[#FDF4E6]/50 rounded-2xl cursor-pointer transition-colors group"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                              {res.type === 'product' && res.image ? (
+                                <img src={res.image.url || res.image} className="w-full h-full object-cover" alt="" />
+                              ) : res.type === 'user' && res.avatar ? (
+                                <img src={res.avatar} className="w-full h-full object-cover" alt="" />
+                              ) : (
+                                <Search size={16} className="text-gray-400 group-hover:text-[#F1641E] transition-colors" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-gray-800 truncate leading-tight">{res.title}</p>
+                              <p className="text-[11px] text-gray-500 truncate mt-0.5">{res.subtitle}</p>
+                            </div>
+                            <div className="px-2 py-1 bg-gray-50 rounded-md shrink-0">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{res.type}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : !isSearching ? (
+                      <div className="p-8 text-center text-gray-500 text-sm">
+                        No results found for "{searchQuery}"
+                      </div>
+                    ) : null}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-5">
