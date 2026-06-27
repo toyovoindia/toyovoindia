@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ShoppingCart, Heart, Repeat, LayoutGrid } from 'lucide-react'
+import { Search, ShoppingCart, Heart, Layers, LayoutGrid } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getProducts } from '../services/catalogApi'
 
@@ -95,7 +95,7 @@ export function SearchPage() {
                   <div className="absolute top-3 -right-12 z-40 flex flex-col gap-2 group-hover:right-3 transition-all duration-500 ease-out opacity-0 group-hover:opacity-100">
                     <button className="h-9 w-9 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#E84949] hover:text-white transition-colors border border-transparent hover:border-[#E84949]"><ShoppingCart size={15} /></button>
                     <button className="h-9 w-9 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#E84949] hover:text-white transition-colors border border-transparent hover:border-[#E84949]"><Heart size={15} /></button>
-                    <button className="h-9 w-9 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#E84949] hover:text-white transition-colors border border-transparent hover:border-[#E84949]"><Repeat size={15} /></button>
+                    <button className="h-9 w-9 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#E84949] hover:text-white transition-colors border border-transparent hover:border-[#E84949]"><Layers size={15} /></button>
                   </div>
                   <img src={p.img} alt={p.name} className="w-full h-full object-cover rounded-[10px] transition-transform duration-1000 group-hover:scale-110" />
                 </Link>

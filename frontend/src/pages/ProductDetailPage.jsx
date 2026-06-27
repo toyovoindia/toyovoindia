@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Star, Heart, Share2, Eye, ShoppingCart, Search, Repeat, Plus, Minus, CheckCircle, X, ChevronRight, Share, ZoomIn } from 'lucide-react'
+import { Star, Heart, Share2, Eye, ShoppingCart, Search, Repeat, Plus, Minus, CheckCircle, X, ChevronRight, Share, ZoomIn, Layers } from 'lucide-react'
 
 
 const productImages = [
@@ -763,7 +763,7 @@ export function ProductDetailPage() {
                     >
                       <Heart size={16} fill={isWishlisted ? 'white' : 'none'} />
                     </button>
-                    <button onClick={handleCompare} className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform" title="Compare"><Repeat size={16} /></button>
+                    <button onClick={handleCompare} className="w-9 h-9 rounded bg-[#E84949] text-white flex items-center justify-center hover:scale-110 transition-transform" title="Compare"><Layers size={16} /></button>
                     
                     <div className="relative">
                       <button 
