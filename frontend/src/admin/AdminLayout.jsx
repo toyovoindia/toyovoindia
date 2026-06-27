@@ -7,7 +7,8 @@ import {
   ChevronRight, CircleUser, Wallet, Tags, Percent, Megaphone, MessageSquare, Truck, Activity, FileText, Star
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getAdminUnreadCount } from '../services/notificationAdminApi'
+import { useToast } from '../context/ToastContext'
+import { getAdminUnreadCount, getAdminNotifications } from '../services/notificationAdminApi'
 
 // --- Skeleton Component for Seamless Loading ---
 function AdminContentSkeleton() {
@@ -35,6 +36,7 @@ function AdminContentSkeleton() {
 
 export function AdminLayout() {
   const { logout } = useAuth()
+  const { success, info } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1280)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1280)
@@ -42,20 +44,42 @@ export function AdminLayout() {
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '', title: '' })
+  const lastNotifIdRef = useRef(null)
 
-  // Fetch unread count
+  // Fetch unread count & check for new notifications
   useEffect(() => {
+    let isInitial = true;
     const fetchCount = async () => {
       try {
-        const count = await getAdminUnreadCount()
+        const payload = await getAdminNotifications({ limit: 1 })
+        const latestNotif = payload?.data?.[0]
+        
+        if (latestNotif) {
+          if (!isInitial && lastNotifIdRef.current && lastNotifIdRef.current !== latestNotif._id) {
+             // New notification!
+             if (latestNotif.title?.toLowerCase().includes('order') || latestNotif.type === 'order') {
+                 success(`New Order: ${latestNotif.message}`)
+                 try {
+                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+                     audio.play()
+                 } catch (e) {}
+             } else {
+                 info(`Alert: ${latestNotif.title}`)
+             }
+          }
+          lastNotifIdRef.current = latestNotif._id
+        }
+        isInitial = false;
+
+        const count = payload?.meta?.unread || 0;
         setUnreadCount(count)
       } catch (err) {
-        console.error('Failed to fetch unread count')
+        console.error('Failed to fetch notifications')
       }
     }
     fetchCount()
-    // Poll every 1 minute
-    const interval = setInterval(fetchCount, 60000)
+    // Poll every 15 seconds for responsiveness
+    const interval = setInterval(fetchCount, 15000)
     
     // Listen for custom event to update instantly
     const handleUpdate = () => fetchCount()
@@ -65,7 +89,7 @@ export function AdminLayout() {
       clearInterval(interval)
       window.removeEventListener('adminNotificationsRead', handleUpdate)
     }
-  }, [])
+  }, [success, info])
 
   // Handle window resize for responsiveness
   useEffect(() => {
