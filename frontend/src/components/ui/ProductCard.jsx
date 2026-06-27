@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Eye, Layers, X, Star, Plus, Minus } from 'lucide-react'
@@ -12,30 +12,30 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
   const { success, error: showError } = useToast()
   const [qty, setQty] = useState(1)
 
-  // Scroll lock implementation - Refined to prevent initial mount scroll jump
+  const scrollPosRef = useRef(0)
+
+  // Scroll lock implementation
   useEffect(() => {
     if (isOpen) {
-      const scrollY = window.scrollY;
+      scrollPosRef.current = window.scrollY;
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollPosRef.current}px`;
       document.body.style.width = '100%';
     } else {
-      // Only restore scroll if we actually have a saved position (prevents jump on mount)
-      const savedScrollY = document.body.style.top;
-      if (savedScrollY) {
+      if (document.body.style.position === 'fixed') {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        window.scrollTo(0, parseInt(savedScrollY || '0') * -1);
+        window.scrollTo(0, scrollPosRef.current);
       }
     }
+    
     return () => {
-      // Cleanup: Only reset if the modal being unmounted is actually the one that locked the scroll
-      // (This prevents multiple cards from fighting over the body style during unmount)
-      if (isOpen) {
+      if (isOpen && document.body.style.position === 'fixed') {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
+        window.scrollTo(0, scrollPosRef.current);
       }
     };
   }, [isOpen]);
