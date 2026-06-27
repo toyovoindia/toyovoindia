@@ -194,7 +194,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                       <div key={item.id} className="pt-4 pb-6 border-t border-black/5 last:border-b last:border-black/10">
                         <div className="flex gap-4">
                           <div className="w-20 h-20 bg-white border border-black/5 rounded-lg overflow-hidden shrink-0">
-                            <img src={item.thumbnail?.url || item.images?.[0]?.url || item.img} alt={item.title} className="w-full h-full object-cover" />
+                            <img src={item.thumbnail?.url || item.images?.[0]?.url || item.img || undefined} alt={item.title} className="w-full h-full object-cover" />
                           </div>
 
                           <div className="grow flex flex-col justify-between">
