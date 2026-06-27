@@ -32,6 +32,7 @@ export function AdminUserDetail() {
   const [user, setUser] = useState(emptyUser)
   const [loadError, setLoadError] = useState('')
   const [formErrors, setFormErrors] = useState({})
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, nextStatus: '' })
 
   useEffect(() => {
     if (isNew) {
@@ -51,6 +52,7 @@ export function AdminUserDetail() {
         if (!isMounted) return
         setUser({
           ...data,
+          phone: data.phone ? data.phone.replace('+91', '') : '',
           password: '',
         })
       } catch (err) {
@@ -91,13 +93,23 @@ export function AdminUserDetail() {
     }
 
     // Password validation for new users
-    if (isNew && (!user.password || user.password.length < 8)) {
-      errors.password = 'Password must be at least 8 characters long'
+    if (isNew) {
+      if (!user.password || !user.password.trim()) {
+        errors.password = 'Password is required'
+      } else if (user.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters long'
+      }
+    }
+
+    // Phone validation
+    if (!user.phone || !user.phone.trim()) {
+      errors.phone = 'Phone number is required'
+    } else if (!/^[6-9]\d{9}$/.test(user.phone.trim())) {
+      errors.phone = 'Phone number must be exactly 10 digits and start with 6-9'
     }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
-      showError('Please resolve the validation errors in the form.')
       return
     }
 
@@ -108,9 +120,9 @@ export function AdminUserDetail() {
         firstName: user.firstName.trim(),
         lastName: user.lastName.trim(),
         email: user.email.trim(),
-        phone: user.phone?.trim() || '',
+        phone: user.phone?.trim() ? `+91${user.phone.trim()}` : undefined,
         role: user.role,
-        status: user.status,
+        status: isNew ? 'Active' : user.status,
         ...(isNew && { password: user.password }),
       }
 
@@ -140,6 +152,9 @@ export function AdminUserDetail() {
       if (lower.includes('email')) {
         newErrors.email = msg
       }
+      if (lower.includes('phone') || lower.includes('mobile')) {
+        newErrors.phone = msg
+      }
       if (lower.includes('password')) {
         newErrors.password = msg
       }
@@ -151,15 +166,23 @@ export function AdminUserDetail() {
     }
   }
 
-  const handleSuspend = async () => {
-    const nextStatus = user.status === 'Banned' ? 'Active' : 'Banned'
+  const executeSuspend = async () => {
     try {
-      const updatedUser = await updateAdminUserStatus(user.id, nextStatus)
+      const updatedUser = await updateAdminUserStatus(user.id, confirmModal.nextStatus)
       setUser((prev) => ({ ...prev, ...updatedUser }))
-      success(`${updatedUser.name} marked as ${nextStatus}.`)
+      success(`${updatedUser.name} marked as ${confirmModal.nextStatus}.`)
+      setConfirmModal({ isOpen: false, nextStatus: '' })
     } catch (err) {
       showError(err.message || 'Status update failed')
+      setConfirmModal({ isOpen: false, nextStatus: '' })
     }
+  }
+
+  const handleSuspend = () => {
+    setConfirmModal({
+      isOpen: true,
+      nextStatus: user.status === 'Banned' ? 'Active' : 'Banned'
+    })
   }
 
   if (loading) {
@@ -280,6 +303,7 @@ export function AdminUserDetail() {
                     <div className="space-y-1">
                       <input
                         type="email"
+                        autoComplete="new-password"
                         value={user.email}
                         onChange={(event) => setUser({ ...user, email: event.target.value })}
                         className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all ${
@@ -302,6 +326,7 @@ export function AdminUserDetail() {
                     <div className="space-y-1">
                       <input
                         type="password"
+                        autoComplete="new-password"
                         value={user.password}
                         onChange={(event) => setUser({ ...user, password: event.target.value })}
                         className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border-2 transition-all ${
@@ -356,13 +381,24 @@ export function AdminUserDetail() {
 
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Phone</p>
-                  <input
-                    disabled={!isEditing}
-                    type="text"
-                    value={user.phone || ''}
-                    onChange={(event) => setUser({ ...user, phone: event.target.value })}
-                    className="w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg p-3 outline-none border border-transparent focus:border-[#6651A4]/30 disabled:opacity-70"
-                  />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">+91</span>
+                      <input
+                        disabled={!isEditing}
+                        type="text"
+                        value={user.phone || ''}
+                        onChange={(event) => {
+                          const clean = event.target.value.replace(/[^0-9]/g, '').slice(0, 10)
+                          setUser({ ...user, phone: clean })
+                        }}
+                        className={`w-full text-sm font-bold text-gray-700 bg-[#FDF4E6]/50 rounded-lg py-3 pr-3 pl-12 outline-none border-2 transition-all disabled:opacity-70 ${
+                          formErrors.phone ? 'border-red-500 text-red-600' : 'border-transparent focus:border-[#6651A4]/30'
+                        }`}
+                      />
+                    </div>
+                    {formErrors.phone && <p className="text-red-500 text-xs px-1">{formErrors.phone}</p>}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -376,9 +412,9 @@ export function AdminUserDetail() {
                     >
                       <option value="customer">customer</option>
                       <option value="admin">admin</option>
-                      <option value="super_admin">super_admin</option>
                     </select>
                   </div>
+                  {!isNew && (
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Status</p>
                     <select
@@ -392,6 +428,7 @@ export function AdminUserDetail() {
                       <option value="Banned">Banned</option>
                     </select>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -444,6 +481,47 @@ export function AdminUserDetail() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setConfirmModal({ isOpen: false, nextStatus: '' })}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border border-black/[0.05]"
+          >
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Ban size={24} className="text-[#E8312A]" />
+            </div>
+            <h2 className="text-2xl font-grandstander font-bold text-gray-800 text-center mb-2">
+              Confirm {confirmModal.nextStatus === 'Active' ? 'Restore' : 'Suspend'}
+            </h2>
+            <p className="text-[13px] text-gray-500 text-center font-medium mb-8">
+              Are you sure you want to {confirmModal.nextStatus === 'Active' ? 'restore' : 'suspend'} access for <strong className="text-gray-800">{fullName || user.email}</strong>?
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setConfirmModal({ isOpen: false, nextStatus: '' })}
+                className="flex-1 h-12 bg-gray-50 text-gray-600 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeSuspend}
+                className="flex-1 h-12 bg-[#E8312A] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
+              >
+                Yes, {confirmModal.nextStatus === 'Active' ? 'Restore' : 'Suspend'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

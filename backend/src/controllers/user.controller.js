@@ -249,9 +249,19 @@ export const adminGetUser = asyncHandler(async (req, res, next) => {
 });
 
 export const adminCreateUser = asyncHandler(async (req, res, next) => {
-  const existingUser = await User.findOne({ email: req.body.email });
-  if (existingUser) {
+  const existingEmail = await User.findOne({ email: req.body.email });
+  if (existingEmail) {
     return next(new AppError('Email is already registered', 400));
+  }
+
+  if (req.body.phone) {
+    const rawPhone = req.body.phone.replace('+91', '');
+    const existingPhone = await User.findOne({ 
+      phone: { $in: [req.body.phone, rawPhone] }
+    });
+    if (existingPhone) {
+      return next(new AppError('Phone number is already registered', 400));
+    }
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -262,7 +272,7 @@ export const adminCreateUser = asyncHandler(async (req, res, next) => {
     lastName: req.body.lastName,
     email: req.body.email,
     passwordHash,
-    phone: req.body.phone || '',
+    phone: req.body.phone || undefined,
     role: req.body.role || 'customer',
     status: req.body.status || 'Active',
     emailVerified: true,
@@ -281,6 +291,17 @@ export const adminUpdateUser = asyncHandler(async (req, res, next) => {
     const existingUser = await User.findOne({ email: req.body.email, _id: { $ne: req.params.id } });
     if (existingUser) {
       return next(new AppError('Email is already registered', 400));
+    }
+  }
+
+  if (req.body.phone && req.body.phone !== user.phone) {
+    const rawPhone = req.body.phone.replace('+91', '');
+    const existingPhone = await User.findOne({ 
+      phone: { $in: [req.body.phone, rawPhone] },
+      _id: { $ne: req.params.id } 
+    });
+    if (existingPhone) {
+      return next(new AppError('Phone number is already registered', 400));
     }
   }
 

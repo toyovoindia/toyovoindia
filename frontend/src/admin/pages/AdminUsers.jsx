@@ -17,6 +17,7 @@ export function AdminUsers() {
   const [users, setUsers] = useState([])
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 })
   const [error, setError] = useState('')
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, user: null, nextStatus: '' })
   const itemsPerPage = 10
 
   useEffect(() => {
@@ -204,11 +205,7 @@ export function AdminUsers() {
                     <td className="py-4 px-6 text-right">
                       <p className="text-[13px] font-bold text-gray-600">{user.joinedDate || '-'}</p>
                     </td>
-                    <td
-                      className="py-4 px-6 text-right relative"
-                      onMouseEnter={() => setMenuOpenUserId(user.id)}
-                      onMouseLeave={() => setMenuOpenUserId(null)}
-                    >
+                    <td className="py-4 px-6 text-right relative">
                       <button
                         onClick={(event) => {
                           event.stopPropagation()
@@ -235,7 +232,14 @@ export function AdminUsers() {
                               <Shield size={14} className="text-[#6651A4]" /> View Profile
                             </button>
                             <button
-                              onClick={() => handleStatusChange(user, user.status === 'Banned' ? 'Active' : 'Banned')}
+                              onClick={() => {
+                                setConfirmModal({
+                                  isOpen: true,
+                                  user,
+                                  nextStatus: user.status === 'Banned' ? 'Active' : 'Banned'
+                                });
+                                setMenuOpenUserId(null);
+                              }}
                               className="w-full px-5 py-3 text-left text-[12px] font-bold text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors"
                             >
                               <UserX size={14} /> {user.status === 'Banned' ? 'Restore User' : 'Suspend User'}
@@ -275,6 +279,53 @@ export function AdminUsers() {
           </div>
         )}
       </motion.div>
+
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal({ isOpen: false, user: null, nextStatus: '' })}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border border-black/[0.05]"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UserX size={24} className="text-[#E8312A]" />
+              </div>
+              <h2 className="text-2xl font-grandstander font-bold text-gray-800 text-center mb-2">
+                Confirm {confirmModal.nextStatus === 'Active' ? 'Restore' : 'Suspend'}
+              </h2>
+              <p className="text-[13px] text-gray-500 text-center font-medium mb-8">
+                Are you sure you want to {confirmModal.nextStatus === 'Active' ? 'restore' : 'suspend'} access for <strong className="text-gray-800">{confirmModal.user?.name || confirmModal.user?.email}</strong>?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmModal({ isOpen: false, user: null, nextStatus: '' })}
+                  className="flex-1 h-12 bg-gray-50 text-gray-600 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleStatusChange(confirmModal.user, confirmModal.nextStatus)
+                    setConfirmModal({ isOpen: false, user: null, nextStatus: '' })
+                  }}
+                  className="flex-1 h-12 bg-[#E8312A] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
+                >
+                  Yes, {confirmModal.nextStatus === 'Active' ? 'Restore' : 'Suspend'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
