@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import heroImg from '../../assets/hero-section.webp'
 import { getStorefrontSettings } from '../../services/siteApi'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 /* ─── SVG Decorations ────────────────────────────────────────────── */
 const Star = ({ className }) => (
@@ -217,18 +218,47 @@ export function HeroSection() {
         <HeroText />
       </div>
 
-      {/* ── Layer 4: dot indicators ── */}
+      {/* ── Layer 4: dot indicators & arrows ── */}
       {slides.length > 1 && (
-        <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { clearTimeout(timerRef.current); setCurrent(i) }}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
-              aria-label={`Slide ${i + 1}`}
-            />
-          ))}
-        </div>
+        <>
+          {/* Navigation Arrows */}
+          <div className="absolute inset-y-0 left-0 right-0 z-30 flex items-center justify-between px-2 sm:px-6 pointer-events-none">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                clearTimeout(timerRef.current)
+                setCurrent(c => (c - 1 + slides.length) % slides.length)
+              }}
+              className="w-10 h-10 sm:w-12 sm:h-12 bg-black/20 hover:bg-black/50 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-all pointer-events-auto active:scale-95"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                clearTimeout(timerRef.current)
+                setCurrent(c => (c + 1) % slides.length)
+              }}
+              className="w-10 h-10 sm:w-12 sm:h-12 bg-black/20 hover:bg-black/50 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-all pointer-events-auto active:scale-95"
+              aria-label="Next slide"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          {/* Dots */}
+          <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2 pointer-events-auto">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { clearTimeout(timerRef.current); setCurrent(i) }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
+                aria-label={`Slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </section>
   )

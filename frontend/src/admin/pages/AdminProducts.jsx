@@ -99,9 +99,9 @@ export function AdminProducts() {
     try {
       await deleteAdminProduct(product._id)
       setProducts(prev => prev.filter(item => item._id !== product._id))
-      success(`${product.name} archived.`)
+      success(`${product.name} deleted.`)
     } catch (err) {
-      showError(err.message || 'Product archive failed')
+      showError(err.message || 'Product deletion failed')
     }
   }
 
@@ -213,6 +213,7 @@ export function AdminProducts() {
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
                   <button 
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       navigate(`/admin/products/${product._id}`);
                     }}
@@ -222,6 +223,7 @@ export function AdminProducts() {
                   </button>
                   <button 
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       handleDelete(product);
                     }}
@@ -287,13 +289,16 @@ export function AdminProducts() {
         </div>
       )}
 
+      {/* Confirmation Modal */}
       <ConfirmationModal 
         isOpen={!!productToArchive}
         onClose={() => setProductToArchive(null)}
         onConfirm={confirmDelete}
-        title="Archive Toy?"
-        message={`Are you sure you want to archive "${productToArchive?.name}"? This will hide it from the storefront.`}
-        confirmText="Archive"
+        title="Delete Toy?"
+        message={`Are you sure you want to delete "${productToArchive?.name}"?`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
       />
     </div>
   )
