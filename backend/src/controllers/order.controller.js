@@ -96,13 +96,18 @@ const mapOrder = (order) => ({
 });
 
 const mapOrderSummary = (order) => ({
+  ...order.toObject(),
   id: order._id.toString(),
   orderNumber: order.orderNumber,
   date: formatOrderDate(order.createdAt),
   status: order.status,
   statusLabel: STATUS_LABELS[order.status] || order.status,
   total: order.totalAmount,
+  subtotal: order.subtotal,
+  shipping: order.shippingAmount,
+  discount: order.discountAmount,
   itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+  items: order.items.map(mapOrderItem),
   paymentStatus: order.paymentStatus,
   paymentStatusLabel: PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus,
   paymentMethodLabel: order.paymentGateway?.paymentMethodLabel || PAYMENT_METHOD_LABELS[order.paymentMethod] || order.paymentMethod,
