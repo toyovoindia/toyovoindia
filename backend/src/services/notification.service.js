@@ -111,7 +111,7 @@ export const notifyOrderPlaced = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
       title: '🎉 Order Placed!',
-      body: `Your order #${order.orderNumber} is confirmed. Total: ₹${order.totalAmount}`,
+      body: `Your order #${order.orderNumber?.split('-').pop() || order.orderNumber} is confirmed. Total: ₹${order.totalAmount}`,
       category: 'Order',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -123,7 +123,7 @@ export const notifyOrderPlaced = (order) => {
   // Also notify admins (works even for guest orders)
   return notifyAdmins({
     title: '🛒 New Order Received',
-    body: `${order.customer.firstName} placed order #${order.orderNumber} for ₹${order.totalAmount}`,
+    body: `${order.customer.firstName} placed order #${order.orderNumber?.split('-').pop() || order.orderNumber} for ₹${order.totalAmount}`,
     category: 'Order',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -137,14 +137,15 @@ export const notifyOrderStatusChanged = (order, previousStatus) => {
   // Bug 113: Derive secret/delivery-verification code from order number (last segment after '-')
   const secretCode = order.orderNumber ? order.orderNumber.split('-').pop() : '';
 
+  const shortId = order.orderNumber?.split('-').pop() || order.orderNumber;
   const messages = {
-    processing: { title: '📦 Order Processing', body: `Your order #${order.orderNumber} is being processed.` },
+    processing: { title: '📦 Order Processing', body: `Your order #${shortId} is being processed.` },
     shipped:    {
       title: '🚚 Order Shipped!',
-      body: `#${order.orderNumber} is on the way${order.trackingNumber ? `. Tracking: ${order.trackingNumber}` : ''}. Your delivery code: ${secretCode} — share only with your delivery agent.`
+      body: `#${shortId} is on the way${order.trackingNumber ? `. Tracking: ${order.trackingNumber}` : ''}. Your delivery code: ${secretCode} — share only with your delivery agent.`
     },
-    delivered:  { title: '🎉 Order Delivered!', body: `#${order.orderNumber} has been delivered. Enjoy!` },
-    cancelled:  { title: '❌ Order Cancelled', body: `Your order #${order.orderNumber} has been cancelled.` },
+    delivered:  { title: '🎉 Order Delivered!', body: `#${shortId} has been delivered. Enjoy!` },
+    cancelled:  { title: '❌ Order Cancelled', body: `Your order #${shortId} has been cancelled.` },
   };
   const msg = messages[order.status];
   if (!msg) return;
@@ -162,7 +163,7 @@ export const notifyOrderStatusChanged = (order, previousStatus) => {
   return notifyAdmins({
     ...msg,
     title: `📦 Order ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`,
-    body: `Order #${order.orderNumber} status changed to ${order.status}`,
+    body: `Order #${shortId} status changed to ${order.status}`,
     category: 'Order',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -174,7 +175,7 @@ export const notifyDeliveryRescheduled = (order, reason) => {
   if (!order.user) return;
   return sendNotificationToUser(order.user, {
     title: '📅 Delivery Rescheduled',
-    body: `Your order #${order.orderNumber} delivery date has changed. Reason: ${reason}`,
+    body: `Your order #${order.orderNumber?.split('-').pop() || order.orderNumber} delivery date has changed. Reason: ${reason}`,
     category: 'Order',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -188,7 +189,7 @@ export const notifyOrderCancelled = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
       title: '❌ Order Cancelled',
-      body: `Your order #${order.orderNumber} has been cancelled. Refund will be processed soon.`,
+      body: `Your order #${order.orderNumber?.split('-').pop() || order.orderNumber} has been cancelled. Refund will be processed soon.`,
       category: 'Order',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -200,7 +201,7 @@ export const notifyOrderCancelled = (order) => {
   // Also notify admins
   return notifyAdmins({
     title: '❌ Order Cancelled',
-    body: `Order #${order.orderNumber} was cancelled.`,
+    body: `Order #${order.orderNumber?.split('-').pop() || order.orderNumber} has been cancelled by customer`,
     category: 'Order',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -211,8 +212,8 @@ export const notifyOrderCancelled = (order) => {
 export const notifyReturnRequested = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
-      title: '🔄 Return Request Submitted',
-      body: `Your return request for #${order.orderNumber} is under review.`,
+      title: '↩️ Return Requested',
+      body: `Your return request for order #${order.orderNumber?.split('-').pop() || order.orderNumber} has been received.`,
       category: 'Return',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -224,7 +225,7 @@ export const notifyReturnRequested = (order) => {
   // Also notify admins
   return notifyAdmins({
     title: '🔄 Return Requested',
-    body: `${order.customer.firstName} requested a return for order #${order.orderNumber}`,
+    body: `${order.customer.firstName} requested a return for order #${order.orderNumber?.split('-').pop() || order.orderNumber}`,
     category: 'Return',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -236,9 +237,9 @@ export const notifyReturnStatusChanged = (order) => {
   if (!order.user) return;
   const status = order.returnRequest?.status;
   const messages = {
-    approved: { title: '✅ Return Approved', body: `Your return for #${order.orderNumber} has been approved. Refund is being processed.` },
-    rejected: { title: '⛔ Return Declined', body: `Your return request for #${order.orderNumber} was declined. ${order.returnRequest?.adminNote || ''}` },
-    refunded: { title: '💰 Refund Successful!', body: `Your refund for #${order.orderNumber} has been credited.` },
+    approved: { title: '✅ Return Approved', body: `Your return for order #${order.orderNumber?.split('-').pop() || order.orderNumber} is approved.` },
+    rejected: { title: '❌ Return Rejected', body: `Your return for order #${order.orderNumber?.split('-').pop() || order.orderNumber} was rejected.` },
+    refunded: { title: '💸 Refund Processed', body: `Your refund for order #${order.orderNumber?.split('-').pop() || order.orderNumber} has been issued.` },
   };
   const msg = messages[status];
   if (!msg) return;
@@ -257,7 +258,7 @@ export const notifyPaymentSuccess = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
       title: '🎊 Order Confirmed!',
-      body: `Payment Successful! Your order #${order.orderNumber} is now being processed.`,
+      body: `Payment Successful! Your order #${order.orderNumber?.split('-').pop() || order.orderNumber} is now being processed.`,
       category: 'Payment',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -269,7 +270,7 @@ export const notifyPaymentSuccess = (order) => {
   // Also notify admins
   return notifyAdmins({
     title: '💰 Payment Received',
-    body: `Payment successful for order #${order.orderNumber} (₹${order.totalAmount})`,
+    body: `Payment successful for order #${order.orderNumber?.split('-').pop() || order.orderNumber} (₹${order.totalAmount})`,
     category: 'Payment',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -281,7 +282,7 @@ export const notifyPaymentFailed = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
       title: '❌ Payment Failed',
-      body: `Your payment for order #${order.orderNumber} failed. Please retry.`,
+      body: `Your payment for order #${order.orderNumber?.split('-').pop() || order.orderNumber} failed. Please retry.`,
       category: 'Payment',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -293,7 +294,7 @@ export const notifyPaymentFailed = (order) => {
   // Also notify admins
   return notifyAdmins({
     title: '⚠️ Payment Failed',
-    body: `Payment failed for order #${order.orderNumber}`,
+    body: `Payment failed for order #${order.orderNumber?.split('-').pop() || order.orderNumber}`,
     category: 'Payment',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
@@ -304,7 +305,7 @@ export const notifyRefundProcessed = (order) => {
   if (order.user) {
     sendNotificationToUser(order.user, {
       title: '💰 Refund Processed',
-      body: `Refund of ₹${order.totalAmount} for #${order.orderNumber} is on its way.`,
+      body: `Refund of ₹${order.totalAmount} for #${order.orderNumber?.split('-').pop() || order.orderNumber} is on its way.`,
       category: 'Payment',
       orderNumber: order.orderNumber,
       adminActionUrl: `/admin/orders/${order._id}`,
@@ -316,7 +317,7 @@ export const notifyRefundProcessed = (order) => {
   // Also notify admins
   return notifyAdmins({
     title: '💸 Refund Processed',
-    body: `Refund issued for order #${order.orderNumber}`,
+    body: `Refund issued for order #${order.orderNumber?.split('-').pop() || order.orderNumber}`,
     category: 'Payment',
     orderNumber: order.orderNumber,
     adminActionUrl: `/admin/orders/${order._id}`,
