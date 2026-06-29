@@ -761,7 +761,7 @@ export function CheckoutPage() {
                                     city: addr.city,
                                     state: addr.state,
                                     postalCode: addr.postalCode,
-                                    phone: addr.phone,
+                                    phone: cleanPhoneForForm(addr.phone),
                                     district: addr.district
                                  }));
                               }}
