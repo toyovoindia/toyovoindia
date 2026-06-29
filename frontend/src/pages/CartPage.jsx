@@ -46,7 +46,7 @@ export function CartPage() {
       setGiftWrap(Boolean(parsed?.checkoutNotes?.giftWrap))
       setGiftMessage(parsed?.checkoutNotes?.giftMessage || '')
     } catch {
-      // ignore invalid draft
+      // ignore invalid draft 
     }
   }, [user])
 
