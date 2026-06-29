@@ -76,3 +76,8 @@ export const getProductBrands = async () => {
   const payload = await apiRequest('/products/brands')
   return payload.data || []
 }
+
+export const getProductFilters = async () => {
+  const payload = await apiRequest('/products/filters')
+  return payload.data || { brands: [], genders: [], ages: [], materials: [], colors: [], sizes: [] }
+}

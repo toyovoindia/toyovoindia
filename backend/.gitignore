@@ -20,6 +20,7 @@ yarn-error.log*
 *.swp
 *.swo
 
+
 # OS Files
 .DS_Store
 Thumbs.db
@@ -33,3 +34,6 @@ backend/.env*
 
 # others
 firebase-service-account.json
+
+scripts/
+data-backup

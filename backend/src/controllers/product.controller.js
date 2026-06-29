@@ -192,6 +192,37 @@ export const getProductBrands = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Brands fetched successfully', cleanBrands);
 });
 
+export const getProductFilters = asyncHandler(async (req, res) => {
+  const [brands, genders, ages, materials, colors, sizes] = await Promise.all([
+    Product.distinct('brand', { status: 'active', brand: { $ne: null, $ne: '' } }),
+    Product.distinct('gender', { status: 'active', gender: { $ne: null, $ne: '' } }),
+    Product.distinct('ageGroup', { status: 'active', ageGroup: { $ne: null, $ne: '' } }),
+    Product.distinct('material', { status: 'active', material: { $ne: null, $ne: '' } }),
+    Product.distinct('color', { status: 'active', color: { $ne: null, $ne: [] } }),
+    Product.distinct('size', { status: 'active', size: { $ne: null, $ne: [] } })
+  ]);
+
+  const cleanArray = (arr) => [...new Set(arr.flat().map(i => i.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const uniqueBrandsMap = new Map();
+  for (const b of brands) {
+    const trimmed = b.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    if (!uniqueBrandsMap.has(lower)) uniqueBrandsMap.set(lower, formatted);
+  }
+
+  return successResponse(res, 200, 'Filters fetched successfully', {
+    brands: Array.from(uniqueBrandsMap.values()).sort((a, b) => a.localeCompare(b)),
+    genders: cleanArray(genders),
+    ages: cleanArray(ages),
+    materials: cleanArray(materials),
+    colors: cleanArray(colors),
+    sizes: cleanArray(sizes)
+  });
+});
+
 export const getProductBySlug = asyncHandler(async (req, res, next) => {
   const query = { status: 'active' };
   if (req.params.slug && req.params.slug.match(/^[0-9a-fA-F]{24}$/)) {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, SlidersHorizontal, ChevronLeft, ChevronDown, Check, X, ChevronRight } from 'lucide-react'
 import { ProductCard } from '../components/ui/ProductCard'
-import { getCategoryTree, getProducts, getTrendingProducts, getProductBrands } from '../services/catalogApi'
+import { getCategoryTree, getProducts, getTrendingProducts, getProductFilters } from '../services/catalogApi'
 
 const fallbackCategories = [{ id: 'musical-toys', slug: 'musical-toys', name: 'Musical Toys' }]
 
@@ -68,7 +68,7 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
   )
 }
 
-const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFilterOpen, filters, toggleFilter, setFilters, brands }) => (
+const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFilterOpen, filters, toggleFilter, setFilters, dynamicFilters }) => (
   <div className="space-y-1">
     <FilterSection title="Categories">
       <div className="space-y-1">
@@ -86,12 +86,12 @@ const FilterContent = ({ categories, activeCategory, setActiveCategory, setIsFil
 
     {[
       { id: 'availability', title: 'availability', items: ['in stock', 'out of stock'] },
-      { id: 'brand', title: 'brands', items: brands || ['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'] },
-      { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
-      { id: 'age', title: 'age', items: ['0-2 Years', '2-4 Years', '4-6 Years', '6-8 Years', '8+ Years'] },
-      { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
-      { id: 'color', title: 'colors', items: ['Red', 'Blue', 'Pink', 'Yellow', 'White', 'Black'] },
-      { id: 'material', title: 'material', items: ['Cotton', 'Wool', 'Plastic', 'Wood', 'Silicone'] },
+      { id: 'brand', title: 'brands', items: dynamicFilters?.brands?.length > 0 ? dynamicFilters.brands : ['Babyhug'] },
+      { id: 'gender', title: 'gender', items: dynamicFilters?.genders?.length > 0 ? dynamicFilters.genders : ['Boy', 'Girl', 'Unisex'] },
+      { id: 'age', title: 'age', items: dynamicFilters?.ages?.length > 0 ? dynamicFilters.ages : ['0-2 Years', '2-4 Years', '4-6 Years'] },
+      { id: 'size', title: 'size', items: dynamicFilters?.sizes?.length > 0 ? dynamicFilters.sizes : ['Small', 'Medium', 'Large'] },
+      { id: 'color', title: 'colors', items: dynamicFilters?.colors?.length > 0 ? dynamicFilters.colors : ['Red', 'Blue', 'Pink'] },
+      { id: 'material', title: 'material', items: dynamicFilters?.materials?.length > 0 ? dynamicFilters.materials : ['Cotton', 'Wool', 'Plastic'] },
       { id: 'discount', title: 'discounts', items: ['10% OFF', '20% OFF', '30% OFF', '50% OFF'] }
     ].map(f => (
       <FilterSection key={f.id} title={f.title} defaultOpen={false}>
@@ -135,21 +135,28 @@ export function AllCategoriesPage() {
   const [gridCols, setGridCols] = useState(3)
   const itemsPerPage = 12
 
-  const [dynamicBrands, setDynamicBrands] = useState(['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers'])
+  const [dynamicFilters, setDynamicFilters] = useState({
+    brands: [],
+    genders: [],
+    ages: [],
+    materials: [],
+    colors: [],
+    sizes: []
+  })
 
   useEffect(() => {
     let isMounted = true
-    const loadBrands = async () => {
+    const loadFilters = async () => {
       try {
-        const list = await getProductBrands()
-        if (isMounted && list && list.length > 0) {
-          setDynamicBrands(list)
+        const filtersData = await getProductFilters()
+        if (isMounted && filtersData) {
+          setDynamicFilters(filtersData)
         }
       } catch (err) {
         // ignore
       }
     }
-    loadBrands()
+    loadFilters()
     return () => { isMounted = false }
   }, [])
 
@@ -336,7 +343,7 @@ export function AllCategoriesPage() {
                 filters={filters}
                 toggleFilter={toggleFilter}
                 setFilters={setFilters}
-                brands={dynamicBrands}
+                dynamicFilters={dynamicFilters}
               />
             </div>
           </aside>
@@ -491,7 +498,7 @@ export function AllCategoriesPage() {
                   filters={filters}
                   toggleFilter={toggleFilter}
                   setFilters={setFilters}
-                  brands={dynamicBrands}
+                  dynamicFilters={dynamicFilters}
                 />
               </div>
             </motion.div>

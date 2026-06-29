@@ -162,7 +162,7 @@ export function Footer() {
             <FooterAccordion title="My Account">
               <ul className="flex flex-col gap-3">
                 {[
-                  { name: 'Return & exchange', href: '/pages/return-exchange' },
+                  { name: 'Return Refund & Exchange', href: '/pages/return-exchange' },
                   { name: 'Cancellation policy', href: '/pages/cancellation-policy' },
                   { name: 'Shipping policy', href: '/pages/shipping-policy' },
                   { name: 'Terms & condition', href: '/pages/terms-conditions' },

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, SlidersHorizontal, ChevronLeft, ChevronDown, Check, X, ChevronRight } from 'lucide-react'
 import { categoryData } from '../data/navigationData'
 import { ProductCard } from '../components/ui/ProductCard'
-import { getCategoryTree, getProducts, getProductBrands } from '../services/catalogApi'
+import { getCategoryTree, getProducts, getProductFilters } from '../services/catalogApi'
 
 const SkeletonCard = () => (
   <div className="bg-transparent rounded-[30px] p-2 animate-pulse">
@@ -15,34 +15,6 @@ const SkeletonCard = () => (
     </div>
   </div>
 )
-
-const generateMockProducts = (catId, subCatId, count = 120) => {
-  const brands = ['Babyhug', 'Toykio', 'Carter\'s', 'Lego', 'Pampers']
-  const materials = ['Cotton', 'Wool', 'Plastic', 'Wood', 'Silicone']
-  const colors = ['Red', 'Blue', 'Pink', 'Yellow', 'White', 'Black']
-  const ages = ['0-2 Years', '2-4 Years', '4-6 Years', '6-8 Years', '8+ Years']
-  const genders = ['Boy', 'Girl', 'Unisex']
-  const sizes = ['Small', 'Medium', 'Large', 'XL']
-  const discounts = ['10% OFF', '20% OFF', '30% OFF', '50% OFF']
-
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${catId}-${subCatId || 'all'}-${i}`,
-    name: `${(subCatId || catId).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} - Item ${i + 1}`,
-    price: Math.floor(Math.random() * 2000) + 100,
-    oldPrice: Math.floor(Math.random() * 3000) + 500,
-    img: `https://picsum.photos/seed/${catId}-${subCatId}-${i}/600/600`,
-    brand: brands[Math.floor(Math.random() * brands.length)],
-    material: materials[Math.floor(Math.random() * materials.length)],
-    color: colors[Math.floor(Math.random() * colors.length)],
-    age: ages[Math.floor(Math.random() * ages.length)],
-    gender: genders[Math.floor(Math.random() * genders.length)],
-    size: sizes[Math.floor(Math.random() * sizes.length)],
-    discount: discounts[Math.floor(Math.random() * discounts.length)],
-    availability: Math.random() > 0.1 ? 'in stock' : 'out of stock',
-    rating: (Math.random() * 2 + 3).toFixed(1),
-    date: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString()
-  }))
-}
 
 const FilterSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen)
@@ -84,21 +56,28 @@ export function CollectionPage() {
   const [gridCols, setGridCols] = useState(3)
   const itemsPerPage = 12
 
-  const [dynamicBrands, setDynamicBrands] = useState(['Toyovo', 'Babyhug', 'Sanjary', 'Play Nation', 'Intellibaby', 'Bonfino'])
+  const [dynamicFilters, setDynamicFilters] = useState({
+    brands: [],
+    genders: [],
+    ages: [],
+    materials: [],
+    colors: [],
+    sizes: []
+  })
 
   useEffect(() => {
     let isMounted = true
-    const loadBrands = async () => {
+    const loadFilters = async () => {
       try {
-        const list = await getProductBrands()
-        if (isMounted && list && list.length > 0) {
-          setDynamicBrands(list)
+        const filtersData = await getProductFilters()
+        if (isMounted && filtersData) {
+          setDynamicFilters(filtersData)
         }
       } catch (err) {
         // ignore
       }
     }
-    loadBrands()
+    loadFilters()
     return () => { isMounted = false }
   }, [])
 
@@ -273,12 +252,12 @@ export function CollectionPage() {
     <div className="space-y-1">
       {[
         { id: 'availability', title: 'availability', items: ['in stock', 'out of stock'] },
-        { id: 'brand', title: 'brands', items: dynamicBrands },
-        { id: 'gender', title: 'gender', items: ['Boy', 'Girl', 'Unisex'] },
-        { id: 'age', title: 'age', items: ['0-10 Years', '0-24 Months', '2 Years+', '3 Years+', '5 Years+'] },
-        { id: 'size', title: 'size', items: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
-        { id: 'color', title: 'colors', items: ['Red', 'Blue', 'Pink', 'Yellow', 'Multicolor', 'Green', 'Orange'] },
-        { id: 'material', title: 'material', items: ['Child-Safe Premium', 'Wood', 'Plastic', 'Soft Fabric'] },
+        { id: 'brand', title: 'brands', items: dynamicFilters.brands.length > 0 ? dynamicFilters.brands : ['Toyovo'] },
+        { id: 'gender', title: 'gender', items: dynamicFilters.genders.length > 0 ? dynamicFilters.genders : ['Boy', 'Girl', 'Unisex'] },
+        { id: 'age', title: 'age', items: dynamicFilters.ages.length > 0 ? dynamicFilters.ages : ['0-10 Years', '0-24 Months', '2 Years+', '3 Years+', '5 Years+'] },
+        { id: 'size', title: 'size', items: dynamicFilters.sizes.length > 0 ? dynamicFilters.sizes : ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Free Size'] },
+        { id: 'color', title: 'colors', items: dynamicFilters.colors.length > 0 ? dynamicFilters.colors : ['Red', 'Blue', 'Pink', 'Yellow', 'Multicolor', 'Green', 'Orange'] },
+        { id: 'material', title: 'material', items: dynamicFilters.materials.length > 0 ? dynamicFilters.materials : ['Child-Safe Premium', 'Wood', 'Plastic', 'Soft Fabric'] },
         { id: 'discount', title: 'discounts', items: ['10% OFF', '20% OFF', '30% OFF', '50% OFF'] }
       ].map(f => (
         <FilterSection key={f.id} title={f.title} defaultOpen={false}>
