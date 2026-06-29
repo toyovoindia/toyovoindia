@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, ChevronRight, ShoppingCart, Check, ChevronDown, ChevronUp, Tag, AlertCircle } from 'lucide-react'
 import { useCart } from '../context/CartContext'
@@ -214,6 +214,7 @@ export function CheckoutPage() {
   const { addPaymentLog } = usePayment()
   const { user, addresses, authLoading } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   
   const [showSummary, setShowSummary] = useState(false)
   const [isLaunchingPayment, setIsLaunchingPayment] = useState(false)
@@ -300,6 +301,17 @@ export function CheckoutPage() {
       navigate('/login?next=%2Fcheckout', { replace: true })
     }
   }, [authLoading, user, navigate])
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      const msg = errorParam === 'PaymentCancelled' 
+        ? 'Payment was cancelled. Your order was not completed. You can try again.' 
+        : `Payment failed: ${errorParam}`;
+      setFormErrors(prev => ({ ...prev, general: msg }))
+      setSearchParams(new URLSearchParams(), { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -448,6 +460,12 @@ export function CheckoutPage() {
 
     if (!toOptionalString(formData.address).trim()) {
       errors.address = 'Street address is required'
+    } else if (toOptionalString(formData.address).trim().length < 3) {
+      errors.address = 'Street address must be at least 3 characters'
+    }
+
+    if (toOptionalString(formData.apartment).trim() && toOptionalString(formData.apartment).trim().length < 3) {
+      errors.apartment = 'Apartment must be at least 3 characters'
     }
 
     if (!formData.country) {
@@ -625,13 +643,8 @@ export function CheckoutPage() {
         email: checkoutData.customer.email,
       }))
 
-      if (buyNowItem) {
-        sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
-      } else {
-        localStorage.removeItem(checkoutDraftKey)
-        localStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY)
-        clearCart()
-      }
+      // We no longer clear the cart here. The cart and drafts will be cleared 
+      // ONLY on the OrderSuccessPage after a successful payment verification.
 
       // Submit form to redirect to PayU securely
       submitPayuForm(payuOrderData)

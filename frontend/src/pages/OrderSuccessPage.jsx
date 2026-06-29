@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Package, Truck, ShoppingBag, ArrowRight, ChevronRight, MapPin, ExternalLink, Calendar, Heart, Phone } from 'lucide-react'
 import { getOrderSummary } from '../services/orderApi'
 import { getStorefrontSettings } from '../services/siteApi'
+import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 
 const TrackingStep = ({ icon: Icon, label, status, active }) => (
   <div className="flex flex-col items-center gap-2 relative z-10">
@@ -20,6 +22,8 @@ const TrackingStep = ({ icon: Icon, label, status, active }) => (
 export function OrderSuccessPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { clearCart } = useCart()
+  const { user } = useAuth()
   const [order, setOrder] = useState(location.state?.order || null)
   const [loading, setLoading] = useState(!location.state?.order)
   const [settings, setSettings] = useState(null)
@@ -105,6 +109,12 @@ export function OrderSuccessPage() {
         navigate('/', { replace: true })
         return
       }
+      
+      clearCart()
+      localStorage.removeItem(`TOYOVOINDIA_checkout_coupon`)
+      localStorage.removeItem(`TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`)
+      sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
+
       sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
         orderNumber: orderNum,
         email: orderObj.customerEmail,
@@ -124,7 +134,13 @@ export function OrderSuccessPage() {
       try {
         const { orderNumber, email } = JSON.parse(lastOrder)
         const data = await getOrderSummary(orderNumber, email)
-        if (isMounted) setOrder(data)
+        if (isMounted) {
+          setOrder(data)
+          clearCart()
+          localStorage.removeItem(`TOYOVOINDIA_checkout_coupon`)
+          localStorage.removeItem(`TOYOVOINDIA_checkout_draft_${user?.id || user?._id || user?.email || 'guest'}`)
+          sessionStorage.removeItem('TOYOVOINDIA_buyNowItem')
+        }
       } catch {
         if (isMounted) navigate('/', { replace: true })
       } finally {

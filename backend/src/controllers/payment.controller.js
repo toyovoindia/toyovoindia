@@ -83,24 +83,24 @@ export const handlePayuSuccess = asyncHandler(async (req, res, next) => {
   
   if (!isValid) {
     logger.error('PayU hash verification failed in success callback', { txnid: req.body.txnid });
-    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=HashMismatch`);
+    return res.redirect(`${env.CLIENT_URL}/checkout?error=HashMismatch`);
   }
 
   if (req.body.status !== 'success') {
     logger.error('PayU status is not success in success callback', { status: req.body.status });
-    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=PaymentFailed`);
+    return res.redirect(`${env.CLIENT_URL}/checkout?error=PaymentFailed`);
   }
 
   const order = await Order.findOne({ 'paymentGateway.payuTxnId': req.body.txnid });
   
   if (!order) {
     logger.error('Associated pending order not found for PayU success verification', { txnid: req.body.txnid });
-    return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=OrderNotFound`);
+    return res.redirect(`${env.CLIENT_URL}/checkout?error=OrderNotFound`);
   }
 
   if (order.paymentStatus === 'paid') {
     // Already processed (could happen with webhook duplicate)
-    return res.redirect(`${env.CLIENT_URL}/checkout/success?orderNumber=${order.orderNumber}`);
+    return res.redirect(`${env.CLIENT_URL}/order-success?orderNumber=${order.orderNumber}`);
   }
 
   // Build draft to get resolved items for side effects
@@ -138,7 +138,7 @@ export const handlePayuSuccess = asyncHandler(async (req, res, next) => {
 
   logger.info('PayU payment success verification completed', { orderNumber: order.orderNumber, txnid: req.body.txnid });
 
-  return res.redirect(`${env.CLIENT_URL}/checkout/success?orderNumber=${order.orderNumber}`);
+  return res.redirect(`${env.CLIENT_URL}/order-success?orderNumber=${order.orderNumber}`);
 });
 
 export const handlePayuFailure = asyncHandler(async (req, res, next) => {
@@ -160,7 +160,7 @@ export const handlePayuFailure = asyncHandler(async (req, res, next) => {
 
     order.statusHistory.push({
       status: 'cancelled',
-      note: 'Payment failed on PayU gateway.',
+      note: 'Payment failed or cancelled on PayU gateway.',
       actorRole: 'system',
       createdAt: new Date(),
     });
@@ -169,5 +169,5 @@ export const handlePayuFailure = asyncHandler(async (req, res, next) => {
     Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
   }
 
-  return res.redirect(`${env.CLIENT_URL}/checkout/failure?error=${req.body.error_Message || 'PaymentFailed'}`);
+  return res.redirect(`${env.CLIENT_URL}/checkout?error=${req.body.error_Message || 'PaymentCancelled'}`);
 });
