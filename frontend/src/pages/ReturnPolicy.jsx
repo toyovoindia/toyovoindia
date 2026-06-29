@@ -25,7 +25,7 @@ export function ReturnPolicy() {
 
   if (loading) {
     return (
-      <PolicyPageLayout title="Return & Exchange Policy" subtitle="Loading...">
+      <PolicyPageLayout title="Return, Refund & Exchange Policy" subtitle="Loading...">
         <div className="animate-pulse space-y-4">
           <div className="h-4 bg-gray-200 rounded w-3/4" />
           <div className="h-4 bg-gray-200 rounded w-full" />
@@ -58,10 +58,10 @@ export function ReturnPolicy() {
 
   return (
     <PolicyPageLayout
-      title="Return & Exchange Policy"
+      title="Return, Refund & Exchange Policy"
       subtitle="Hassle-free Satisfaction"
     >
-      <p className="text-[14px] text-[#888] font-medium">Return and Exchange Policy for TOYOVO INDIA (OPC) PRIVATE LIMITED</p>
+      <p className="text-[14px] text-[#888] font-medium">Return, Refund and Exchange Policy for TOYOVO INDIA (OPC) PRIVATE LIMITED</p>
 
       <section className="space-y-4">
         <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">1. About TOYOVO INDIA (OPC) PRIVATE LIMITED</h2>
@@ -69,16 +69,16 @@ export function ReturnPolicy() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">2. What Is This Return and Exchange Policy?</h2>
-        <p>This Return and Exchange Policy, together with the Terms of Use, sets out our procedures and policies for accepting Product returns and exchanges after delivery. Any return/exchange of Products shall be governed by this Return and Exchange Policy.</p>
-        <p>Users must understand this Return and Exchange Policy. If you do not agree, do not accept the Terms of Use and stop using the Website. By initiating a purchase request, you agree to be bound by these terms.</p>
+        <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">2. What Is This Return, Refund and Exchange Policy?</h2>
+        <p>This Return, Refund and Exchange Policy, together with the Terms of Use, sets out our procedures and policies for accepting Product returns, refunds, and exchanges after delivery. Any return, refund, or exchange of Products shall be governed by this Return, Refund and Exchange Policy.</p>
+        <p>Users must understand this Return, Refund and Exchange Policy. If you do not agree, do not accept the Terms of Use and stop using the Website. By initiating a purchase request, you agree to be bound by these terms.</p>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">3. Terms of Return and Exchange</h2>
+        <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">3. Terms of Return, Refund and Exchange</h2>
 
-        <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.1 Return/Exchange Period:</h3>
-        <p>If you are dissatisfied with the purchased Product or there are defects (attributable to and accepted by us after verification at our sole discretion), you may initiate a return/exchange request on the Website within <strong>30 (thirty) days</strong> from delivery date. You must produce a copy of the original invoice when placing a return or exchange request. Exchanged product will be delivered within <strong>10–15 days</strong>. We reserve the right to alter this Return and Exchange Policy at any time without prior notice.</p>
+        <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.1 Return/Refund/Exchange Period & Eligibility:</h3>
+        <p>Returns are accepted subject to the following conditions: If you are dissatisfied with the purchased Product or there are defects (attributable to and accepted by us after verification at our sole discretion), you may initiate a return/exchange request on the Website within <strong>3–7 working days</strong> of delivery (including the delivery date). The product must be unused, undamaged, and in its original packaging. The original invoice must be provided. We reserve the right to alter this Return, Refund and Exchange Policy at any time without prior notice.</p>
 
         <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.2 Cancellation Before Dispatch:</h3>
         <p>You may fully or partially cancel orders before dispatch. After placing an order and handing Products to our logistics partner, you will receive a unique tracking number. To cancel before dispatch, reference the tracking number and email <a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a>. We will initiate cancellation processing within <strong>2 (two) business days</strong> from receiving your request.</p>
@@ -124,15 +124,18 @@ export function ReturnPolicy() {
         </ul>
 
         <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.10 Exchange Timeline:</h3>
-        <p>Subject to satisfactory quality checks, we will initiate exchange requests. Approved exchanges will be processed and delivered within <strong>10–15 business days</strong>.</p>
+        <p>Subject to satisfactory quality checks, we will initiate exchange requests. Once approved, replacement/exchange products are typically delivered within <strong>10–15 working days</strong>.</p>
 
-        <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.11 Reverse Logistics:</h3>
+        <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.11 Refund Timeline and Method:</h3>
+        <p>Subject to satisfactory quality checks, refunds are credited within <strong>5–7 business days</strong> after approval. The amount will be credited to the original payment method. Final credit timelines may vary depending on your bank or payment provider.</p>
+
+        <h3 className="text-[18px] font-grandstander font-bold text-[#333]">3.12 Reverse Logistics:</h3>
         <p>Returns/exchanges are facilitated through our reverse-logistics partners. After you request a return/exchange and we acknowledge it, our reverse-logistics partners will contact you to collect the Product and deliver it to us.</p>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">Grievance Redressal</h2>
-        <p>Any grievances relating to this Return and Exchange Policy may be directed to:</p>
+        <p>Any grievances relating to this Return, Refund and Exchange Policy may be directed to:</p>
         <ul className="list-disc pl-6 space-y-2">
           <li><strong>Email:</strong> <a href={`mailto:${siteConfig?.contactEmail || 'toyovoindia@gmail.com'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactEmail || 'toyovoindia@gmail.com'}</a></li>
           <li><strong>Phone/WhatsApp:</strong> <a href={`tel:${siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}`} className="text-[#E84949] hover:underline">{siteConfig?.contactPhone?.replace('+91', '').trim() || ' 7901931534'}</a></li>
@@ -142,7 +145,7 @@ export function ReturnPolicy() {
 
       <section className="space-y-4">
         <h2 className="text-[22px] md:text-[26px] font-grandstander font-bold text-[#333]">Governing Law</h2>
-        <p>This Return and Exchange Policy is governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts at Zirakpur, India.</p>
+        <p>This Return, Refund and Exchange Policy is governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts at Zirakpur, India.</p>
       </section>
     </PolicyPageLayout>
   )
