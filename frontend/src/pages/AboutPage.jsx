@@ -124,7 +124,7 @@ export function AboutPage() {
         </div>
 
         {/* Meet Our Team Section */}
-        <div className="mt-15 md:mt-20">
+        {/* <div className="mt-15 md:mt-20">
           <div className="text-center mb-10">
             <p className="text-[#E84949] font-medium tracking-[0.4em] uppercase text-[12px] md:text-[14px] mb-4 font-roboto">The Minds Behind the Magic</p>
             <h2 className="text-4xl md:text-5xl font-grandstander font-bold text-[#333333] leading-none tracking-tight">Meet Our Team</h2>
@@ -136,7 +136,7 @@ export function AboutPage() {
             <TeamMemberCard name="Jemis P" role="Product Expert" img="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=400&auto=format&fit=crop" />
             <TeamMemberCard name="Michel R" role="Quality Assurance" img="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop" />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )
