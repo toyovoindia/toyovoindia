@@ -31,10 +31,16 @@ const buildProductFilter = async (query, publicOnly = true) => {
   if (publicOnly) filter.status = 'active';
 
   const categoryId = await resolveCategoryId(query.category);
-  if (categoryId) filter.category = categoryId;
-
   const subcategoryId = await resolveCategoryId(query.subcategory);
-  if (subcategoryId) filter.subcategories = subcategoryId;
+
+  const andConditions = [];
+
+  if (categoryId && !subcategoryId) {
+    andConditions.push({ $or: [{ category: categoryId }, { subcategories: categoryId }] });
+  } else {
+    if (categoryId) filter.category = categoryId;
+    if (subcategoryId) filter.subcategories = subcategoryId;
+  }
 
   if (query.search && query.search.trim()) {
     const searchRegex = new RegExp(escapeRegExp(query.search.trim()), 'i');
@@ -43,7 +49,7 @@ const buildProductFilter = async (query, publicOnly = true) => {
     const matchingCategories = await Category.find({ name: searchRegex }).select('_id');
     const matchingCategoryIds = matchingCategories.map(c => c._id);
 
-    filter.$or = [
+    const searchOr = [
       { name: searchRegex },
       { description: searchRegex },
       { brand: searchRegex },
@@ -51,9 +57,15 @@ const buildProductFilter = async (query, publicOnly = true) => {
     ];
 
     if (matchingCategoryIds.length > 0) {
-      filter.$or.push({ category: { $in: matchingCategoryIds } });
-      filter.$or.push({ subcategories: { $in: matchingCategoryIds } });
+      searchOr.push({ category: { $in: matchingCategoryIds } });
+      searchOr.push({ subcategories: { $in: matchingCategoryIds } });
     }
+    
+    andConditions.push({ $or: searchOr });
+  }
+
+  if (andConditions.length > 0) {
+    filter.$and = andConditions;
   }
 
   if (query.brand) {

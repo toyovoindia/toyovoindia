@@ -504,7 +504,9 @@ export function VisionHeader() {
                                             const itemSlug = name.toLowerCase().replaceAll(' ', '-');
                                             const finalHref = type === 'link' 
                                               ? `/product/${itemSlug}` 
-                                              : `/collections/${parentSlug}/${itemSlug}`;
+                                              : itemSlug === parentSlug 
+                                                ? `/collections/${parentSlug}`
+                                                : `/collections/${parentSlug}/${itemSlug}`;
                                             
                                             return (
                                               <li key={name}>
@@ -537,7 +539,7 @@ export function VisionHeader() {
                                               const itemSlug = i.toLowerCase().replaceAll(' ', '-');
                                               return (
                                                 <li key={i}>
-                                                  <Link to={`/collections/${parentSlug}/${itemSlug}`} className="group/link flex items-center gap-2 text-[11px] text-[#666] hover:text-[#E84949] transition-all font-bold uppercase tracking-wider">
+                                                  <Link to={itemSlug === parentSlug ? `/collections/${parentSlug}` : `/collections/${parentSlug}/${itemSlug}`} className="group/link flex items-center gap-2 text-[11px] text-[#666] hover:text-[#E84949] transition-all font-bold uppercase tracking-wider">
                                                     <span className="w-1 h-1 bg-[#E84949]/0 group-hover/link:bg-[#E84949] group-hover/link:w-2 transition-all rounded-full"></span>
                                                     {i}
                                                   </Link>
@@ -802,16 +804,20 @@ export function VisionHeader() {
                                     </div>
                                     {activeMobileSub2 === item.name && item.children && item.children.length > 0 && (
                                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="pl-4 py-2 flex flex-col gap-2 border-l-2 border-[#E84949]/20 ml-2 mt-2">
-                                        {item.children.map(child => (
+                                        {item.children.map(child => {
+                                          const iSlug = item.id || item.name.toLowerCase().replaceAll(' ', '-');
+                                          const cSlug = child.slug || child.name.toLowerCase().replaceAll(' ', '-');
+                                          return (
                                           <Link
                                             key={child._id || child.slug || child.name}
-                                            to={`/collections/${item.id || item.name.toLowerCase().replaceAll(' ', '-')}/${child.slug || child.name.toLowerCase().replaceAll(' ', '-')}`}
+                                            to={cSlug === iSlug ? `/collections/${iSlug}` : `/collections/${iSlug}/${cSlug}`}
                                             onClick={handleLinkClick}
                                             className="text-[11.5px] text-[#555] font-semibold hover:text-[#E84949] transition-colors py-1"
                                           >
                                             {child.name}
                                           </Link>
-                                        ))}
+                                          );
+                                        })}
                                       </motion.div>
                                     )}
                                   </div>
@@ -833,7 +839,7 @@ export function VisionHeader() {
                                         return (
                                           <Link 
                                             key={name} 
-                                            to={type === 'link' ? `/product/${subSlug}` : `/collections/${parentSlug}/${subSlug}`} 
+                                            to={type === 'link' ? `/product/${subSlug}` : subSlug === parentSlug ? `/collections/${parentSlug}` : `/collections/${parentSlug}/${subSlug}`} 
                                             onClick={handleLinkClick} 
                                             className="flex items-center justify-between text-[12px] text-[#333] font-bold hover:text-[#E84949] transition-colors"
                                           >
