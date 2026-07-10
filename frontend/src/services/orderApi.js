@@ -173,3 +173,28 @@ export const getAdminRevenueStats = async (timeframe = 'monthly') => {
   const payload = await apiRequest(`/admin/orders/stats/revenue?timeframe=${timeframe}`)
   return payload.data
 }
+
+export const exportDetailedTransactions = async () => {
+  // Uses raw fetch to handle the CSV Blob instead of JSON
+  const authRaw = localStorage.getItem('TOYOVOINDIA_auth_user')
+  let token = ''
+  if (authRaw) {
+    try { token = JSON.parse(authRaw)?.accessToken || '' } catch {}
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/reports/transactions/export`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  
+  if (!response.ok) throw new Error('Failed to download transactions')
+  
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `transaction_report_${new Date().toISOString().split('T')[0]}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  return true
+}

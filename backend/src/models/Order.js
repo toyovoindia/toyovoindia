@@ -195,7 +195,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['card', 'upi', 'netbanking', 'cod', 'payu'],
+    enum: ['card', 'upi', 'netbanking', 'cod', 'payu', 'phonepe'],
     default: 'card',
   },
   shippingMethod: {
@@ -251,7 +251,7 @@ const orderSchema = new mongoose.Schema({
   paymentGateway: {
     provider: {
       type: String,
-      enum: ['payu'],
+      enum: ['payu', 'phonepe'],
     },
     payuTxnId: {
       type: String,

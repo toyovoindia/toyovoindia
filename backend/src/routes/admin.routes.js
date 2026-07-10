@@ -9,6 +9,7 @@ import { adminShippingRoutes } from './shipping.routes.js';
 import { adminMessageRoutes } from './message.routes.js';
 import { adminMediaRoutes } from './media.routes.js';
 import { adminPageRoutes } from './pageContent.routes.js';
+import { adminReportRoutes } from './report.routes.js';
 import { globalAdminSearch } from '../controllers/adminSearch.controller.js';
 import { protect, authorizeRoles } from '../middlewares/auth.js';
 
@@ -26,5 +27,6 @@ router.use('/shipping-methods', adminShippingRoutes);
 router.use('/messages', adminMessageRoutes);
 router.use('/media', adminMediaRoutes);
 router.use('/pages', adminPageRoutes);
+router.use('/reports', adminReportRoutes);
 
 export default router;

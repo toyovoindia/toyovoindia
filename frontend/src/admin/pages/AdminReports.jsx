@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileSpreadsheet, FileText, Calendar, Download, CheckCircle, PieChart, TrendingUp, Users } from 'lucide-react'
-import { getAdminOrders } from '../../services/orderApi'
+import { getAdminOrders, exportDetailedTransactions } from '../../services/orderApi'
 import { getAdminProducts } from '../../services/adminCatalogApi'
 import { getAdminUsers } from '../../services/adminUserApi'
 import { useToast } from '../../context/ToastContext'
@@ -195,7 +195,12 @@ export function AdminReports() {
       // UX delay
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      if (format === 'csv') {
+      if (reportType === 'transactions') {
+        // Direct backend call for 85-column transactions export
+        await exportDetailedTransactions()
+        setGenerated(true)
+        toast.success('Detailed Order Logs downloaded successfully!')
+      } else if (format === 'csv') {
         const success = jsonToCSV(data, fileName)
         if (success) {
           setGenerated(true)
@@ -236,9 +241,10 @@ export function AdminReports() {
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Report Subject</label>
               <div className="grid grid-cols-1 gap-3">
                 {[
-                  { id: 'sales', label: 'Sales & Revenue', desc: 'Hauls, totals, and refunds', icon: <TrendingUp size={16}/> },
-                  { id: 'users', label: 'Explorer Growth', desc: 'New users and engagement', icon: <Users size={16}/> },
-                  { id: 'inventory', label: 'Toy Catalog Health', desc: 'Stock levels and categories', icon: <PieChart size={16}/> }
+                  { id: 'sales', label: 'Sales & Financial Report', desc: 'Summary of recent sales and refunds.', icon: <TrendingUp size={16}/> },
+                  { id: 'transactions', label: 'Detailed Order Logs', desc: 'Row-by-row transaction and bank data.', icon: <FileSpreadsheet size={16}/> },
+                  { id: 'users', label: 'Customer Growth Report', desc: 'New users and active customers.', icon: <Users size={16}/> },
+                  { id: 'inventory', label: 'Inventory & Stock Report', desc: 'Current stock and low inventory alerts.', icon: <PieChart size={16}/> }
                 ].map(type => (
                   <label key={type.id} className={`flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${reportType === type.id ? 'border-[#6651A4] bg-[#6651A4]/5 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}>
                     <input type="radio" name="reportType" value={type.id} checked={reportType === type.id} onChange={(e) => setReportType(e.target.value)} className="mt-1 text-[#6651A4] focus:ring-[#6651A4]" />
@@ -298,8 +304,8 @@ export function AdminReports() {
               )}
             </div>
             
-            <h3 className="text-xl font-grandstander font-bold text-gray-800 mb-2">Ready to Compile</h3>
-            <p className="text-[13px] text-gray-500 mb-8 max-w-[250px]">Your report will include all verified data up to the current timestamp.</p>
+            <h3 className="text-xl font-grandstander font-bold text-gray-800 mb-2">Ready to Download</h3>
+            <p className="text-[13px] text-gray-500 mb-8 max-w-[250px]">Choose your report type and click the button to securely generate your data.</p>
 
             <button 
               onClick={handleGenerate}
