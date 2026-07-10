@@ -182,6 +182,12 @@ export const listMyOrders = asyncHandler(async (req, res) => {
 
   const filter = { user: req.user._id };
 
+  // Explicitly hide abandoned checkouts (pending payu/phonepe) from user view
+  filter.$or = [
+    { paymentMethod: { $nin: ['payu', 'phonepe'] } },
+    { paymentMethod: { $in: ['payu', 'phonepe'] }, paymentStatus: { $ne: 'pending' } }
+  ];
+
   const [orders, total] = await Promise.all([
     Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
     Order.countDocuments(filter),
@@ -324,6 +330,30 @@ export const adminListOrders = asyncHandler(async (req, res) => {
         { 'customer.firstName': new RegExp(cleanSearch, 'i') },
         { 'customer.lastName': new RegExp(cleanSearch, 'i') },
         { 'customer.email': new RegExp(cleanSearch, 'i') },
+      ];
+    }
+  }
+
+  // Explicitly hide abandoned checkouts from the admin default view unless explicitly filtering by pending
+  if (!req.query.status && !req.query.paymentStatus) {
+    if (!filter.$or) filter.$or = [];
+    if (filter.$or.length === 0) {
+      filter.$or = [
+        { paymentMethod: { $nin: ['payu', 'phonepe'] } },
+        { paymentMethod: { $in: ['payu', 'phonepe'] }, paymentStatus: { $ne: 'pending' } }
+      ];
+    } else {
+      // If there's already an $or (like search), we wrap it in an $and to combine logic safely
+      const existingOr = filter.$or;
+      delete filter.$or;
+      filter.$and = [
+        { $or: existingOr },
+        {
+          $or: [
+            { paymentMethod: { $nin: ['payu', 'phonepe'] } },
+            { paymentMethod: { $in: ['payu', 'phonepe'] }, paymentStatus: { $ne: 'pending' } }
+          ]
+        }
       ];
     }
   }

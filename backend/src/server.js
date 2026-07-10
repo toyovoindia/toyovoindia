@@ -2,6 +2,7 @@ import env from './config/env.js';
 import app from './app.js';
 import { connectDB } from './config/db.js';
 import logger from './utils/logger.js';
+import { startCronJobs } from './services/cron.service.js';
 
 // Handle Uncaught Exceptions
 process.on('uncaughtException', (err) => {
@@ -19,6 +20,7 @@ const bootstrap = async () => {
     await connectDB();
     server = app.listen(env.PORT, () => {
       logger.info(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+      startCronJobs();
     });
   } catch (error) {
     logger.error(`Failed to bootstrap server: ${error.message}`);
