@@ -88,6 +88,19 @@ export const createPayuPaymentOrder = async (data) => {
   return payload.data
 }
 
+export const createPhonepePaymentOrder = async (data) => {
+  const payload = await apiRequest('/payments/phonepe/initiate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+  return payload.data
+}
+
+export const checkPhonepePaymentStatus = async (txnid) => {
+  const payload = await apiRequest(`/payments/phonepe/status/${txnid}`)
+  return payload.data
+}
+
 export const getOrderSummary = async (orderNumber, email) => {
   const query = new URLSearchParams()
   if (email) {

@@ -745,7 +745,7 @@ export function ProductDetailPage() {
                   </div>
                   <div className="flex items-center gap-3 text-[14px] text-[#333]">
                     <div className="w-4.5 h-4.5 rounded-full border border-[#333] flex items-center justify-center text-[10px]"><X size={10} /></div>
-                    <span>Sold <strong>{product.soldCount || 0} Product</strong> In last 24 Hours</span>
+                    <span>Sold <strong>{Math.max(product.soldCount || 0, 0)} Product</strong> In last 24 Hours</span>
                   </div>
                   <div className="flex gap-3 pt-1">
                     <button

@@ -25,6 +25,10 @@ const devOrigins = parseOrigins(process.env.CLIENT_URL);
 const prodOrigins = parseOrigins(process.env.CLIENT_URL_PROD);
 const additionalOrigins = [
   'https://toyovoindia.vercel.app',
+  'https://secure.payu.in',
+  'https://test.payu.in',
+  'https://api.phonepe.com',
+  'https://api-preprod.phonepe.com'
 ];
 
 // Automatically pick the primary URL based on environment
@@ -73,6 +77,10 @@ const env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   FIREBASE_CONFIG: process.env.FIREBASE_CONFIG,
+  PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID,
+  PHONEPE_SALT_KEY: process.env.PHONEPE_SALT_KEY,
+  PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX,
+  PHONEPE_ENV: process.env.PHONEPE_ENV,
 };
 
 if (env.NODE_ENV !== 'test') {

@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext'
 import { usePayment } from '../context/PaymentContext'
 import { useAuth } from '../context/AuthContext'
 import { validateCouponCode, getActiveCoupons } from '../services/couponApi'
-import { createPayuPaymentOrder } from '../services/orderApi'
+import { createPayuPaymentOrder, createPhonepePaymentOrder } from '../services/orderApi'
 import { getShippingMethods } from '../services/shippingApi'
 import { getStorefrontSettings } from '../services/siteApi'
 
@@ -226,6 +226,7 @@ export function CheckoutPage() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [couponHydrated, setCouponHydrated] = useState(false)
   const [shippingMethod, setShippingMethod] = useState('standard')
+  const [paymentGateway, setPaymentGateway] = useState('phonepe') // Default to PhonePe
   const [shippingMethods, setShippingMethods] = useState([])
   const [checkoutNotes, setCheckoutNotes] = useState({ orderMessage: '', giftWrap: false, giftMessage: '' })
   const [isHydrated, setIsHydrated] = useState(false)
@@ -338,6 +339,7 @@ export function CheckoutPage() {
     const draft = {
       formData,
       shippingMethod,
+      paymentGateway,
       discountCode,
       // persist coupon state so it survives navigating back to this page
       couponState: couponState || null,
@@ -346,7 +348,7 @@ export function CheckoutPage() {
       checkoutNotes,
     }
     localStorage.setItem(checkoutDraftKey, JSON.stringify(draft))
-  }, [checkoutDraftKey, formData, shippingMethod, discountCode, couponState, useSavedAddress, selectedAddressId, checkoutNotes, isHydrated])
+  }, [checkoutDraftKey, formData, shippingMethod, paymentGateway, discountCode, couponState, useSavedAddress, selectedAddressId, checkoutNotes, isHydrated])
 
   const selectedShippingMethod = shippingMethods.find((method) => method.code === shippingMethod) || null
   const shippingCharge = Number(selectedShippingMethod?.charge || 0)
@@ -616,7 +618,7 @@ export function CheckoutPage() {
       quantity: Math.max(1, parseInt(item.qty || item.quantity || 1, 10)),
     })),
     shippingMethod,
-    paymentMethod: 'payu',
+    paymentMethod: paymentGateway, // 'payu' or 'phonepe'
     couponCode: couponState?.coupon?.code || '',
     notes: [checkoutNotes.orderMessage, checkoutNotes.giftWrap ? `Gift wrap requested.${checkoutNotes.giftMessage ? ` Gift message: ${checkoutNotes.giftMessage}` : ''}` : '']
       .filter(Boolean)
@@ -634,20 +636,22 @@ export function CheckoutPage() {
     setIsLaunchingPayment(true)
     setFormErrors({})
     try {
-      // Create the pending order on backend and get PayU hash and data
-      const payuOrderData = await createPayuPaymentOrder(checkoutData)
-      
-      // Save order metadata to sessionStorage so we can show it on success/failure redirects
-      sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
-        orderNumber: payuOrderData.orderNumber,
-        email: checkoutData.customer.email,
-      }))
-
-      // We no longer clear the cart here. The cart and drafts will be cleared 
-      // ONLY on the OrderSuccessPage after a successful payment verification.
-
-      // Submit form to redirect to PayU securely
-      submitPayuForm(payuOrderData)
+      if (paymentGateway === 'payu') {
+        const payuOrderData = await createPayuPaymentOrder(checkoutData)
+        sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
+          orderNumber: payuOrderData.orderNumber,
+          email: checkoutData.customer.email,
+        }))
+        submitPayuForm(payuOrderData)
+      } else {
+        const phonepeOrderData = await createPhonepePaymentOrder(checkoutData)
+        sessionStorage.setItem('TOYOVOINDIA_last_order', JSON.stringify({
+          orderNumber: phonepeOrderData.orderNumber,
+          email: checkoutData.customer.email,
+        }))
+        // Redirect directly to PhonePe secure page
+        window.location.href = phonepeOrderData.redirectUrl
+      }
     } catch (error) {
       setIsLaunchingPayment(false)
       setIsProcessing(false)
@@ -690,7 +694,7 @@ export function CheckoutPage() {
               <div className="w-20 h-20 border-8 border-gray-100 border-t-[#6651A4] rounded-full animate-spin" />
            </div>
            <h2 className="text-2xl font-grandstander font-bold text-[#333] mb-3">Opening Secure Payment...</h2>
-           <p className="text-gray-500 max-w-sm font-medium">We are connecting with PayU securely. Please wait a moment.</p>
+           <p className="text-gray-500 max-w-sm font-medium">We are connecting with {paymentGateway === 'phonepe' ? 'PhonePe' : 'PayU'} securely. Please wait a moment.</p>
         </div>
       )}
       
@@ -814,6 +818,35 @@ export function CheckoutPage() {
                       <span className="font-bold text-[14px]">₹{Number(method.charge || 0).toFixed(2)}</span>
                     </label>
                   ))}
+               </div>
+            </section>
+
+            <section className="space-y-6">
+               <div className="flex justify-between items-end">
+                 <h2 className="text-xl font-bold text-[#333] font-grandstander">Payment Method</h2>
+                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                   <Check size={12} className="text-green-500"/> Secured End-to-End
+                 </p>
+               </div>
+               <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                  <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'phonepe' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
+                    <div className="flex items-center gap-4">
+                      <input type="radio" checked={paymentGateway === 'phonepe'} onChange={() => setPaymentGateway('phonepe')} className="w-4 h-4 accent-[#005BD1]" />
+                      <div className="flex flex-col">
+                        <span className="text-[14px] font-bold text-[#333]">PhonePe (Fastest)</span>
+                        <span className="text-[11px] font-medium text-gray-500">UPI, Credit/Debit Cards, Wallets</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'payu' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
+                    <div className="flex items-center gap-4">
+                      <input type="radio" checked={paymentGateway === 'payu'} onChange={() => setPaymentGateway('payu')} className="w-4 h-4 accent-[#005BD1]" />
+                      <div className="flex flex-col">
+                        <span className="text-[14px] font-bold text-[#333]">PayU Gateway</span>
+                        <span className="text-[11px] font-medium text-gray-500">Alternative Gateway for Cards & Netbanking</span>
+                      </div>
+                    </div>
+                  </label>
                </div>
             </section>
 

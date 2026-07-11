@@ -259,6 +259,12 @@ const orderSchema = new mongoose.Schema({
       index: true,
       sparse: true,
     },
+    phonepeTxnId: {
+      type: String,
+      trim: true,
+      index: true,
+      sparse: true,
+    },
     payuMihpayid: {
       type: String,
       trim: true,

@@ -1,4 +1,5 @@
 import Order from '../models/Order.js';
+import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import AppError from '../utils/AppError.js';
 import { successResponse } from '../utils/apiResponse.js';
@@ -6,6 +7,7 @@ import { buildOrderDraftFromCheckout, applyFulfilledOrderSideEffects } from '../
 import { sendOrderConfirmationEmail } from '../services/email.service.js';
 import { generateTxnId, generatePayuHash, verifyPayuHash } from '../utils/payu.js';
 import { notifyPaymentSuccess, notifyPaymentFailed, notifyRefundProcessed } from '../services/notification.service.js';
+import { phonepeService } from '../services/phonepe.service.js';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
 
@@ -74,6 +76,91 @@ export const createPayuOrder = asyncHandler(async (req, res) => {
     payuBaseUrl: env.PAYU_BASE_URL,
     orderNumber: order.orderNumber,
   });
+});
+
+export const createPhonepeOrder = asyncHandler(async (req, res, next) => {
+  const draft = await buildOrderDraftFromCheckout(req.body);
+  const txnid = generateTxnId(); // We can reuse the same unique generator
+
+  // Pre-create pending order in MongoDB
+  const order = await Order.create({
+    user: req.user?._id || null,
+    customer: {
+      ...req.body.customer,
+      email: (req.body.customer.email || 'dummy@toyovo.com').toLowerCase(),
+    },
+    shippingAddress: req.body.shippingAddress,
+    items: draft.items,
+    status: 'pending',
+    paymentStatus: 'pending',
+    paymentMethod: 'phonepe', // the frontend choice
+    shippingMethod: req.body.shippingMethod,
+    subtotal: draft.subtotal,
+    shippingAmount: draft.shippingAmount,
+    discountAmount: draft.discountAmount,
+    totalAmount: draft.totalAmount,
+    coupon: draft.couponData,
+    notes: req.body.notes || undefined,
+    paymentGateway: {
+      provider: 'phonepe',
+      phonepeTxnId: txnid,
+    },
+  });
+
+  logger.info('Pending PhonePe order pre-created in MongoDB', {
+    orderNumber: order.orderNumber,
+    phonepeTxnId: txnid,
+  });
+
+  // V2 Payload
+  const payload = {
+    merchantOrderId: txnid,
+    amount: Math.round(draft.totalAmount * 100),
+    paymentFlow: {
+      type: "PG_CHECKOUT",
+      merchantUrls: {
+        redirectUrl: `${env.CLIENT_URL}/payment/phonepe/callback?txnid=${txnid}`,
+        callbackUrl: `${env.SERVER_URL}/api/payments/phonepe/webhook`
+      }
+    }
+  };
+
+  try {
+    const token = await phonepeService.getAccessToken();
+    const endpoint = '/checkout/v2/pay';
+
+    const response = await fetch(`${phonepeService.pgBaseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `O-Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      logger.error('PhonePe V2 PG API Error', { status: response.status, data: errorData });
+      return next(new AppError('Payment initiation failed at gateway', 502));
+    }
+
+    const data = await response.json();
+    
+    if (data.redirectUrl) {
+      // V2 responds directly with a redirectUrl at the root level, or inside data.redirectUrl
+      return successResponse(res, 201, 'PhonePe order initiated successfully', {
+        redirectUrl: data.redirectUrl || (data.data && data.data.redirectUrl),
+        orderNumber: order.orderNumber,
+        txnid
+      });
+    } else {
+      logger.error('Unexpected PhonePe V2 PG Response format', data);
+      return next(new AppError('Invalid response from payment gateway', 502));
+    }
+  } catch (error) {
+    logger.error('Error reaching PhonePe V2 API:', error);
+    return next(new AppError('Payment gateway is temporarily unavailable', 503));
+  }
 });
 
 export const handlePayuSuccess = asyncHandler(async (req, res, next) => {
@@ -170,4 +257,169 @@ export const handlePayuFailure = asyncHandler(async (req, res, next) => {
   }
 
   return res.redirect(`${env.CLIENT_URL}/checkout?error=${req.body.error_Message || 'PaymentCancelled'}`);
+});
+
+// Helper function to process a successful payment cleanly for any gateway
+const processSuccessfulPayment = async (order, gatewayResponse) => {
+  order.status = 'processing';
+  order.paymentStatus = 'paid';
+  order.paymentGateway.verifiedAt = new Date();
+  order.paymentGateway.rawResponse = gatewayResponse;
+
+  order.statusHistory.push({
+    status: 'processing',
+    note: `Payment verified successfully via ${order.paymentMethod.toUpperCase()}.`,
+    actorRole: 'system',
+    createdAt: new Date(),
+  });
+
+  const checkoutData = {
+    customer: order.customer,
+    shippingAddress: order.shippingAddress,
+    items: order.items.map(item => ({ productId: item.product, quantity: item.quantity })),
+    shippingMethod: order.shippingMethod,
+    couponCode: order.coupon?.code || ''
+  };
+  const draft = await buildOrderDraftFromCheckout(checkoutData);
+
+  await applyFulfilledOrderSideEffects({
+    resolvedItems: draft.resolvedItems,
+    couponData: draft.couponData,
+  });
+
+  await order.save();
+
+  // Atomically clear the cart for logged-in users after verified purchase
+  if (order.user) {
+    await User.updateOne(
+      { _id: order.user },
+      { $set: { 'preferences.cart': [] } }
+    );
+  }
+
+  Promise.resolve(notifyPaymentSuccess(order)).catch(() => {});
+  Promise.resolve(sendOrderConfirmationEmail(order)).catch(() => {});
+};
+
+export const handlePhonepeWebhook = asyncHandler(async (req, res) => {
+  // Webhook is just an EVENT TRIGGER in V2. We do NOT trust the payload.
+  // We use the merchantOrderId from the webhook to query the V2 Status API securely.
+  
+  // V2 webhooks usually send data directly in body or decoded JSON, not base64.
+  // We will extract merchantOrderId either from base64 (if hybrid) or direct JSON.
+  let txnid;
+  try {
+    if (req.body.response) {
+      const decoded = JSON.parse(Buffer.from(req.body.response, 'base64').toString('utf-8'));
+      txnid = decoded.data?.merchantTransactionId || decoded.merchantOrderId;
+    } else {
+      txnid = req.body.merchantOrderId || req.body.transactionId;
+    }
+  } catch (e) {
+    logger.error('Failed to parse PhonePe webhook payload');
+    return res.status(400).send('Bad Request');
+  }
+
+  if (!txnid) {
+    logger.error('No transaction ID found in webhook payload');
+    return res.status(400).send('Bad Request');
+  }
+
+  // 1. Initial Idempotency Check
+  const order = await Order.findOne({ 'paymentGateway.phonepeTxnId': txnid });
+  if (!order) {
+    logger.error(`Webhook Order Not Found for TxnId: ${txnid}`);
+    return res.status(404).send('Order Not Found');
+  }
+
+  if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') {
+    logger.info(`Idempotent return: Webhook already processed for TxnId: ${txnid}. Status: ${order.paymentStatus}`);
+    return res.status(200).send('Already Processed');
+  }
+
+  // 2. Server-to-Server Verification (Single Source of Truth)
+  try {
+    const statusData = await phonepeService.checkPaymentStatus(txnid);
+
+    // Update Raw Response for Logging
+    order.paymentGateway.rawResponse = statusData;
+
+    // 3. Status handling based on V2 API response (state usually SUCCESS or FAILED)
+    if (statusData.state === 'COMPLETED' || statusData.state === 'SUCCESS') {
+      const webhookAmountInRupees = statusData.amount / 100;
+      
+      // Amount Validation (Hack Prevention)
+      if (Math.abs(webhookAmountInRupees - order.totalAmount) > 0.01) {
+        logger.error(`Amount mismatch in Webhook Status Check! DB: ${order.totalAmount}, Webhook: ${webhookAmountInRupees}`);
+        order.paymentStatus = 'failed';
+        order.status = 'cancelled';
+        order.notes = (order.notes ? order.notes + '\n' : '') + `SECURITY ALERT: Amount mismatch. PhonePe charged ₹${webhookAmountInRupees}`;
+        await order.save();
+        return res.status(200).send('Amount Mismatch Handled');
+      }
+
+      await processSuccessfulPayment(order, statusData);
+      logger.info(`PhonePe Webhook Success Processed securely via Status API for Order: ${order.orderNumber}`);
+      
+    } else if (statusData.state === 'FAILED') {
+      order.paymentStatus = 'failed';
+      order.status = 'cancelled';
+      order.statusHistory.push({
+        status: 'cancelled',
+        note: `PhonePe Payment Failed: ${statusData.responseCode || 'UNKNOWN_ERROR'}`,
+        actorRole: 'system',
+        createdAt: new Date(),
+      });
+      await order.save();
+      Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
+      logger.info(`PhonePe Webhook Failure Processed for Order: ${order.orderNumber}`);
+    } else {
+      logger.info(`Webhook event ignored: Payment state is ${statusData.state}`);
+    }
+
+    return res.status(200).send('OK');
+  } catch (error) {
+    logger.error('Failed to verify status from PhonePe during webhook handling', error);
+    // Return 500 so PhonePe retries the webhook later
+    return res.status(500).send('Status Verification Failed');
+  }
+});
+
+export const checkPhonepeStatus = asyncHandler(async (req, res, next) => {
+  const { txnid } = req.params;
+  
+  const order = await Order.findOne({ 'paymentGateway.phonepeTxnId': txnid });
+  if (!order) return next(new AppError('Order not found', 404));
+
+  if (order.paymentStatus === 'paid') {
+    return successResponse(res, 200, 'Payment already marked as successful', { status: 'success', orderNumber: order.orderNumber });
+  }
+
+  try {
+    const statusData = await phonepeService.checkPaymentStatus(txnid);
+
+    if (statusData.state === 'COMPLETED' || statusData.state === 'SUCCESS') {
+      const webhookAmountInRupees = statusData.amount / 100;
+      if (Math.abs(webhookAmountInRupees - order.totalAmount) <= 0.01) {
+        await processSuccessfulPayment(order, statusData);
+      }
+      return successResponse(res, 200, 'Payment synced successfully', { status: 'success', orderNumber: order.orderNumber });
+    }
+
+    if (statusData.state === 'PENDING') {
+      return successResponse(res, 200, 'Payment is still pending at gateway', { status: 'pending', orderNumber: order.orderNumber });
+    }
+
+    // Otherwise it failed
+    if (order.paymentStatus !== 'failed') {
+      order.paymentStatus = 'failed';
+      order.status = 'cancelled';
+      await order.save();
+      Promise.resolve(notifyPaymentFailed(order)).catch(() => {});
+    }
+    return successResponse(res, 200, 'Payment failed', { status: 'failed', orderNumber: order.orderNumber });
+    
+  } catch (error) {
+    return next(new AppError('Failed to check status with PhonePe V2', 500));
+  }
 });

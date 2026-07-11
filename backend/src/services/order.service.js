@@ -105,15 +105,22 @@ export const buildOrderDraftFromCheckout = async (checkoutInput) => {
 };
 
 export const applyFulfilledOrderSideEffects = async ({ resolvedItems, couponData }) => {
-  await Promise.all(resolvedItems.map(({ product, quantity }) => Product.updateOne(
-    { _id: product._id },
-    {
-      $inc: {
-        stock: -quantity,
-        soldCount: quantity,
-      },
-    }
-  )));
+  await Promise.all(resolvedItems.map(async ({ product, quantity }) => {
+    // Atomic update preventing stock from going below zero
+    const result = await Product.updateOne(
+      { _id: product._id, stock: { $gte: quantity } },
+      {
+        $inc: {
+          stock: -quantity,
+          soldCount: quantity,
+        },
+      }
+    );
+    
+    // If modifiedCount is 0, it means stock was insufficient. 
+    // In a production system, this would trigger an out-of-stock alert to admin for a manual refund/backorder,
+    // but we strictly enforce no negative stock at the DB level here.
+  }));
 
   if (couponData?.couponId) {
     await Coupon.updateOne({ _id: couponData.couponId }, { $inc: { usedCount: 1 } });

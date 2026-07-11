@@ -31,12 +31,6 @@ const cancelAbandonedCheckouts = async () => {
         createdAt: new Date(),
       });
 
-      // We must return the items back to the inventory if they were deducted on creation
-      await revertFulfilledOrderSideEffects({
-        items: order.items,
-        couponData: order.coupon,
-      });
-
       await order.save();
       logger.info(`Cancelled abandoned order: ${order.orderNumber}`);
     }

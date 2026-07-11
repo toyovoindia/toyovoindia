@@ -22,6 +22,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { AccountPage } from './pages/AccountPage'
 import { CartPage } from './pages/CartPage'
 import { CheckoutPage } from './pages/CheckoutPage'
+import { PhonepeCallbackPage } from './pages/PhonepeCallbackPage'
 import { OrderSuccessPage } from './pages/OrderSuccessPage'
 import { ComparePage } from './pages/ComparePage'
 import { AllCategoriesPage } from './pages/AllCategoriesPage'
@@ -318,6 +319,7 @@ function AppContent() {
             <Route path="/account/orders/:orderId" element={<AccountPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/payment/phonepe/callback" element={<PhonepeCallbackPage />} />
             <Route path="/order-success" element={<OrderSuccessPage />} />
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/all-categories" element={<AllCategoriesPage />} />

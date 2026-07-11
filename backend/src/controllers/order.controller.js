@@ -240,12 +240,12 @@ export const cancelMyOrder = asyncHandler(async (req, res, next) => {
       'system',
       `Auto-refund of ₹${order.totalAmount} processed for cancelled prepaid order.`
     );
+    // Only revert stock if it was actually paid and deducted
+    await revertFulfilledOrderSideEffects({
+      items: order.items,
+      couponData: order.coupon,
+    });
   }
-
-  await revertFulfilledOrderSideEffects({
-    items: order.items,
-    couponData: order.coupon,
-  });
 
   await order.save();
 
@@ -443,11 +443,12 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res, next) => {
   if (req.body.status === 'cancelled') {
     order.cancelledAt = new Date();
     if (previousStatus !== 'cancelled') {
-      await revertFulfilledOrderSideEffects({
-        items: order.items,
-        couponData: order.coupon,
-      });
       if (order.paymentStatus === 'paid') {
+        // Only revert stock if it was actually paid and deducted
+        await revertFulfilledOrderSideEffects({
+          items: order.items,
+          couponData: order.coupon,
+        });
         order.paymentStatus = 'refunded';
         appendStatusHistory(
           order,
