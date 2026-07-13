@@ -4,8 +4,9 @@ import logger from '../utils/logger.js';
 
 class PhonePeService {
   constructor() {
-    this.clientId = env.PHONEPE_MERCHANT_ID; // The new V2 identifier (e.g. M22H0O..._...)
-    this.clientSecret = env.PHONEPE_SALT_KEY; // The OAuth client secret
+    this.merchantId = env.PHONEPE_MERCHANT_ID;
+    this.clientId = env.PHONEPE_CLIENT_ID || env.PHONEPE_MERCHANT_ID; 
+    this.clientSecret = env.PHONEPE_CLIENT_SECRET || env.PHONEPE_SALT_KEY;
     this.environment = env.PHONEPE_ENV;
     
     // UAT URL is for testing, API URL is for production
