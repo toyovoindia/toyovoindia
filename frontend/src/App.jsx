@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Link, useNavigationType } from 'react-router-dom'
-import React, { useEffect, Suspense } from 'react'
+import React, { useEffect, useLayoutEffect, Suspense } from 'react'
 import { VisionHeader } from './components/layout/VisionHeader'
 import { Footer }       from './components/layout/Footer'
 import { HomePage }     from './pages/HomePage'
@@ -40,14 +40,19 @@ function ScrollManager() {
 
   // 1. Record scroll position as the user scrolls
   useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual'
+    }
+
     let timeoutId = null
     const handleScroll = () => {
       if (timeoutId) return
       timeoutId = setTimeout(() => {
-        // Save the scroll position for the current location key
-        sessionStorage.setItem(`scroll-pos-${location.key}`, window.scrollY)
+        if (document.body.style.position !== 'fixed') {
+          sessionStorage.setItem(`scroll-pos-${location.key}`, window.scrollY)
+        }
         timeoutId = null
-      }, 150) // Throttle to avoid performance issues
+      }, 150)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -58,32 +63,32 @@ function ScrollManager() {
   }, [location.key])
 
   // 2. Apply scroll position on route change
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (navigationType === 'POP') {
       const savedPos = sessionStorage.getItem(`scroll-pos-${location.key}`)
       if (savedPos !== null) {
         const pos = parseInt(savedPos, 10)
         
-        // Apply immediately
-        window.scrollTo(0, pos)
+        let frameId;
+        const start = Date.now();
         
-        // For React apps, data often loads async (e.g. products fetching).
-        // This interval keeps asserting the scroll position as the DOM expands
-        // over the next 1 second, ensuring it locks into place accurately.
-        let attempts = 0
-        const intervalId = setInterval(() => {
-          if (window.scrollY !== pos) {
-             window.scrollTo(0, pos)
-          }
-          attempts++
-          if (attempts > 10) clearInterval(intervalId)
-        }, 100)
+        // Aggressively hold the scroll position during the first 500ms
+        // while cached data populates the DOM to prevent any visual jump.
+        const forceScroll = () => {
+           if (window.scrollY !== pos) {
+              window.scrollTo({ top: pos, left: 0, behavior: 'instant' });
+           }
+           if (Date.now() - start < 500) {
+              frameId = requestAnimationFrame(forceScroll);
+           }
+        };
+        forceScroll();
 
-        return () => clearInterval(intervalId)
+        return () => cancelAnimationFrame(frameId);
       }
     } else {
-      // PUSH or REPLACE: New navigation, always scroll to top smoothly
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      // PUSH or REPLACE: New navigation, always scroll to top instantly
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }
   }, [location.pathname, location.key, navigationType])
 

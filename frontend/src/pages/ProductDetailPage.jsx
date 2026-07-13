@@ -276,7 +276,6 @@ export function ProductDetailPage() {
 
   useEffect(() => {
     let isMounted = true
-    window.scrollTo(0, 0)
     setShowToast(false)
     setIsLoadingProduct(true)
     setProductError('')
@@ -287,7 +286,6 @@ export function ProductDetailPage() {
         const data = await getProductBySlug(title)
         if (!isMounted) return
         setProductState(data)
-        window.scrollTo(0, 0)
 
         const relatedPayload = await getProducts({
           category: data.category,
@@ -297,9 +295,6 @@ export function ProductDetailPage() {
         if (isMounted) {
           setRelatedProducts(relatedPayload.products.filter(item => item.id !== data.id))
         }
-        setTimeout(() => {
-          window.scrollTo(0, 0)
-        }, 50)
       } catch (err) {
         if (!isMounted) return
         setProductState(null)

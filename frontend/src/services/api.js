@@ -40,7 +40,20 @@ const buildHeaders = (options = {}) => {
 
 const shouldTryRefresh = (path) => !path.startsWith('/auth/') || path === '/auth/me'
 
+const queryCache = new Map();
+const CACHE_DURATION = 1000 * 60 * 2; // 2 minutes
+
 export async function apiRequest(path, options = {}, meta = {}) {
+  const isGet = (!options.method || options.method.toUpperCase() === 'GET') && !path.includes('/admin');
+  const cacheKey = `${API_BASE_URL}${path}`;
+
+  if (isGet && queryCache.has(cacheKey) && !meta.forceRefresh) {
+    const cached = queryCache.get(cacheKey);
+    if (Date.now() - cached.timestamp < CACHE_DURATION) {
+      return JSON.parse(JSON.stringify(cached.data));
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
     headers: buildHeaders(options),
@@ -84,6 +97,10 @@ export async function apiRequest(path, options = {}, meta = {}) {
     error.details = details
     error.status = response.status
     throw error
+  }
+
+  if (isGet) {
+    queryCache.set(cacheKey, { timestamp: Date.now(), data: JSON.parse(JSON.stringify(payload)) });
   }
 
   return payload

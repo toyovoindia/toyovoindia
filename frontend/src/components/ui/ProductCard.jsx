@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Eye, Layers, X, Star, Plus, Minus } from 'lucide-react'
@@ -14,10 +14,15 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
 
   const scrollPosRef = useRef(0)
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Mobile Back Button Handler
   useEffect(() => {
     const handlePopState = () => {
-      if (isOpen) onClose();
+      if (isOpen) onCloseRef.current();
     };
 
     if (isOpen) {
@@ -31,10 +36,10 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
         window.history.back();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Scroll lock implementation
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
       scrollPosRef.current = window.scrollY;
       document.body.style.position = 'fixed';
@@ -45,7 +50,7 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        window.scrollTo(0, scrollPosRef.current);
+        window.scrollTo({ top: scrollPosRef.current, left: 0, behavior: 'instant' });
       }
     }
     
@@ -54,7 +59,7 @@ const QuickViewModal = ({ p, isOpen, onClose }) => {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        window.scrollTo(0, scrollPosRef.current);
+        window.scrollTo({ top: scrollPosRef.current, left: 0, behavior: 'instant' });
       }
     };
   }, [isOpen]);
