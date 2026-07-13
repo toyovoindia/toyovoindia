@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Plus, Minus, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -16,10 +16,15 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(999);
 
   // Mobile Back Button Handler
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const handlePopState = () => {
       if (isOpen) {
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -34,7 +39,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         window.history.back();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Load from local storage draft when user or drawer open state changes
   useEffect(() => {
