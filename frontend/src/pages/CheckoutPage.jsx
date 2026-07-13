@@ -232,12 +232,21 @@ export function CheckoutPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(999)
   const [activeCoupons, setActiveCoupons] = useState([])
+  const [availableGateways, setAvailableGateways] = useState({ phonepeEnabled: true, payuEnabled: true })
 
   useEffect(() => {
     getStorefrontSettings()
       .then((data) => {
         if (data && typeof data.freeShippingThreshold === 'number') {
           setFreeShippingThreshold(data.freeShippingThreshold)
+        }
+        if (data?.paymentGateways) {
+          setAvailableGateways(data.paymentGateways)
+          if (!data.paymentGateways.phonepeEnabled && data.paymentGateways.payuEnabled) {
+            setPaymentGateway('payu')
+          } else if (!data.paymentGateways.payuEnabled && data.paymentGateways.phonepeEnabled) {
+            setPaymentGateway('phonepe')
+          }
         }
       })
       .catch(console.error)
@@ -635,6 +644,13 @@ export function CheckoutPage() {
 
     setIsLaunchingPayment(true)
     setFormErrors({})
+    
+    if (!availableGateways.phonepeEnabled && !availableGateways.payuEnabled) {
+      setIsLaunchingPayment(false)
+      setFormErrors({ general: 'Online payments are currently disabled. Please try again later.' })
+      return
+    }
+
     try {
       if (paymentGateway === 'payu') {
         const payuOrderData = await createPayuPaymentOrder(checkoutData)
@@ -829,24 +845,33 @@ export function CheckoutPage() {
                  </p>
                </div>
                <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
-                  <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'phonepe' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
-                    <div className="flex items-center gap-4">
-                      <input type="radio" checked={paymentGateway === 'phonepe'} onChange={() => setPaymentGateway('phonepe')} className="w-4 h-4 accent-[#005BD1]" />
-                      <div className="flex flex-col">
-                        <span className="text-[14px] font-bold text-[#333]">PhonePe (Fastest)</span>
-                        <span className="text-[11px] font-medium text-gray-500">UPI, Credit/Debit Cards, Wallets</span>
+                  {availableGateways.phonepeEnabled && (
+                    <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'phonepe' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
+                      <div className="flex items-center gap-4">
+                        <input type="radio" checked={paymentGateway === 'phonepe'} onChange={() => setPaymentGateway('phonepe')} className="w-4 h-4 accent-[#005BD1]" />
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-bold text-[#333]">PhonePe (Fastest)</span>
+                          <span className="text-[11px] font-medium text-gray-500">UPI, Credit/Debit Cards, Wallets</span>
+                        </div>
                       </div>
-                    </div>
-                  </label>
-                  <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'payu' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
-                    <div className="flex items-center gap-4">
-                      <input type="radio" checked={paymentGateway === 'payu'} onChange={() => setPaymentGateway('payu')} className="w-4 h-4 accent-[#005BD1]" />
-                      <div className="flex flex-col">
-                        <span className="text-[14px] font-bold text-[#333]">PayU Gateway</span>
-                        <span className="text-[11px] font-medium text-gray-500">Alternative Gateway for Cards & Netbanking</span>
+                    </label>
+                  )}
+                  {availableGateways.payuEnabled && (
+                    <label className={`p-4 flex items-center justify-between cursor-pointer transition-all ${paymentGateway === 'payu' ? 'bg-[#F4F4F4]' : 'bg-white'}`}>
+                      <div className="flex items-center gap-4">
+                        <input type="radio" checked={paymentGateway === 'payu'} onChange={() => setPaymentGateway('payu')} className="w-4 h-4 accent-[#005BD1]" />
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-bold text-[#333]">PayU Gateway</span>
+                          <span className="text-[11px] font-medium text-gray-500">Alternative Gateway for Cards & Netbanking</span>
+                        </div>
                       </div>
+                    </label>
+                  )}
+                  {!availableGateways.phonepeEnabled && !availableGateways.payuEnabled && (
+                    <div className="p-4 text-center">
+                      <p className="text-[13px] font-bold text-red-500">Online payments are currently paused for maintenance. Please try again later.</p>
                     </div>
-                  </label>
+                  )}
                </div>
             </section>
 
@@ -954,8 +979,12 @@ export function CheckoutPage() {
                     {formErrors.general}
                   </div>
                 )}
-                <button onClick={startPayment} disabled={isProcessing || isLaunchingPayment} className="w-full h-16 bg-[#005BD1] px-4 text-white font-bold rounded-xl tracking-widest uppercase hover:bg-[#00459E] transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl text-center">
-                   Pay Now - ₹{total.toFixed(2)}
+                <button 
+                  onClick={startPayment} 
+                  disabled={isProcessing || isLaunchingPayment || (!availableGateways.phonepeEnabled && !availableGateways.payuEnabled)} 
+                  className="w-full h-16 bg-[#005BD1] px-4 text-white font-bold rounded-xl tracking-widest uppercase hover:bg-[#00459E] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:bg-gray-400 disabled:shadow-none shadow-xl text-center"
+                >
+                   {isProcessing || isLaunchingPayment ? 'Processing...' : (!availableGateways.phonepeEnabled && !availableGateways.payuEnabled ? 'Payments Disabled' : `Pay Now - ₹${total.toFixed(2)}`)}
                 </button>
              </div>
           </motion.div>

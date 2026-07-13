@@ -34,6 +34,10 @@ const siteConfigSchema = new mongoose.Schema({
   defaultShippingFee: { type: Number, default: 99 },
   taxPercentage: { type: Number, default: 0 },
   codEnabled: { type: Boolean, default: true },
+  paymentGateways: {
+    phonepeEnabled: { type: Boolean, default: true },
+    payuEnabled: { type: Boolean, default: true },
+  },
 
   // --- Contact & Social ---
   contactEmail: { type: String, default: 'toyovoindia@gmail.com' },

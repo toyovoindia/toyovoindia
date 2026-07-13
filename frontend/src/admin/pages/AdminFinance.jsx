@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { DollarSign, CreditCard, Landmark, Settings as SettingsIcon, Search, Wallet, User, RefreshCcw, Download } from 'lucide-react'
 import { getAdminOrders } from '../../services/orderApi'
 import { getAdminUsers } from '../../services/adminUserApi'
+import { getAdminStorefrontSettings, updateAdminStorefrontSettings } from '../../services/siteApi'
 import { useToast } from '../../context/ToastContext'
 
 export function AdminFinance() {
@@ -12,6 +13,8 @@ export function AdminFinance() {
   const [ledgerStatus, setLedgerStatus] = useState('All')
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
+  const [gatewaysConfig, setGatewaysConfig] = useState({ phonepeEnabled: true, payuEnabled: true })
+  const [savingGateway, setSavingGateway] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -19,13 +22,17 @@ export function AdminFinance() {
     const loadFinance = async () => {
       setLoading(true)
       try {
-        const [{ orders: orderData }, { users: userData }] = await Promise.all([
+        const [{ orders: orderData }, { users: userData }, configData] = await Promise.all([
           getAdminOrders({ limit: 100 }),
           getAdminUsers({ limit: 100 }),
+          getAdminStorefrontSettings(),
         ])
         if (!isMounted) return
         setOrders(orderData)
         setUsers(userData)
+        if (configData?.paymentGateways) {
+          setGatewaysConfig(configData.paymentGateways)
+        }
       } catch (error) {
         if (isMounted) showError(error.message || 'Financial data could not be loaded')
       } finally {
@@ -116,6 +123,19 @@ export function AdminFinance() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const handleToggleGateway = async (gateway) => {
+    try {
+      setSavingGateway(true)
+      const newConfig = { ...gatewaysConfig, [gateway]: !gatewaysConfig[gateway] }
+      await updateAdminStorefrontSettings({ paymentGateways: newConfig })
+      setGatewaysConfig(newConfig)
+    } catch (error) {
+      showError('Failed to update gateway status')
+    } finally {
+      setSavingGateway(false)
+    }
   }
 
   return (
@@ -287,6 +307,45 @@ export function AdminFinance() {
                   </div>
                   <div className="h-12 px-4 bg-[#FDF4E6] rounded-xl flex items-center text-[13px] font-bold text-gray-700">
                     Refunded Orders: {refundedOrders.length}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-black/[0.03]">
+                  <h4 className="text-sm font-bold text-gray-800 uppercase tracking-widest mb-4">Payment Methods Configuration</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-[#F8F9FA] rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-bold">P</div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">PhonePe Checkout V2</p>
+                          <p className="text-[10px] text-gray-500 font-medium">UPI, Cards & Netbanking</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleToggleGateway('phonepeEnabled')}
+                        disabled={savingGateway}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${gatewaysConfig.phonepeEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                      >
+                        <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${gatewaysConfig.phonepeEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-[#F8F9FA] rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold">U</div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">PayU Standard</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Backup PG for stability</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleToggleGateway('payuEnabled')}
+                        disabled={savingGateway}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${gatewaysConfig.payuEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                      >
+                        <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${gatewaysConfig.payuEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
