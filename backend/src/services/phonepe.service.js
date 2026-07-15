@@ -9,14 +9,9 @@ class PhonePeService {
     this.clientSecret = env.PHONEPE_CLIENT_SECRET || env.PHONEPE_SALT_KEY;
     this.environment = env.PHONEPE_ENV;
     
-    // UAT URL is for testing, API URL is for production
-    this.authBaseUrl = this.environment === 'PRODUCTION' 
-      ? 'https://api.phonepe.com/apis/identity-manager' 
-      : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
-      
-    this.pgBaseUrl = this.environment === 'PRODUCTION' 
-      ? 'https://api.phonepe.com/apis/pg' 
-      : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+    // Read directly from .env variables
+    this.authBaseUrl = env.PHONEPE_AUTH_URL;
+    this.pgBaseUrl = env.PHONEPE_PG_URL;
 
     this.cachedToken = null;
     this.tokenExpiry = null;

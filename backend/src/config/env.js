@@ -83,6 +83,8 @@ const env = {
   PHONEPE_CLIENT_ID: process.env.PHONEPE_CLIENT_ID,
   PHONEPE_CLIENT_SECRET: process.env.PHONEPE_CLIENT_SECRET,
   PHONEPE_ENV: process.env.PHONEPE_ENV,
+  PHONEPE_AUTH_URL: process.env.PHONEPE_AUTH_URL,
+  PHONEPE_PG_URL: process.env.PHONEPE_PG_URL,
 };
 
 if (env.NODE_ENV !== 'test') {
